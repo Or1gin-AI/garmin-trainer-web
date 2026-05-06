@@ -208,7 +208,7 @@ export default function GarminConnectPage() {
           </Link>
           <h1 className="text-2xl font-bold mt-2">连接 {regionLabel} Garmin</h1>
           <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-            下方登录表单由 Garmin 官方的 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 直接渲染。账号密码只发到 Garmin，不会经过我们的服务器。
+            下方登录表单由 Garmin 官方的 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 渲染。
           </p>
         </header>
 

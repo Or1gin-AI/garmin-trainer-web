@@ -65,11 +65,7 @@ export default function GarminPage() {
       <header>
         <h1 className="text-3xl font-bold">Garmin 账号</h1>
         <p className="text-zinc-500 mt-1 leading-relaxed">
-          点击下方按钮在 <span className="font-mono">Garmin 官方页面</span> 完成登录，
-          Garmin 会自动把登录凭据回传给我们。
-          <span className="text-emerald-700 font-medium ml-1">
-            你的 Garmin 密码不会经过我们的服务器。
-          </span>
+          点击下方按钮在 <span className="font-mono">Garmin 官方页面</span> 完成登录，登录成功后会自动绑定到你的账号。
         </p>
       </header>
 
