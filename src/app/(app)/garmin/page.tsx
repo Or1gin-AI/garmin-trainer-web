@@ -6,8 +6,6 @@ import { api, type GarminAccountSummary } from '@/lib/api';
 
 type Region = 'cn' | 'global';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 function fmtDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleString('zh-CN');
@@ -126,7 +124,7 @@ function RegionCard({
   onDisconnect: () => void;
 }) {
   const label = region === 'cn' ? '国区 (garmin.cn)' : '国际区 (garmin.com)';
-  const loginHref = `${API_URL}/api/garmin/login/${region}`;
+  const loginHref = `/garmin/connect/${region}`;
   const connected = !!account?.hasSession;
 
   return (
