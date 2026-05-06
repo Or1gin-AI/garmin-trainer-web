@@ -5,9 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/auth-client';
 
+function humanizeError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid') && m.includes('password')) {
+    return '账号或密码错误';
+  }
+  if (m.includes('not found') || m.includes('no user')) {
+    return '账号不存在';
+  }
+  if (m.includes('unauthorized')) {
+    return '账号或密码错误';
+  }
+  return message;
+}
+
 export default function SignInPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,13 +30,14 @@ export default function SignInPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: err } = await signIn.email({
-      email,
-      password,
-    });
+
+    const isEmail = identifier.includes('@');
+    const { error: err } = isEmail
+      ? await signIn.email({ email: identifier, password })
+      : await (signIn as any).username({ username: identifier, password });
     setLoading(false);
     if (err) {
-      setError(err.message ?? '登录失败');
+      setError(humanizeError(err.message ?? '登录失败'));
       return;
     }
     router.push('/dashboard');
@@ -40,25 +55,38 @@ export default function SignInPage() {
             </Link>
           </p>
         </div>
-        <form onSubmit={onSubmit} className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200">
+        <form
+          onSubmit={onSubmit}
+          className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200"
+        >
           <div>
-            <label className="text-sm font-medium">邮箱</label>
+            <label className="text-sm font-medium">昵称或邮箱</label>
             <input
-              type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
+              placeholder="用户名 或 you@example.com"
+              autoComplete="username"
             />
           </div>
           <div>
-            <label className="text-sm font-medium">密码</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">密码</label>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-zinc-500 hover:text-emerald-600"
+              >
+                忘记密码？
+              </Link>
+            </div>
             <input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
             />
           </div>
