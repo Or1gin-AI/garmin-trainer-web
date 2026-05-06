@@ -1,11 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { api, type GarminAccountSummary } from '@/lib/api';
 
 type Region = 'cn' | 'global';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+function fmtDate(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('zh-CN');
+}
+
 export default function GarminPage() {
+  const router = useRouter();
+  const params = useSearchParams();
   const [accounts, setAccounts] = useState<GarminAccountSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -21,13 +31,47 @@ export default function GarminPage() {
     refresh().catch((e) => setError((e as Error).message));
   }, []);
 
+  // Pick up redirect callback flags from /api/garmin/callback/:region
+  useEffect(() => {
+    const err = params.get('error');
+    const connected = params.get('connected');
+    const region = params.get('region');
+    const name = params.get('name');
+    if (err) {
+      setError(err);
+      router.replace('/garmin');
+    } else if (connected && region) {
+      setSuccess(
+        `${region === 'cn' ? '国区' : '国际区'} Garmin 已连接${name ? `（${name}）` : ''}`,
+      );
+      refresh().finally(() => router.replace('/garmin'));
+    }
+  }, [params, router]);
+
+  async function disconnect(region: Region) {
+    if (!confirm(`断开 ${region === 'cn' ? '国区' : '国际区'} 的 Garmin 连接？`)) {
+      return;
+    }
+    setError(null);
+    try {
+      await api.del(`/api/garmin/accounts/${region}`);
+      await refresh();
+      setSuccess('已断开');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <header>
         <h1 className="text-3xl font-bold">Garmin 账号</h1>
-        <p className="text-zinc-500 mt-1">
-          配置并验证你的国区与国际区 Garmin 账号。账号密码会加密存储到服务器（每用户独立密钥），
-          仅用于同步运动记录。
+        <p className="text-zinc-500 mt-1 leading-relaxed">
+          点击下方按钮在 <span className="font-mono">Garmin 官方页面</span> 完成登录，
+          Garmin 会自动把登录凭据回传给我们。
+          <span className="text-emerald-700 font-medium ml-1">
+            你的 Garmin 密码不会经过我们的服务器。
+          </span>
         </p>
       </header>
 
@@ -50,23 +94,24 @@ export default function GarminPage() {
               key={region}
               region={region}
               account={acc}
-              onChange={async () => {
-                setError(null);
-                setSuccess(null);
-                await refresh();
-              }}
-              onError={(m) => {
-                setError(m);
-                setSuccess(null);
-              }}
-              onSuccess={(m) => {
-                setSuccess(m);
-                setError(null);
-              }}
+              onDisconnect={() => disconnect(region)}
             />
           );
         })}
       </div>
+
+      <section className="text-sm text-zinc-500 space-y-2">
+        <p className="font-medium text-zinc-700">连接流程</p>
+        <ol className="list-decimal pl-5 space-y-1">
+          <li>点击下方"连接 Garmin"按钮</li>
+          <li>跳转到 Garmin 官方登录页（域名：sso.garmin.cn / sso.garmin.com）</li>
+          <li>输入账号密码（如启用了 MFA，输入验证码）</li>
+          <li>登录成功后浏览器自动跳回，账号变为"已连接"</li>
+        </ol>
+        <p className="pt-2">
+          会话失效后页面会提示"请重新连接"，再点一次按钮即可。
+        </p>
+      </section>
     </div>
   );
 }
@@ -74,87 +119,15 @@ export default function GarminPage() {
 function RegionCard({
   region,
   account,
-  onChange,
-  onError,
-  onSuccess,
+  onDisconnect,
 }: {
   region: Region;
   account: GarminAccountSummary | undefined;
-  onChange: () => Promise<void>;
-  onError: (m: string) => void;
-  onSuccess: (m: string) => void;
+  onDisconnect: () => void;
 }) {
   const label = region === 'cn' ? '国区 (garmin.cn)' : '国际区 (garmin.com)';
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaCode, setMfaCode] = useState('');
-
-  async function save() {
-    setBusy(true);
-    try {
-      await api.post('/api/garmin/accounts', { region, username, password });
-      setUsername('');
-      setPassword('');
-      await onChange();
-      onSuccess(`${label} 已保存`);
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verify() {
-    setBusy(true);
-    setMfaRequired(false);
-    try {
-      const r = await api.post<{ ok: boolean; mfaRequired?: boolean }>(
-        '/api/garmin/verify',
-        { region },
-      );
-      if (r.ok) {
-        await onChange();
-        onSuccess(`${label} 验证通过`);
-      } else if (r.mfaRequired) {
-        setMfaRequired(true);
-        onError('Garmin 要求 MFA 验证码，请输入收到的 6 位验证码');
-      }
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitMfa() {
-    setBusy(true);
-    try {
-      await api.post('/api/garmin/verify/mfa', { region, code: mfaCode });
-      setMfaCode('');
-      // After submitting MFA, retry verify to actually load profile
-      await verify();
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove() {
-    if (!confirm(`确定移除 ${label} 的账号绑定？`)) return;
-    setBusy(true);
-    try {
-      await api.del(`/api/garmin/accounts/${region}`);
-      await onChange();
-      onSuccess(`${label} 已移除`);
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const loginHref = `${API_URL}/api/garmin/login/${region}`;
+  const connected = !!account?.hasSession;
 
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
@@ -162,91 +135,53 @@ function RegionCard({
         <h2 className="text-lg font-semibold">{label}</h2>
         <span
           className={`text-xs px-2 py-0.5 rounded-full ${
-            account?.hasSession
+            connected
               ? 'bg-emerald-100 text-emerald-700'
-              : account?.configured
-                ? 'bg-amber-100 text-amber-700'
-                : 'bg-zinc-100 text-zinc-500'
+              : 'bg-zinc-100 text-zinc-500'
           }`}
         >
-          {account?.hasSession ? '已连接' : account?.configured ? '待验证' : '未配置'}
+          {connected ? '已连接' : '未连接'}
         </span>
       </div>
 
-      {account?.profile && (
+      {account?.profile ? (
         <div className="text-sm text-zinc-600 bg-zinc-50 rounded-lg p-3">
-          <div>{account.profile.fullName || account.profile.userName}</div>
+          <div className="font-medium">
+            {account.profile.fullName || account.profile.userName}
+          </div>
           {account.profile.location && (
-            <div className="text-xs text-zinc-500">{account.profile.location}</div>
+            <div className="text-xs text-zinc-500 mt-0.5">
+              {account.profile.location}
+            </div>
           )}
+          <div className="text-xs text-zinc-400 mt-1">
+            最后验证 {fmtDate(account.lastValidatedAt)}
+          </div>
         </div>
+      ) : (
+        <p className="text-sm text-zinc-500">
+          还没有连接。点击下方按钮在 Garmin 官方页面登录。
+        </p>
       )}
 
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm font-medium">账号</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder={account?.configured ? '已保存（留空保留）' : '邮箱 / 用户名'}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">密码</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={account?.configured ? '已保存（留空保留）' : '密码'}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2">
+        <a
+          href={loginHref}
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+            connected
+              ? 'border border-zinc-300 hover:border-zinc-400'
+              : 'bg-emerald-600 text-white hover:bg-emerald-700'
+          }`}
+        >
+          {connected ? '重新连接' : '连接 Garmin'}
+        </a>
+        {connected && (
           <button
-            onClick={save}
-            disabled={busy || !username || !password}
-            className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-sm disabled:opacity-50"
+            onClick={onDisconnect}
+            className="ml-auto text-sm text-red-600 hover:underline"
           >
-            保存
+            断开
           </button>
-          <button
-            onClick={verify}
-            disabled={busy || !account?.configured}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm disabled:opacity-50"
-          >
-            验证连接
-          </button>
-          {account?.configured && (
-            <button
-              onClick={remove}
-              disabled={busy}
-              className="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-sm disabled:opacity-50 ml-auto"
-            >
-              移除
-            </button>
-          )}
-        </div>
-
-        {mfaRequired && (
-          <div className="space-y-2 border-t border-zinc-200 pt-3">
-            <label className="text-sm font-medium">MFA 验证码</label>
-            <div className="flex gap-2">
-              <input
-                value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value)}
-                placeholder="6 位验证码"
-                className="flex-1 rounded-lg border border-zinc-300 px-3 py-2"
-              />
-              <button
-                onClick={submitMfa}
-                disabled={busy || !mfaCode}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm disabled:opacity-50"
-              >
-                提交
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
