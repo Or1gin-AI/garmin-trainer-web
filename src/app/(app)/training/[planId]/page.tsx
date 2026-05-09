@@ -260,7 +260,38 @@ export default function TrainingPlanDetailPage() {
         </section>
 
         <aside>
-          <ChatPanel />
+          <ChatPanel
+            planId={planId}
+            initialMessages={detail.messages}
+            onWorkoutUpdated={(w) => {
+              setDetail((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      workouts: prev.workouts.map((row) =>
+                        row.id === w.id ? { ...row, ...w } : row,
+                      ),
+                    }
+                  : prev,
+              );
+              highlight(w.dayIndex);
+            }}
+            onWorkoutFieldUpdated={(workoutId, field, value) => {
+              if (field !== 'status') return;
+              setDetail((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      workouts: prev.workouts.map((row) =>
+                        row.id === workoutId
+                          ? { ...row, status: value as WorkoutStatus }
+                          : row,
+                      ),
+                    }
+                  : prev,
+              );
+            }}
+          />
         </aside>
       </div>
     </div>

@@ -268,3 +268,13 @@ export async function patchTrainingWorkout(
 export const trainingPlanStreamUrl = `${API_BASE}/api/training/plans`;
 export const trainingDayRegenerateUrl = (planId: string) =>
   `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/regenerate-day`;
+export const trainingChatStreamUrl = (planId: string) =>
+  `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/chat`;
+
+export async function listTrainingChatMessages(
+  planId: string,
+): Promise<{ messages: TrainingChatMessage[] }> {
+  return api.get<{ messages: TrainingChatMessage[] }>(
+    `/api/training/plans/${encodeURIComponent(planId)}/messages`,
+  );
+}
