@@ -4,14 +4,23 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from '@/lib/auth-client';
+import { signIn, authClient } from '@/lib/auth-client';
+
+type SignInError = { message?: string; status?: number; code?: string } | null | undefined;
 
 type UsernameSignIn = {
   username: (body: {
     username: string;
     password: string;
-  }) => Promise<{ error?: { message?: string } | null }>;
+  }) => Promise<{ error?: SignInError }>;
 };
+
+function isEmailNotVerified(err: SignInError): boolean {
+  if (!err) return false;
+  if (err.code === 'EMAIL_NOT_VERIFIED') return true;
+  const m = (err.message || '').toLowerCase();
+  return m.includes('email') && m.includes('verif');
+}
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
@@ -32,12 +41,17 @@ export default function SignInPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setUnverifiedEmail(null);
+    setResent(false);
 
     const isEmail = identifier.includes('@');
     const { error: err } = isEmail
@@ -48,10 +62,25 @@ export default function SignInPage() {
         });
     setLoading(false);
     if (err) {
+      if (isEmailNotVerified(err) && isEmail) {
+        setUnverifiedEmail(identifier);
+        return;
+      }
       setError(humanizeError(err.message ?? '登录失败'));
       return;
     }
     router.push('/dashboard');
+  }
+
+  async function resendVerification() {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    await authClient.sendVerificationEmail({
+      email: unverifiedEmail,
+      callbackURL: `${window.location.origin}/verify-email?verified=1`,
+    });
+    setResending(false);
+    setResent(true);
   }
 
   return (
@@ -110,6 +139,23 @@ export default function SignInPage() {
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {unverifiedEmail && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+              <p>该邮箱尚未验证，请先完成邮箱验证后再登录。</p>
+              {resent ? (
+                <p className="text-emerald-700">验证邮件已重新发送，请查收。</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={resendVerification}
+                  disabled={resending}
+                  className="underline disabled:opacity-50"
+                >
+                  {resending ? '发送中…' : '重新发送验证邮件'}
+                </button>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}

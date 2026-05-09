@@ -57,13 +57,14 @@ export default function SignUpPage() {
       username,
       email,
       password,
+      callbackURL: `${window.location.origin}/verify-email?verified=1`,
     } as never);
     setLoading(false);
     if (err) {
       setError(humanizeError(err.message ?? '注册失败'));
       return;
     }
-    router.push('/dashboard');
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   return (
