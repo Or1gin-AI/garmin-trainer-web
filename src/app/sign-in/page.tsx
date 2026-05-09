@@ -5,6 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/auth-client';
 
+type UsernameSignIn = {
+  username: (body: {
+    username: string;
+    password: string;
+  }) => Promise<{ error?: { message?: string } | null }>;
+};
+
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid') && m.includes('password')) {
@@ -34,7 +41,10 @@ export default function SignInPage() {
     const isEmail = identifier.includes('@');
     const { error: err } = isEmail
       ? await signIn.email({ email: identifier, password })
-      : await (signIn as any).username({ username: identifier, password });
+      : await (signIn as unknown as UsernameSignIn).username({
+          username: identifier,
+          password,
+        });
     setLoading(false);
     if (err) {
       setError(humanizeError(err.message ?? '登录失败'));
