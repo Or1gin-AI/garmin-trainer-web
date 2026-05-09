@@ -119,6 +119,26 @@ export async function deleteLlmConfig(id: number): Promise<void> {
   await api.del<void>(`/api/admin/llm-configs/${id}`);
 }
 
+export interface AiUsageEntry {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  periodStart: string;
+  planGenerationCount: number;
+  chatMessageCount: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export async function listAiUsage(
+  periodStart?: string,
+): Promise<{ entries: AiUsageEntry[] }> {
+  const qs = periodStart
+    ? `?periodStart=${encodeURIComponent(periodStart)}`
+    : '';
+  return api.get<{ entries: AiUsageEntry[] }>(`/api/admin/ai-usage${qs}`);
+}
+
 export interface SyncJob {
   id: string;
   userId: string;

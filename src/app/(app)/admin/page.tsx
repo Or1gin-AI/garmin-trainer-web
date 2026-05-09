@@ -8,9 +8,11 @@ import {
   updateLlmConfig,
   activateLlmConfig,
   deleteLlmConfig,
+  listAiUsage,
   type LlmConfigSummary,
   type LlmConfigCreateBody,
   type LlmConfigUpdateBody,
+  type AiUsageEntry,
 } from '@/lib/api';
 
 interface CodeRow {
@@ -31,7 +33,7 @@ interface UserRow {
   createdAt: string;
 }
 
-type TabKey = 'codes' | 'ai';
+type TabKey = 'codes' | 'ai' | 'usage';
 
 export default function AdminPage() {
   const [tab, setTab] = useState<TabKey>('codes');
@@ -102,6 +104,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'ai'} onClick={() => setTab('ai')}>
           AI 配置
+        </TabButton>
+        <TabButton active={tab === 'usage'} onClick={() => setTab('usage')}>
+          用量
         </TabButton>
       </div>
 
@@ -242,6 +247,7 @@ export default function AdminPage() {
       )}
 
       {tab === 'ai' && <AiConfigSection />}
+      {tab === 'usage' && <AiUsageSection />}
     </div>
   );
 }
@@ -633,6 +639,140 @@ function AiConfigSection() {
           </form>
         </section>
       )}
+    </div>
+  );
+}
+
+// ===== AI usage section =====
+
+function currentMonthIso(): string {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-01`;
+}
+
+function shiftMonth(period: string, delta: number): string {
+  const [yStr, mStr] = period.split('-');
+  const y = Number(yStr);
+  const m = Number(mStr) - 1; // 0-indexed
+  const d = new Date(Date.UTC(y, m + delta, 1));
+  const ny = d.getUTCFullYear();
+  const nm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${ny}-${nm}-01`;
+}
+
+function AiUsageSection() {
+  const [period, setPeriod] = useState<string>(currentMonthIso());
+  const [entries, setEntries] = useState<AiUsageEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh(p: string = period) {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await listAiUsage(p);
+      setEntries(r.entries);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh(period);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <h2 className="text-lg font-semibold">AI 用量</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPeriod(shiftMonth(period, -1))}
+              className="px-2 py-1 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              ←
+            </button>
+            <input
+              type="month"
+              value={period.slice(0, 7)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (/^\d{4}-\d{2}$/.test(v)) {
+                  setPeriod(`${v}-01`);
+                }
+              }}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
+            />
+            <button
+              onClick={() => setPeriod(shiftMonth(period, 1))}
+              className="px-2 py-1 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              →
+            </button>
+            <button
+              onClick={() => refresh(period)}
+              disabled={loading}
+              className="ml-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50"
+            >
+              {loading ? '刷新中…' : '刷新'}
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-zinc-500">加载中…</p>
+        ) : entries.length === 0 ? (
+          <p className="text-sm text-zinc-500">本月暂无用量数据。</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-zinc-500 text-left">
+                <tr>
+                  <th className="font-normal py-2">用户</th>
+                  <th className="font-normal">月份</th>
+                  <th className="font-normal text-right">生成</th>
+                  <th className="font-normal text-right">对话</th>
+                  <th className="font-normal text-right">输入 tokens</th>
+                  <th className="font-normal text-right">输出 tokens</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e) => (
+                  <tr key={e.userId} className="border-t border-zinc-100">
+                    <td className="py-2">
+                      <div className="font-medium text-zinc-800">{e.email}</div>
+                      {e.displayName && (
+                        <div className="text-xs text-zinc-500">{e.displayName}</div>
+                      )}
+                    </td>
+                    <td className="text-zinc-500">{e.periodStart.slice(0, 7)}</td>
+                    <td className="text-right tabular-nums">{e.planGenerationCount}</td>
+                    <td className="text-right tabular-nums">{e.chatMessageCount}</td>
+                    <td className="text-right tabular-nums">
+                      {e.inputTokens.toLocaleString()}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      {e.outputTokens.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

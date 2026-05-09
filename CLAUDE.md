@@ -84,6 +84,18 @@ Backend (`api/src/garmin/client.ts`) accepts `serviceUrl` and shadows `client.cl
 - Don't switch to redirecting the browser to Garmin's portal SSO with `service=garmin-trainer.uk/...`. Garmin SSO refuses arbitrary external redirect URIs; tested, fails silently.
 - Don't add the "save Garmin password" form back without coordinating the api side (MFA flow, encrypted-creds storage). The api currently has no endpoints for this.
 
+## Training routes / SSE consumer pattern
+
+The training UI lives under `(app)/training/`. The full plan-generation pipeline streams via SSE — `fetch` (not `EventSource`, because we need `credentials:'include'` for the BetterAuth cookie):
+
+- `POST /api/training/plans` (create) → emits `plan_created`, `context`, `schedule`, `workout`, `violations`, `summary_delta`, `monitoring`, `adjustment_rules`, `done|error`
+- `POST /api/training/plans/:id/regenerate-day` → emits `workout`, `violations`, `done|error`
+- `POST /api/training/plans/:id/chat` → emits `user_message_saved`, `text_delta`, `tool_call`, `workout_updated`, `assistant_message_saved`, `done|error`
+
+URLs are pre-built constants in `lib/api.ts`: `trainingPlanStreamUrl`, `trainingDayRegenerateUrl(planId)`, `trainingChatStreamUrl(planId)`.
+
+Consumer pattern: `await fetch(url, { method:'POST', credentials:'include', body: JSON.stringify(...) })`, then read `res.body!.getReader()` and parse `data: …\n\n` events line by line. Plan-generation errors return JSON (e.g. `402 quota_exceeded`) BEFORE the SSE stream opens — check `res.headers.get('content-type')`. `requireProAndQuota` gates the three endpoints above; quota is consumed only on success (after the `done` event), so failed turns don't burn the user's monthly budget.
+
 ## Auth client
 
 `signIn.email({ email, password })` and `signIn.username({ username, password })` are both exposed via the `usernameClient()` plugin. Frontend routes by `@` presence in the input. Server's `username` plugin is configured to lowercase for uniqueness but allow Chinese characters in display.
