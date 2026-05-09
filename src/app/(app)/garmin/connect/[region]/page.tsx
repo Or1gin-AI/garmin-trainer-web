@@ -216,6 +216,9 @@ export default function GarminConnectPage() {
           <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
             下方登录表单由 Garmin 官方的 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 渲染。
           </p>
+          <p className="text-sm text-red-600 mt-1 font-medium leading-relaxed">
+            你的 Garmin 密码直接提交到 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>，不经过我们的服务器。我们只收到 Garmin 返回的一次性登录票据用于换取 OAuth 令牌。
+          </p>
         </header>
 
         {displayError ? (
