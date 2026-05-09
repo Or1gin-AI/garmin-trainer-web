@@ -289,6 +289,10 @@ export default function NewTrainingPlanPage() {
             ? (data.error as string)
             : '生成失败';
         fatalRef.current = msg;
+        // Abort the stream so subsequent events can't keep mutating React
+        // state we're about to discard. The catch block in handleSubmit
+        // sees AbortError and falls through to the fatalRef branch.
+        abortRef.current?.abort();
         return;
       }
       default:

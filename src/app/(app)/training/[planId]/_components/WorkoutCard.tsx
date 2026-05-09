@@ -130,7 +130,7 @@ export function WorkoutCard({
         </div>
       )}
 
-      {(w.workoutStructure || w.targets.length > 0 || w.adaptation) && (
+      {(w.workoutStructure || (w.targets ?? []).length > 0 || w.adaptation) && (
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -150,11 +150,11 @@ export function WorkoutCard({
               </p>
             </div>
           )}
-          {w.targets.length > 0 && (
+          {(w.targets ?? []).length > 0 && (
             <div>
               <div className="text-xs text-zinc-500 mb-1">关键指标</div>
               <ul className="list-disc list-inside text-zinc-800 space-y-0.5">
-                {w.targets.map((t, i) => (
+                {(w.targets ?? []).map((t, i) => (
                   <li key={i}>{t}</li>
                 ))}
               </ul>
