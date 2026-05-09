@@ -9,6 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 type Tone = 'info' | 'warning' | 'danger' | 'success';
 type GAuthPayload = {
   serviceTicket?: unknown;
+  serviceUrl?: unknown;
   gauthInitHeight?: unknown;
   status?: unknown;
   openLiteBox?: unknown;
@@ -60,10 +61,9 @@ export default function GarminConnectPage() {
     initialized.current = true;
 
     const ssoBase = region === 'cn' ? 'https://sso.garmin.cn/sso' : 'https://sso.garmin.com/sso';
-    const ssoEmbed = `${ssoBase}/embed`;
     const widgetSrc = `${ssoBase}/js/gauth-widget.js?20230127`;
 
-    const submitTicket = async (ticket: string) => {
+    const submitTicket = async (ticket: string, serviceUrl: string | null) => {
       if (submitted.current) return;
       submitted.current = true;
       setStatusMessage('登录成功，正在与服务器绑定…', 'success');
@@ -72,7 +72,7 @@ export default function GarminConnectPage() {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticket }),
+          body: JSON.stringify({ ticket, serviceUrl }),
         });
         let data: {
           ok?: boolean;
@@ -102,10 +102,33 @@ export default function GarminConnectPage() {
       }
     };
 
-    const onTicket = (data: unknown) => {
-      const ticket = (data as GAuthPayload | null)?.serviceTicket;
-      if (ticket) submitTicket(String(ticket));
+    const tryConsumeTicket = (data: unknown) => {
+      const payload = (data ?? {}) as GAuthPayload;
+      const ticket = payload.serviceTicket;
+      if (!ticket) return false;
+      const serviceUrl =
+        typeof payload.serviceUrl === 'string' && payload.serviceUrl ? payload.serviceUrl : null;
+      submitTicket(String(ticket), serviceUrl);
+      return true;
     };
+
+    // Fallback channel: catch postMessages directly off the window in case the
+    // gauth-widget origin filter rejects them. Garmin's iframe sometimes posts
+    // a {status:'SUCCESS', serviceTicket, serviceUrl} envelope that the widget
+    // event bus drops if the parent_url template var was empty server-side.
+    const rawMessageListener = (event: MessageEvent) => {
+      if (typeof event.origin !== 'string' || !event.origin.includes('garmin.')) return;
+      let parsed: unknown = event.data;
+      if (typeof parsed === 'string') {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch {
+          return;
+        }
+      }
+      tryConsumeTicket(parsed);
+    };
+    window.addEventListener('message', rawMessageListener);
 
     const script = document.createElement('script');
     script.src = widgetSrc;
@@ -164,13 +187,20 @@ export default function GarminConnectPage() {
             makeIframeVisible();
           }
           setStatusMessage('Garmin 官方登录表单已加载，请直接在下方完成登录', 'info');
-        } else if (detail?.status === 'SUCCESS') {
-          onTicket(detail);
-        } else if (detail?.openLiteBox) {
-          setStatusMessage('Garmin 打开了附加验证，请按官方页面继续', 'warning');
+          return;
         }
+        if (detail?.openLiteBox) {
+          setStatusMessage('Garmin 打开了附加验证，请按官方页面继续', 'warning');
+          return;
+        }
+        tryConsumeTicket(detail);
       });
-      addListener('SUCCESS', (_e, d) => onTicket(d));
+      addListener('SUCCESS', (_e, d) => {
+        tryConsumeTicket(d);
+      });
+      addListener('AUTHENTICATED', (_e, d) => {
+        tryConsumeTicket(d);
+      });
       addListener('FAIL', () => {
         setStatusMessage('账号或密码错误，请在下方表单中重新输入', 'danger');
       });
@@ -194,21 +224,26 @@ export default function GarminConnectPage() {
         observer.observe(widgetRootRef.current, { childList: true, subtree: true });
       }
 
-      // Do not set `target` or call checkAuthentication(): both can create a
-      // ticket for the wrong service URL or navigate away before our POST runs.
+      // Mode C from gauth-widget.js docs (line 174-186):
+      //   no `redirectAfterAccountLoginUrl` + `consumeServiceTicket: false`
+      //   → widget posts {status:'SUCCESS', serviceTicket, serviceUrl} to parent
+      //
+      // Mode A (`redirectAfterAccountLoginUrl: sso/embed`) traps the iframe in
+      // an infinite `sso/embed?ticket=...` recursion (the embed.html page
+      // re-runs the widget and redirects itself), so the parent never gets the
+      // ticket. Backend dynamically uses the `serviceUrl` Garmin returns as
+      // `login-url` for the OAuth1 exchange — that's why we forward it.
       win.GAUTH.init({
         gauthHost: ssoBase,
         clientId: 'GarminConnect',
         locale: region === 'cn' ? 'zh_CN' : 'en_US',
         id: 'gauth-widget',
-        redirectAfterAccountLoginUrl: ssoEmbed,
-        redirectAfterAccountCreationUrl: ssoEmbed,
         rememberMeShown: false,
         rememberMeChecked: false,
         createAccountShown: true,
         openCreateAccount: false,
         displayNameShown: false,
-        consumeServiceTicket: true,
+        consumeServiceTicket: false,
         initialFocus: true,
         embedWidget: false,
         socialEnabled: false,
@@ -259,6 +294,7 @@ export default function GarminConnectPage() {
       disposed = true;
       initialized.current = false;
       widgetCleanup?.();
+      window.removeEventListener('message', rawMessageListener);
       script.remove();
     };
   }, [region, router, setStatusMessage]);
