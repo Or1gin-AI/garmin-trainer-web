@@ -96,29 +96,29 @@ export default function SubscriptionPage() {
         )}
       </section>
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4 max-w-2xl">
         <div>
           <h2 className="text-lg font-semibold">购买卡密</h2>
           <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900 space-y-1">
             <p className="font-medium">购买流程：</p>
             <ol className="list-decimal pl-5 space-y-0.5">
-              <li>在下方页面完成支付</li>
+              <li>点击下方按钮在新标签页打开购买页并完成支付</li>
               <li>
                 支付成功后页面会显示一串卡密（格式{' '}
                 <code className="font-mono">XXXX-XXXX-XXXX-XXXX</code>）。填写邮箱后卡密会发送到邮箱留底，但仍<strong>建议立即复制并兑换</strong>
               </li>
-              <li>将卡密粘贴到下方「兑换卡密」栏并提交即可激活会员</li>
+              <li>回到本页面将卡密粘贴到下方「兑换卡密」栏并提交即可激活会员</li>
             </ol>
           </div>
         </div>
-        <div className="rounded-lg overflow-hidden border border-zinc-200">
-          <iframe
-            src="https://pay.ldxp.cn/item/3xvbsa"
-            className="w-full block"
-            style={{ height: '600px', border: 0 }}
-            title="购买卡密"
-          />
-        </div>
+        <a
+          href="https://pay.ldxp.cn/item/3xvbsa"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition"
+        >
+          前往购买 ↗
+        </a>
       </section>
 
       <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4 max-w-2xl">
