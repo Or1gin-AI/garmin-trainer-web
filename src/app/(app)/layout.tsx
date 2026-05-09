@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
@@ -40,9 +41,20 @@ export default function AppLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-zinc-200 bg-white sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/dashboard" className="font-semibold tracking-tight">
-            Garmin Trainer
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 font-semibold tracking-tight"
+          >
+            <Image
+              src="/logo.jpg"
+              alt="Garmin Trainer"
+              width={44}
+              height={44}
+              priority
+              className="rounded-lg"
+            />
+            <span>Garmin Trainer</span>
           </Link>
           <nav className="flex items-center gap-1">
             {nav.map((item) => {

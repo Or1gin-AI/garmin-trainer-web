@@ -1,9 +1,18 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="max-w-2xl w-full text-center space-y-8">
+        <Image
+          src="/logo.jpg"
+          alt="Garmin Trainer"
+          width={112}
+          height={112}
+          priority
+          className="mx-auto rounded-2xl shadow-sm"
+        />
         <div className="inline-block px-3 py-1 text-xs uppercase tracking-widest rounded-full bg-emerald-100 text-emerald-800">
           Garmin CN → Global
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signUp } from '@/lib/auth-client';
@@ -69,6 +70,14 @@ export default function SignUpPage() {
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
+          <Image
+            src="/logo.jpg"
+            alt="Garmin Trainer"
+            width={72}
+            height={72}
+            priority
+            className="mx-auto rounded-2xl mb-4"
+          />
           <h1 className="text-2xl font-bold">注册账号</h1>
           <p className="text-sm text-zinc-500 mt-1">
             已有账号？
