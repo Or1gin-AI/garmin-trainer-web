@@ -54,13 +54,13 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <header>
+    <div className="space-y-8">
+      <header className="max-w-2xl">
         <h1 className="text-3xl font-bold">订阅</h1>
         <p className="text-zinc-500 mt-1">使用卡密激活或续期 Pro 订阅。</p>
       </header>
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-3">
+      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-3 max-w-2xl">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-zinc-500">当前套餐</p>
@@ -105,10 +105,9 @@ export default function SubscriptionPage() {
               <li>在下方页面完成支付</li>
               <li>
                 支付成功后页面会显示一串卡密（格式{' '}
-                <code className="font-mono">XXXX-XXXX-XXXX-XXXX</code>），请
-                <strong>立即复制并妥善保存</strong>，关闭页面后无法找回
+                <code className="font-mono">XXXX-XXXX-XXXX-XXXX</code>）。填写邮箱后卡密会发送到邮箱留底，但仍<strong>建议立即复制并兑换</strong>
               </li>
-              <li>将卡密粘贴到下方「兑换卡密」栏并提交即可激活 Pro</li>
+              <li>将卡密粘贴到下方「兑换卡密」栏并提交即可激活会员</li>
             </ol>
           </div>
         </div>
@@ -116,13 +115,13 @@ export default function SubscriptionPage() {
           <iframe
             src="https://pay.ldxp.cn/item/3xvbsa"
             className="w-full block"
-            style={{ height: '900px', border: 0 }}
+            style={{ height: '600px', border: 0 }}
             title="购买卡密"
           />
         </div>
       </section>
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4 max-w-2xl">
         <h2 className="text-lg font-semibold">兑换卡密</h2>
         <form onSubmit={redeem} className="flex gap-3">
           <input
@@ -143,7 +142,7 @@ export default function SubscriptionPage() {
         {success && <p className="text-sm text-emerald-700">{success}</p>}
       </section>
 
-      <section className="text-sm text-zinc-500 space-y-2">
+      <section className="text-sm text-zinc-500 space-y-2 max-w-2xl">
         <p className="font-medium text-zinc-700">Pro 权益</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>每 2 小时自动同步一次新增运动记录</li>
