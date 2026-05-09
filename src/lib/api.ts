@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = API_BASE;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public detail?: unknown) {
@@ -19,9 +21,9 @@ async function request<T>(
     },
   });
   if (!res.ok) {
-    let body: any = null;
+    let body: { error?: string } | null = null;
     try {
-      body = await res.json();
+      body = (await res.json()) as { error?: string };
     } catch {}
     throw new ApiError(
       res.status,
@@ -147,3 +149,122 @@ export interface SyncJob {
   startedAt: string | null;
   finishedAt: string | null;
 }
+
+// ===== Training plans =====
+
+export type Sport =
+  | 'running'
+  | 'cycling'
+  | 'swimming'
+  | 'rest'
+  | 'strength'
+  | 'mobility';
+
+export type TargetMetric = 'heart_rate' | 'pace' | 'power' | 'mixed' | 'none';
+export type WorkoutStatus = 'planned' | 'completed' | 'skipped' | 'regenerating';
+export type PlanStatus = 'generating' | 'ready' | 'failed' | 'archived';
+
+export const SPORT_LABELS: Record<Sport, string> = {
+  running: '🏃 跑步',
+  cycling: '🚴 骑行',
+  swimming: '🏊 游泳',
+  rest: '💤 休息',
+  strength: '💪 力量',
+  mobility: '🧘 活动恢复',
+};
+
+export interface TrainingPlanSummary {
+  id: string;
+  weekStartDate: string; // 'YYYY-MM-DD'
+  status: PlanStatus;
+  summary: string | null;
+  createdAt: string;
+}
+
+export interface TrainingWorkout {
+  id: string;
+  planId: string;
+  dayIndex: number;
+  date: string;
+  sport: Sport;
+  templateId: string;
+  workoutType: string | null;
+  title: string;
+  intensity: 'low' | 'medium' | 'high' | null;
+  durationMinutes: number | null;
+  distanceKm: number | null;
+  targetMetric: TargetMetric;
+  targetHeartRate: string;
+  targetPace: string;
+  targetPower: string;
+  workoutStructure: string;
+  targets: string[];
+  parameterSource: unknown;
+  adaptation: string | null;
+  status: WorkoutStatus;
+}
+
+export interface TrainingChatMessage {
+  id: string;
+  planId: string;
+  userId: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  toolCalls: unknown;
+  toolResultRefs: unknown;
+  createdAt: string;
+}
+
+export interface TrainingPlanDetail {
+  plan: TrainingPlanSummary & {
+    request: unknown;
+    monitoring: string | null;
+    adjustmentRules: string | null;
+    modelMeta: unknown;
+    athleteProfileSnapshot: unknown;
+  };
+  workouts: TrainingWorkout[];
+  messages: TrainingChatMessage[];
+}
+
+export interface TrainingPlanRequest {
+  goal?: string;
+  raceDate?: string | null;
+  goalDistance?: string | null;
+  weekStartDate: string;
+  daysPerWeek: number;
+  preferredRestDay?: string;
+  availableTime?: string;
+  injuries?: string;
+  notes?: string;
+  sports: { running: boolean; cycling: boolean; swimming: boolean };
+  sportPriorities?: Sport[];
+  preferredKeyWorkoutDays?: string[];
+  maxHardSessionsPerWeek: number | null;
+  targetMetricPreference: 'auto' | 'heart_rate' | 'pace';
+}
+
+export async function listTrainingPlans(): Promise<{ plans: TrainingPlanSummary[] }> {
+  return api.get<{ plans: TrainingPlanSummary[] }>('/api/training/plans');
+}
+
+export async function getTrainingPlan(id: string): Promise<TrainingPlanDetail> {
+  return api.get<TrainingPlanDetail>(
+    `/api/training/plans/${encodeURIComponent(id)}`,
+  );
+}
+
+export async function patchTrainingWorkout(
+  id: string,
+  body: { status: WorkoutStatus },
+): Promise<TrainingWorkout> {
+  const r = await api.patch<{ workout: TrainingWorkout }>(
+    `/api/training/workouts/${encodeURIComponent(id)}`,
+    body,
+  );
+  return r.workout;
+}
+
+export const trainingPlanStreamUrl = `${API_BASE}/api/training/plans`;
+export const trainingDayRegenerateUrl = (planId: string) =>
+  `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/regenerate-day`;

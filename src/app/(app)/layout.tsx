@@ -8,6 +8,7 @@ import { useSession, signOut } from '@/lib/auth-client';
 
 const NAV = [
   { href: '/dashboard', label: '同步' },
+  { href: '/training', label: '训练' },
   { href: '/garmin', label: 'Garmin 账号' },
   { href: '/subscription', label: '订阅' },
 ];
