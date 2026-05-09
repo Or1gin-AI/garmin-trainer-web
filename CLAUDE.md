@@ -45,17 +45,44 @@ All `(app)` pages are `'use client'`. `(app)/layout.tsx` calls `useSession()` an
 
 ## Garmin connect page is fragile — read before changing
 
-`(app)/garmin/connect/[region]/page.tsx` injects Garmin's official `gauth-widget.js` script and listens for a JS event with the service ticket. The integration is sensitive:
+`(app)/garmin/connect/[region]/page.tsx` constructs the Garmin SSO iframe URL by hand and listens for `postMessage` from `sso.garmin.{cn,com}`. **We deliberately do NOT load `gauth-widget.js`.** It's fragile and forces wrong defaults; the page does its job (signin template + casEmbedSuccess.html postMessage flow) when called with the right URL params, and that's all we need.
 
-- The `<script>` is appended to `document.body` once per mount (guarded by `initialized.current`). Hot reload re-runs the effect; the cleanup removes the tag but `window.GAUTH` may already be polluted — refresh the tab if you hit "GAUTH already initialized" type errors during dev.
-- We run the widget in "Mode C" per the gauth-widget docstring (line 174-186): no `redirectAfterAccountLoginUrl` + `consumeServiceTicket: false`. In this mode the widget posts `{status:'SUCCESS', serviceTicket, serviceUrl}` back to the parent, and the SUCCESS / MESSAGE-POSTED events expose the ticket. We also keep a raw `window.addEventListener('message', ...)` as a fallback in case the widget's origin filter rejects the message (Garmin's signin template leaves `parent_url` empty server-side).
-- Do **not** set `redirectAfterAccountLoginUrl: sso/embed`. That puts the iframe in an infinite `sso/embed?ticket=...` recursion: the embed.html page re-runs the widget, calls `checkAuthentication()`, and `document.location.href`s itself with the new ticket — never postMessaging the parent.
-- Do **not** set GAUTH's `target` option. With it set, the widget runs `window.location.href = target + "?serviceTicket=..."` on success, navigating the parent page away before the callback POST can finish.
-- Do **not** call `GAUTH.checkAuthentication()` from a non-Garmin origin. It does a cross-origin XHR to the SSO probe endpoint and always CORS-fails, just to surface noisy "Network error" events.
-- `embedWidget` semantics are inverted from the name: `true` means `document.location.href = sso/signin?...` (full-page navigation away), `false` means `appendIFrame(...)` inline. Always use `false`.
-- `MESSAGE-POSTED` also fires for non-ticket cases (`gauthInitHeight` for layout adjustment, `openLiteBox` for additional verification). Don't blindly treat any MESSAGE-POSTED as a ticket — check for `serviceTicket`.
-- Once a ticket is captured, POST `{ ticket, serviceUrl }` to `${NEXT_PUBLIC_API_URL}/api/garmin/callback/:region`. `serviceUrl` is whatever Garmin returned alongside the ticket; the backend monkey-patches the lib's `login-url` to that URL because the lib hardcodes `sso/embed` and CAS rejects mismatches. The api server requires a BetterAuth session cookie — works because both domains share `garmin-trainer.uk`.
-- Don't switch back to redirecting the browser to Garmin's portal SSO with `service=our_callback`. Garmin SSO refuses arbitrary external redirect URIs; the callback never fires. (We tried; it fails silently.)
+The exact iframe URL we use:
+
+```
+https://sso.garmin.{cn,com}/sso/signin
+  ?clientId=GarminConnect
+  &consumeServiceTicket=false
+  &locale={zh_CN|en_US}
+  &embedWidget=false
+  &service=https://sso.garmin.{cn,com}/sso/embed
+  &source=<parent URL>
+```
+
+Each parameter is load-bearing. **Empirically verified end-to-end with a valid CN account.** Reasoning:
+
+- `service=sso.garmin.{cn,com}/sso/embed`: Garmin's CAS whitelist rejects non-Garmin service URLs. `sso/embed` is whitelisted. Bonus: `@gooin/garmin-connect`'s `getOauth1Token` hardcodes `login-url=GARMIN_SSO_EMBED`, so the ticket is bound to the same URL the lib presents to the OAuth1 exchange — no monkey-patch required.
+- `consumeServiceTicket=false`: this is the switch in `casEmbedSuccess.html` between "send `{status:SUCCESS, serviceTicket, serviceUrl}` to parent (no nav)" and "consume the ticket via JSONP". We need the ticket on our side, so `false`.
+- **No `redirectAfterAccountLoginUrl` / `redirectAfterAccountCreationUrl`**: when EITHER is set, `casEmbedSuccess.html` runs `top.location.href = response_url`, navigating our parent page to `sso.garmin.{cn,com}/sso/embed?ticket=...`. The flow is dead at that point — that's what we kept seeing in production.
+- `source=<parent URL>`: server uses this to set `parent_url` in the rendered templates so `XD.postMessage` targets us correctly.
+- `embedWidget=false`: name is inverted — `false` means inline iframe, `true` means `document.location.href` (full-page nav). Counterintuitive but verified in `gauth-widget.js` line 598-611.
+- `clientId=GarminConnect`: the only clientId the upstream has been observed to use.
+
+Listener: a single `window.addEventListener('message', ...)` filters by `event.origin === ssoOrigin`, parses `event.data` as JSON if it's a string, then dispatches:
+- `gauthInitHeight` / `gauthHeight` → resize iframe
+- `openLiteBox` → reCaptcha lightbox warning
+- `status === 'SUCCESS' && serviceTicket` → POST `{ticket, serviceUrl}` to `/api/garmin/callback/:region`
+- `status === 'FAIL' / 'ACCOUNT_LOCKED' / 'ACCOUNT_DISABLED'` → user-facing error
+
+Backend (`api/src/garmin/client.ts`) accepts `serviceUrl` and shadows `client.client.url.GARMIN_SSO_EMBED` for the lib's `getOauth1Token` call. With our current config the override is a no-op (serviceUrl already equals sso/embed), but the plumbing stays in case Garmin ever switches what URL the ticket gets bound to.
+
+### Don't
+
+- Don't reintroduce `gauth-widget.js`. Its `loadGAuth` defaults `service` to the parent URL when `redirectAfterAccountLoginUrl` is unset → CAS rejects → "发生意外错误". And setting `redirectAfter*` triggers `casEmbedSuccess.html`'s `top.location.href` parent-window navigation → flow is dead.
+- Don't set `target` in any equivalent config. The widget's `target` and the success page's `redirectAfter*` both navigate the parent away.
+- Don't change `service=sso/embed` without also patching `@gooin/garmin-connect`'s `login-url`. CAS service binding must match what the OAuth1 exchange presents.
+- Don't switch to redirecting the browser to Garmin's portal SSO with `service=garmin-trainer.uk/...`. Garmin SSO refuses arbitrary external redirect URIs; tested, fails silently.
+- Don't add the "save Garmin password" form back without coordinating the api side (MFA flow, encrypted-creds storage). The api currently has no endpoints for this.
 
 ## Auth client
 
@@ -78,6 +105,5 @@ NEXT_PUBLIC_API_URL=https://api.garmin-trainer.uk
 
 ## Don't
 
-- Don't add `'use server'` actions that hit Garmin SSO from the server side — Garmin's anti-bot will block server-side IP, and the embed widget contract requires running in the user's browser anyway.
-- Don't move `/garmin/connect/[region]` out of the `(app)` group — the auth gate must run before the widget loads, otherwise an unauthed visitor can submit a ticket that the api just rejects with 401.
-- Don't add the "save Garmin password" form back without coordinating the api side (MFA flow, encrypted-creds storage). The api currently has no endpoints for this.
+- Don't add `'use server'` actions that hit Garmin SSO from the server side — Garmin's anti-bot will block server-side IP (the iframe load requires real browser headers/Referer), and the SSO postMessage contract requires running in the user's browser anyway.
+- Don't move `/garmin/connect/[region]` out of the `(app)` group — the auth gate must run before the iframe loads, otherwise an unauthed visitor can submit a ticket that the api just rejects with 401.
