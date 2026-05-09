@@ -135,7 +135,13 @@ export interface SyncJob {
     percent?: number | null;
     logs?: { at: string; level: string; message: string }[];
   } | null;
-  result: { uploaded?: number; skipped?: number; failed?: number } | null;
+  result: {
+    uploaded?: number;
+    skipped?: number;
+    failed?: number;
+    cnToGlobal?: { uploaded: number; skipped: number; failed: number };
+    globalToCn?: { uploaded: number; skipped: number; failed: number };
+  } | null;
   error: string | null;
   queuedAt: string;
   startedAt: string | null;

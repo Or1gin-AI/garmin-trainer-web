@@ -35,7 +35,6 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<GarminAccountSummary[]>([]);
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [current, setCurrent] = useState<SyncJob | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -72,35 +71,22 @@ export default function DashboardPage() {
   const globalReady = accounts.find((a) => a.region === 'global')?.configured;
   const ready = cnReady && globalReady;
 
-  async function startSync(mode: 'incremental' | 'history') {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await api.post('/api/sync/jobs', { mode });
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">同步控制台</h1>
-          <p className="text-zinc-500 mt-1">
-            把国区运动记录同步到国际区。
-            {me?.plan.isProActive ? (
-              <span className="ml-2 text-emerald-600 font-medium">
-                Pro · 每 2 小时自动同步
-              </span>
-            ) : (
-              <span className="ml-2 text-zinc-500">免费用户 · 仅手动同步</span>
-            )}
-          </p>
-        </div>
+      <header>
+        <h1 className="text-3xl font-bold">同步控制台</h1>
+        <p className="text-zinc-500 mt-1">
+          国区与国际区运动记录双向自动同步。
+          {me?.plan.isProActive ? (
+            <span className="ml-2 text-emerald-600 font-medium">
+              Pro · 每 2 小时自动同步一次
+            </span>
+          ) : (
+            <span className="ml-2 text-zinc-500">
+              升级 Pro 后开启每 2 小时自动同步
+            </span>
+          )}
+        </p>
       </header>
 
       {!ready && (
@@ -125,50 +111,29 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">手动同步</h2>
-          {current && <StatusPill status={current.status} />}
-        </div>
-
-        {current && (current.status === 'queued' || current.status === 'running') ? (
-          <div className="space-y-3">
-            <p className="text-sm text-zinc-600">
-              {current.progress?.message || '准备中…'}
-            </p>
-            <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${current.progress?.percent ?? 0}%` }}
-              />
-            </div>
-            <div className="text-xs text-zinc-500 grid grid-cols-4 gap-4">
-              <span>扫描 {current.progress?.scanned ?? 0}</span>
-              <span>上传 {current.progress?.uploaded ?? 0}</span>
-              <span>跳过 {current.progress?.skipped ?? 0}</span>
-              <span>失败 {current.progress?.failed ?? 0}</span>
-            </div>
+      {current && (current.status === 'queued' || current.status === 'running') && (
+        <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">当前同步</h2>
+            <StatusPill status={current.status} />
           </div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => startSync('incremental')}
-              disabled={!ready || submitting}
-              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 hover:bg-emerald-700"
-            >
-              {submitting ? '提交中…' : '开始增量同步'}
-            </button>
-            <button
-              onClick={() => startSync('history')}
-              disabled={!ready || submitting || !me?.plan.isProActive}
-              title={!me?.plan.isProActive ? '历史全量迁移仅 Pro 用户可用' : ''}
-              className="px-4 py-2 rounded-lg border border-zinc-300 hover:border-zinc-400 disabled:opacity-50"
-            >
-              历史全量迁移 {!me?.plan.isProActive && '(Pro)'}
-            </button>
+          <p className="text-sm text-zinc-600">
+            {current.progress?.message || '准备中…'}
+          </p>
+          <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 transition-all"
+              style={{ width: `${current.progress?.percent ?? 0}%` }}
+            />
           </div>
-        )}
-      </section>
+          <div className="text-xs text-zinc-500 grid grid-cols-4 gap-4">
+            <span>扫描 {current.progress?.scanned ?? 0}</span>
+            <span>上传 {current.progress?.uploaded ?? 0}</span>
+            <span>跳过 {current.progress?.skipped ?? 0}</span>
+            <span>失败 {current.progress?.failed ?? 0}</span>
+          </div>
+        </section>
+      )}
 
       <section className="bg-white border border-zinc-200 rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-4">最近同步记录</h2>
@@ -179,7 +144,6 @@ export default function DashboardPage() {
             <thead className="text-zinc-500 text-left">
               <tr>
                 <th className="font-normal py-2">时间</th>
-                <th className="font-normal">模式</th>
                 <th className="font-normal">触发</th>
                 <th className="font-normal">状态</th>
                 <th className="font-normal">上传/跳过/失败</th>
@@ -189,7 +153,6 @@ export default function DashboardPage() {
               {jobs.map((j) => (
                 <tr key={j.id} className="border-t border-zinc-100">
                   <td className="py-2">{fmtDate(j.queuedAt)}</td>
-                  <td>{j.mode === 'incremental' ? '增量' : '历史'}</td>
                   <td>{j.trigger === 'cron' ? '自动' : '手动'}</td>
                   <td>
                     <StatusPill status={j.status} />
