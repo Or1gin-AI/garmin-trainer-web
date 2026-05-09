@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+type Tone = 'info' | 'warning' | 'danger' | 'success';
+type GAuthPayload = {
+  serviceTicket?: unknown;
+  gauthInitHeight?: unknown;
+  status?: unknown;
+  openLiteBox?: unknown;
+  errorDetails?: unknown;
+};
+type GAuthHandler = (e: unknown, data?: unknown) => void;
 
 declare global {
   interface Window {
@@ -14,7 +24,8 @@ declare global {
       checkAuthentication: () => void;
     };
     GAUTH_Events?: {
-      addListener: (event: string, handler: (e: unknown, data?: any) => void) => void;
+      addListener: (event: string, handler: GAuthHandler) => void;
+      removeListener?: (event: string, handler: GAuthHandler) => void;
     };
   }
 }
@@ -28,19 +39,21 @@ export default function GarminConnectPage() {
     | null;
 
   const [status, setStatus] = useState('正在加载 Garmin 登录小组件…');
-  const [tone, setTone] = useState<'info' | 'warning' | 'danger' | 'success'>('info');
+  const [tone, setTone] = useState<Tone>('info');
   const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
   const submitted = useRef(false);
+  const widgetRootRef = useRef<HTMLDivElement | null>(null);
 
-  function setStatusMessage(message: string, t: typeof tone = 'info') {
+  const setStatusMessage = useCallback((message: string, t: Tone = 'info') => {
     setStatus(message);
     setTone(t);
-  }
+  }, []);
+
+  const invalidRegionError = !region ? '无效区域，请回到上一页重新选择' : null;
 
   useEffect(() => {
     if (!region) {
-      setError('无效区域，请回到上一页重新选择');
       return;
     }
     if (initialized.current) return;
@@ -61,13 +74,21 @@ export default function GarminConnectPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ticket }),
         });
-        const data = (await res.json()) as {
-          ok: boolean;
+        let data: {
+          ok?: boolean;
           error?: string;
           profile?: { fullName?: string; userName?: string };
-        };
+        } = {};
+        try {
+          data = await res.json();
+        } catch {}
         if (!res.ok || !data.ok) {
-          throw new Error(data.error || '绑定失败，请稍后重试');
+          throw new Error(
+            data.error ||
+              (res.status === 401
+                ? '登录态已过期，请重新登录后再连接 Garmin'
+                : '绑定失败，请稍后重试'),
+          );
         }
         const name = data.profile?.fullName || data.profile?.userName || '';
         const url = new URL('/garmin', window.location.origin);
@@ -81,8 +102,8 @@ export default function GarminConnectPage() {
       }
     };
 
-    const onTicket = (data: any) => {
-      const ticket = data?.serviceTicket;
+    const onTicket = (data: unknown) => {
+      const ticket = (data as GAuthPayload | null)?.serviceTicket;
       if (ticket) submitTicket(String(ticket));
     };
 
@@ -92,56 +113,94 @@ export default function GarminConnectPage() {
     script.onerror = () => {
       setError('无法加载 Garmin 登录脚本（被网络拦截或 Garmin 不可达）。请检查网络后重试。');
     };
+    let disposed = false;
+    let widgetCleanup: (() => void) | null = null;
     script.onload = () => {
+      if (disposed) return;
       const win = window;
       if (!win.GAUTH || !win.GAUTH_Events) {
         setError('Garmin 小组件未加载，请刷新重试');
         return;
       }
 
-      win.GAUTH_Events.addListener('MESSAGE-POSTED', (_e, d) => {
-        if (d?.gauthInitHeight) {
-          const frame = document.querySelector<HTMLIFrameElement>(
-            'iframe.gauth-iframe, #gauth-widget iframe',
-          );
+      const getAuthFrame = () =>
+        widgetRootRef.current?.querySelector<HTMLIFrameElement>('iframe.gauth-iframe, iframe') ??
+        null;
+
+      const makeIframeVisible = () => {
+        const frame = getAuthFrame();
+        if (!frame) return false;
+        if (!frame.style.height || frame.style.height === '0px') {
+          frame.style.height = '760px';
+        }
+        frame.style.width = '100%';
+        frame.style.maxWidth = '100%';
+        frame.style.border = '0';
+        frame.style.background = 'white';
+        return true;
+      };
+
+      const ensureWidgetLoaded = () => {
+        if (getAuthFrame()) {
+          makeIframeVisible();
+          return;
+        }
+        setStatusMessage('正在加载 Garmin 官方登录表单…', 'info');
+        win.GAUTH?.loadGAuth();
+      };
+
+      const listeners: Array<[string, GAuthHandler]> = [];
+      const addListener = (name: string, handler: GAuthHandler) => {
+        listeners.push([name, handler]);
+        win.GAUTH_Events?.addListener(name, handler);
+      };
+
+      addListener('MESSAGE-POSTED', (_e, d) => {
+        const detail = d as GAuthPayload | null;
+        if (detail?.gauthInitHeight) {
+          const frame = getAuthFrame();
           if (frame) {
-            frame.style.height = `${Number(d.gauthInitHeight) + 20}px`;
-            frame.style.width = '100%';
-            frame.style.border = '0';
+            frame.style.height = `${Number(detail.gauthInitHeight) + 20}px`;
+            makeIframeVisible();
           }
           setStatusMessage('Garmin 官方登录表单已加载，请直接在下方完成登录', 'info');
-        } else if (d?.status === 'SUCCESS') {
-          onTicket(d);
-        } else if (d?.openLiteBox) {
+        } else if (detail?.status === 'SUCCESS') {
+          onTicket(detail);
+        } else if (detail?.openLiteBox) {
           setStatusMessage('Garmin 打开了附加验证，请按官方页面继续', 'warning');
         }
       });
-      win.GAUTH_Events.addListener('AUTHENTICATED', (_e, d) => onTicket(d));
-      win.GAUTH_Events.addListener('SUCCESS', (_e, d) => onTicket(d));
-      win.GAUTH_Events.addListener('FAIL', () => {
+      addListener('SUCCESS', (_e, d) => onTicket(d));
+      addListener('FAIL', () => {
         setStatusMessage('账号或密码错误，请在下方表单中重新输入', 'danger');
       });
-      win.GAUTH_Events.addListener('ACCOUNT_LOCKED', () => {
+      addListener('ACCOUNT_LOCKED', () => {
         setStatusMessage('Garmin 账号被暂时锁定，请稍后再试', 'danger');
       });
-      win.GAUTH_Events.addListener('ACCOUNT_DISABLED', () => {
+      addListener('ACCOUNT_DISABLED', () => {
         setStatusMessage('Garmin 账号不可用，请先在官方页面确认账号状态', 'danger');
       });
-      win.GAUTH_Events.addListener('ERROR', (_e, d: any) => {
-        const detail = d?.errorDetails || d?.status || '未知错误';
-        // "Network error" before login is normal — Garmin probes for an
-        // existing session and refuses cross-origin without auth. Don't
-        // show as fatal; the widget will still render the form.
+      addListener('ERROR', (_e, d) => {
+        const payload = d as GAuthPayload | null;
+        const detail = payload?.errorDetails || payload?.status || '未知错误';
         if (detail === 'Network error') return;
-        setStatusMessage(`Garmin 登录组件异常：${detail}`, 'danger');
+        setStatusMessage(`Garmin 登录组件异常：${String(detail)}`, 'danger');
       });
 
+      const observer = new MutationObserver(() => {
+        makeIframeVisible();
+      });
+      if (widgetRootRef.current) {
+        observer.observe(widgetRootRef.current, { childList: true, subtree: true });
+      }
+
+      // Do not set `target` or call checkAuthentication(): both can create a
+      // ticket for the wrong service URL or navigate away before our POST runs.
       win.GAUTH.init({
         gauthHost: ssoBase,
         clientId: 'GarminConnect',
         locale: region === 'cn' ? 'zh_CN' : 'en_US',
         id: 'gauth-widget',
-        target: ssoEmbed,
         redirectAfterAccountLoginUrl: ssoEmbed,
         redirectAfterAccountCreationUrl: ssoEmbed,
         rememberMeShown: false,
@@ -151,7 +210,7 @@ export default function GarminConnectPage() {
         displayNameShown: false,
         consumeServiceTicket: true,
         initialFocus: true,
-        embedWidget: true,
+        embedWidget: false,
         socialEnabled: false,
         generateExtraServiceTicket: false,
         generateTwoExtraServiceTickets: false,
@@ -173,22 +232,36 @@ export default function GarminConnectPage() {
         rememberMyBrowserChecked: false,
       });
 
-      win.GAUTH.checkAuthentication();
-      // Force-load the form if Garmin's session probe doesn't trigger one
-      setTimeout(() => {
-        if (!document.querySelector('#gauth-widget iframe')) {
-          win.GAUTH?.loadGAuth();
-        }
+      ensureWidgetLoaded();
+      const heightTimer = window.setTimeout(() => {
+        if (!makeIframeVisible()) ensureWidgetLoaded();
       }, 1500);
+      const slowTimer = window.setTimeout(() => {
+        if (!getAuthFrame() && !submitted.current) {
+          setStatusMessage('Garmin 登录表单加载较慢，请稍等或刷新重试', 'warning');
+        }
+      }, 5000);
+
+      widgetCleanup = () => {
+        window.clearTimeout(heightTimer);
+        window.clearTimeout(slowTimer);
+        observer.disconnect();
+        for (const [name, handler] of listeners) {
+          win.GAUTH_Events?.removeListener?.(name, handler);
+        }
+      };
     };
 
     document.body.appendChild(script);
 
     return () => {
       // Avoid double-init on hot reload
+      disposed = true;
+      initialized.current = false;
+      widgetCleanup?.();
       script.remove();
     };
-  }, [region, router]);
+  }, [region, router, setStatusMessage]);
 
   const toneClass = {
     info: 'bg-blue-50 border-blue-200 text-blue-800',
@@ -198,6 +271,7 @@ export default function GarminConnectPage() {
   }[tone];
 
   const regionLabel = region === 'cn' ? '国区 (garmin.cn)' : region === 'global' ? '国际区 (garmin.com)' : '';
+  const displayError = invalidRegionError || error;
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -212,9 +286,9 @@ export default function GarminConnectPage() {
           </p>
         </header>
 
-        {error ? (
+        {displayError ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {displayError}
             <div className="mt-3">
               <Link href="/garmin" className="text-emerald-600 hover:underline">
                 返回重试
@@ -226,6 +300,7 @@ export default function GarminConnectPage() {
         )}
 
         <div
+          ref={widgetRootRef}
           id="gauth-widget"
           className="bg-white border border-zinc-200 rounded-2xl p-2 min-h-[640px]"
         />

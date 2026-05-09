@@ -48,8 +48,10 @@ All `(app)` pages are `'use client'`. `(app)/layout.tsx` calls `useSession()` an
 `(app)/garmin/connect/[region]/page.tsx` injects Garmin's official `gauth-widget.js` script and listens for a JS event with the service ticket. The integration is sensitive:
 
 - The `<script>` is appended to `document.body` once per mount (guarded by `initialized.current`). Hot reload re-runs the effect; the cleanup removes the tag but `window.GAUTH` may already be polluted — refresh the tab if you hit "GAUTH already initialized" type errors during dev.
-- Ticket arrives via three possible events; we listen on all of them: `MESSAGE-POSTED { status: 'SUCCESS', serviceTicket }`, `AUTHENTICATED`, `SUCCESS`.
+- Ticket arrives from the iframe login flow via `MESSAGE-POSTED { status: 'SUCCESS', serviceTicket }` or `SUCCESS`; duplicate events are guarded by `submitted.current`.
 - `MESSAGE-POSTED` also fires for non-ticket cases (`gauthInitHeight` for layout adjustment, `openLiteBox` for additional verification). Don't blindly treat any MESSAGE-POSTED as a ticket — check for `status === 'SUCCESS'`.
+- Keep the service URL as `sso.garmin.{cn,com}/sso/embed` through `redirectAfterAccountLoginUrl`, but do **not** set GAUTH's `target` option. Garmin's script navigates `window.location.href` when `target` is set, which can cancel our async callback POST.
+- Don't call `GAUTH.checkAuthentication()` in this cloud flow. It asks Garmin for a ticket for the current app page, but the backend exchanges tickets with `login-url=sso/embed`, so that ticket can be rejected by CAS service validation.
 - Once a ticket is captured, we POST it to `${NEXT_PUBLIC_API_URL}/api/garmin/callback/:region`. The api server requires a BetterAuth session cookie — works because both domains share `garmin-trainer.uk`.
 - Don't switch back to redirecting the browser to Garmin's portal SSO with `service=our_callback`. Garmin SSO refuses arbitrary external redirect URIs; the callback never fires. (We tried; it fails silently.)
 
