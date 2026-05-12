@@ -1,40 +1,83 @@
-import Image from 'next/image';
 import Link from 'next/link';
+import { T, Btn } from '@/components/track';
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="max-w-2xl w-full text-center space-y-8">
-        <Image
-          src="/logo.jpg"
-          alt="Garmin Trainer"
-          width={112}
-          height={112}
-          priority
-          className="mx-auto rounded-2xl shadow-sm"
-        />
-        <div className="inline-block px-3 py-1 text-xs uppercase tracking-widest rounded-full bg-emerald-100 text-emerald-800">
-          Garmin CN → Global
+    <main className="track-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 720, textAlign: 'center',
+        background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 16,
+        padding: '56px 40px',
+        boxShadow: `0 0 48px ${T.limeGlow}`,
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 10, background: T.lime,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: T.mono, fontWeight: 700, fontSize: 20, color: T.bg,
+          boxShadow: `0 0 36px ${T.limeGlow}`, margin: '0 auto 28px',
+        }}>GT</div>
+
+        <div style={{
+          display: 'inline-block', padding: '4px 10px',
+          fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.8,
+          border: `1px solid ${T.lime}40`, borderRadius: 4, marginBottom: 24,
+        }}>
+          GARMIN_TRAINER · v1.0
         </div>
-        <h1 className="text-5xl font-bold tracking-tight">
-          国区运动记录，自动同步到国际区
+
+        <h1 style={{
+          margin: 0, fontSize: 48, fontWeight: 700, letterSpacing: -1.2, lineHeight: 1.05, color: T.ink,
+        }}>
+          你的 AI 教练
+          <br />
+          已就位
         </h1>
-        <p className="text-lg text-zinc-600 leading-relaxed">
-          注册账号、绑定两区 Garmin、按需同步。Pro 用户每 2 小时自动同步一次新记录。
+
+        <p style={{
+          margin: '20px auto 0', maxWidth: 480, color: T.inkDim, fontSize: 16, lineHeight: 1.65,
+        }}>
+          连接国区 + 国际区 Garmin · 自动同步活动 · AI 根据真实数据生成下一周训练。
         </p>
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <Link
-            href="/sign-up"
-            className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition"
-          >
-            注册账号
+
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 12, marginTop: 36, flexWrap: 'wrap',
+        }}>
+          <Link href="/sign-up" style={{ textDecoration: 'none' }}>
+            <Btn>注册账号 →</Btn>
           </Link>
-          <Link
-            href="/sign-in"
-            className="px-6 py-3 rounded-lg border border-zinc-300 hover:border-zinc-400 transition"
-          >
-            登录
+          <Link href="/sign-in" style={{ textDecoration: 'none' }}>
+            <Btn variant="ghost">登录</Btn>
           </Link>
+        </div>
+
+        <div style={{
+          marginTop: 44, paddingTop: 24, borderTop: `1px solid ${T.border}`,
+          display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16,
+          fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2, lineHeight: 1.7,
+          textAlign: 'left',
+        }}>
+          <div>
+            <div style={{ color: T.lime, marginBottom: 4 }}>SYNC</div>
+            <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
+              每 2 小时自动同步双区活动
+            </div>
+          </div>
+          <div>
+            <div style={{ color: T.lime, marginBottom: 4 }}>AI.COACH</div>
+            <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
+              对话式教练 · 按需调整训练
+            </div>
+          </div>
+          <div>
+            <div style={{ color: T.lime, marginBottom: 4 }}>DATA</div>
+            <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
+              基于历史数据生成周计划
+            </div>
+          </div>
         </div>
       </div>
     </main>

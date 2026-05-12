@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api, type GarminAccountSummary } from '@/lib/api';
+import {
+  T, Btn, Card, CardHeader, SectionLabel, StatusBadge, PageHero, Banner, Readout,
+} from '@/components/track';
 
 type Region = 'cn' | 'global';
 
@@ -19,9 +23,7 @@ export default function GarminPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   async function refresh() {
-    const r = await api.get<{ accounts: GarminAccountSummary[] }>(
-      '/api/garmin/accounts',
-    );
+    const r = await api.get<{ accounts: GarminAccountSummary[] }>('/api/garmin/accounts');
     setAccounts(r.accounts);
   }
 
@@ -29,7 +31,6 @@ export default function GarminPage() {
     refresh().catch((e) => setError((e as Error).message));
   }, []);
 
-  // Pick up redirect callback flags from /api/garmin/callback/:region
   useEffect(() => {
     const err = params.get('error');
     const connected = params.get('connected');
@@ -39,17 +40,13 @@ export default function GarminPage() {
       setError(err);
       router.replace('/garmin');
     } else if (connected && region) {
-      setSuccess(
-        `${region === 'cn' ? '国区' : '国际区'} Garmin 已连接${name ? `（${name}）` : ''}`,
-      );
+      setSuccess(`${region === 'cn' ? '国区' : '国际区'} Garmin 已连接${name ? `（${name}）` : ''}`);
       refresh().finally(() => router.replace('/garmin'));
     }
   }, [params, router]);
 
   async function disconnect(region: Region) {
-    if (!confirm(`断开 ${region === 'cn' ? '国区' : '国际区'} 的 Garmin 连接？`)) {
-      return;
-    }
+    if (!confirm(`断开 ${region === 'cn' ? '国区' : '国际区'} 的 Garmin 连接？`)) return;
     setError(null);
     try {
       await api.del(`/api/garmin/accounts/${region}`);
@@ -61,26 +58,26 @@ export default function GarminPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold">Garmin 账号</h1>
-        <p className="text-zinc-500 mt-1 leading-relaxed">
-          点击下方按钮在 <span className="font-mono">Garmin 官方页面</span> 完成登录，登录成功后会自动绑定到你的账号。
-        </p>
-      </header>
+    <>
+      <PageHero
+        eyebrow="// ACCT.LINK"
+        title="Garmin 账号"
+        sub="点击下方按钮，在 Garmin 官方页面（sso.garmin.cn / sso.garmin.com）完成登录，登录成功后会自动绑定到当前账号。"
+      />
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div style={{ marginBottom: 20 }}>
+          <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
       {success && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-          {success}
+        <div style={{ marginBottom: 20 }}>
+          <Banner kind="ok" code="OK">{success}</Banner>
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <SectionLabel>REGIONS</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 28 }}>
         {(['cn', 'global'] as Region[]).map((region) => {
           const acc = accounts.find((a) => a.region === region);
           return (
@@ -94,19 +91,35 @@ export default function GarminPage() {
         })}
       </div>
 
-      <section className="text-sm text-zinc-500 space-y-2">
-        <p className="font-medium text-zinc-700">连接流程</p>
-        <ol className="list-decimal pl-5 space-y-1">
-          <li>点击下方"连接 Garmin"按钮</li>
-          <li>跳转到 Garmin 官方登录页（域名：sso.garmin.cn / sso.garmin.com）</li>
-          <li>输入账号密码（如启用了 MFA，输入验证码）</li>
-          <li>登录成功后浏览器自动跳回，账号变为"已连接"</li>
-        </ol>
-        <p className="pt-2">
-          会话失效后页面会提示"请重新连接"，再点一次按钮即可。
-        </p>
-      </section>
-    </div>
+      <SectionLabel>FLOW</SectionLabel>
+      <Card style={{ padding: 22 }}>
+        <CardHeader eyebrow="// HOW.IT.WORKS" title="连接流程" />
+        <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+          {[
+            { n: '01', t: 'CLICK', d: '点击「连接 Garmin」按钮' },
+            { n: '02', t: 'REDIRECT', d: '跳转到官方登录页 sso.garmin.cn / .com' },
+            { n: '03', t: 'AUTH', d: '输入账号密码，必要时输入 MFA 验证码' },
+            { n: '04', t: 'BIND', d: '浏览器自动跳回，账号变为「已连接」' },
+          ].map((s) => (
+            <div key={s.n} style={{
+              padding: 14, border: `1px solid ${T.border}`, borderRadius: 8,
+              background: 'rgba(255,255,255,0.02)',
+            }}>
+              <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: T.lime, letterSpacing: -0.5 }}>{s.n}</div>
+              <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginTop: 6 }}>{s.t}</div>
+              <div style={{ fontSize: 13, color: T.inkDim, marginTop: 6, lineHeight: 1.55 }}>{s.d}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          marginTop: 18, padding: 12, borderRadius: 6,
+          background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
+          fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
+        }}>
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」，再点一次按钮即可。Pro 用户可同时绑定 CN + INTL 双区。
+        </div>
+      </Card>
+    </>
   );
 }
 
@@ -119,65 +132,52 @@ function RegionCard({
   account: GarminAccountSummary | undefined;
   onDisconnect: () => void;
 }) {
-  const label = region === 'cn' ? '国区 (garmin.cn)' : '国际区 (garmin.com)';
+  const code = region === 'cn' ? 'CN' : 'INTL';
+  const label = region === 'cn' ? '国区' : '国际区';
+  const host = region === 'cn' ? 'sso.garmin.cn' : 'sso.garmin.com';
   const loginHref = `/garmin/connect/${region}`;
   const connected = !!account?.hasSession;
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{label}</h2>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full ${
-            connected
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-zinc-100 text-zinc-500'
-          }`}
-        >
-          {connected ? '已连接' : '未连接'}
-        </span>
+    <Card hot={connected} style={{ padding: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: connected ? T.lime : T.inkFaint, letterSpacing: 1.5, marginBottom: 4 }}>
+            REGION.{code}
+          </div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>{label}</h2>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, marginTop: 4 }}>{host}</div>
+        </div>
+        <StatusBadge kind={connected ? 'success' : 'planned'} />
       </div>
 
-      {account?.profile ? (
-        <div className="text-sm text-zinc-600 bg-zinc-50 rounded-lg p-3">
-          <div className="font-medium">
-            {account.profile.fullName || account.profile.userName}
-          </div>
-          {account.profile.location && (
-            <div className="text-xs text-zinc-500 mt-0.5">
-              {account.profile.location}
-            </div>
-          )}
-          <div className="text-xs text-zinc-400 mt-1">
-            最后验证 {fmtDate(account.lastValidatedAt)}
-          </div>
+      {connected && account?.profile ? (
+        <div style={{ marginTop: 16, padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
+          <Readout k="USER" v={account.profile.fullName || account.profile.userName || '—'} />
+          {account.profile.location && <Readout k="LOCATION" v={account.profile.location} />}
+          <Readout k="LAST.AUTH" v={fmtDate(account.lastValidatedAt)} vColor={T.lime} />
         </div>
       ) : (
-        <p className="text-sm text-zinc-500">
+        <div style={{
+          marginTop: 16, padding: 18, border: `1px dashed ${T.border}`, borderRadius: 8,
+          fontSize: 13, color: T.inkDim, textAlign: 'center',
+        }}>
           还没有连接。点击下方按钮在 Garmin 官方页面登录。
-        </p>
+        </div>
       )}
 
-      <div className="flex gap-2">
-        <a
-          href={loginHref}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-            connected
-              ? 'border border-zinc-300 hover:border-zinc-400'
-              : 'bg-emerald-600 text-white hover:bg-emerald-700'
-          }`}
-        >
-          {connected ? '重新连接' : '连接 Garmin'}
-        </a>
+      <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <Link href={loginHref} style={{ textDecoration: 'none' }}>
+          <Btn variant={connected ? 'ghost' : 'primary'}>
+            {connected ? '重新连接' : '连接 Garmin →'}
+          </Btn>
+        </Link>
         {connected && (
-          <button
-            onClick={onDisconnect}
-            className="ml-auto text-sm text-red-600 hover:underline"
-          >
-            断开
-          </button>
+          <Btn variant="danger" style={{ marginLeft: 'auto' }} onClick={onDisconnect}>
+            断开连接
+          </Btn>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

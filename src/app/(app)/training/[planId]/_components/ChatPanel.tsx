@@ -1,17 +1,5 @@
 'use client';
 
-// AI coach chat panel (U10).
-//
-// Streams a single SSE turn at a time:
-//   user_message_saved  -> swap optimistic user bubble with the persisted row
-//   text_delta          -> append into the in-progress assistant bubble
-//   tool_call           -> attach a tool-call pill to the in-progress bubble
-//   workout_updated     -> bubble up to the parent so the matching card refreshes
-//   assistant_message_saved -> finalize the assistant bubble with its server id
-//   error / done        -> close the stream and re-enable the composer
-//
-// Composer is locked while a stream is in flight. Auto-scroll on each update.
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -20,6 +8,7 @@ import {
   type TrainingWorkout,
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
+import { T, Btn, Card, TrackTextarea } from '@/components/track';
 
 const TOOL_LABELS: Record<string, string> = {
   regenerate_day: '重新生成训练',
@@ -37,9 +26,8 @@ interface UiToolCall {
   arguments: Record<string, unknown>;
 }
 
-// In-flight assistant bubble shape. Once persisted, swap into TrainingChatMessage.
 interface DraftAssistant {
-  id: string; // local-only until assistant_message_saved fires
+  id: string;
   content: string;
   toolCalls: UiToolCall[];
   createdAt: string;
@@ -53,11 +41,7 @@ export interface ChatPanelProps {
   planId: string;
   initialMessages: TrainingChatMessage[];
   onWorkoutUpdated: (workout: TrainingWorkout) => void;
-  onWorkoutFieldUpdated: (
-    workoutId: string,
-    field: string,
-    value: string,
-  ) => void;
+  onWorkoutFieldUpdated: (workoutId: string, field: string, value: string) => void;
 }
 
 export function ChatPanel({
@@ -74,18 +58,16 @@ export function ChatPanel({
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync external messages (e.g. parent refresh) when caller updates the list.
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
 
   const items: ListItem[] = useMemo(() => {
-    const out: ListItem[] = messages.map((m) => ({ kind: 'persisted', message: m }));
-    if (draft) out.push({ kind: 'draft', draft });
+    const out: ListItem[] = messages.map((m) => ({ kind: 'persisted' as const, message: m }));
+    if (draft) out.push({ kind: 'draft' as const, draft });
     return out;
   }, [messages, draft]);
 
-  // Auto-scroll on new content.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -105,7 +87,6 @@ export function ChatPanel({
     setError(null);
     setStreaming(true);
 
-    // Optimistic user bubble.
     const optimisticId = `local-user-${Date.now()}`;
     const optimisticUser: TrainingChatMessage = {
       id: optimisticId,
@@ -120,17 +101,11 @@ export function ChatPanel({
     setMessages((prev) => [...prev, optimisticUser]);
     setComposerValue('');
 
-    // In-progress assistant bubble (created lazily on first text_delta).
     let draftId = '';
     const ensureDraft = () => {
       if (!draftId) {
         draftId = `draft-${Date.now()}`;
-        setDraft({
-          id: draftId,
-          content: '',
-          toolCalls: [],
-          createdAt: new Date().toISOString(),
-        });
+        setDraft({ id: draftId, content: '', toolCalls: [], createdAt: new Date().toISOString() });
       }
     };
 
@@ -149,47 +124,31 @@ export function ChatPanel({
           if (ev.event === 'user_message_saved') {
             const persisted = data.message as TrainingChatMessage | undefined;
             if (!persisted) return;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === optimisticId ? persisted : m)),
-            );
+            setMessages((prev) => prev.map((m) => (m.id === optimisticId ? persisted : m)));
             return;
           }
-
           if (ev.event === 'text_delta') {
             const piece = typeof data.text === 'string' ? data.text : '';
             if (!piece) return;
             ensureDraft();
-            setDraft((prev) =>
-              prev ? { ...prev, content: prev.content + piece } : prev,
-            );
+            setDraft((prev) => (prev ? { ...prev, content: prev.content + piece } : prev));
             return;
           }
-
           if (ev.event === 'tool_call') {
             ensureDraft();
             const name = typeof data.name === 'string' ? data.name : 'unknown';
-            const args =
-              data.arguments && typeof data.arguments === 'object'
-                ? (data.arguments as Record<string, unknown>)
-                : {};
-            setDraft((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    toolCalls: [...prev.toolCalls, { name, arguments: args }],
-                  }
-                : prev,
-            );
+            const args = data.arguments && typeof data.arguments === 'object'
+              ? (data.arguments as Record<string, unknown>)
+              : {};
+            setDraft((prev) => (prev ? { ...prev, toolCalls: [...prev.toolCalls, { name, arguments: args }] } : prev));
             return;
           }
-
           if (ev.event === 'workout_updated') {
             const w = data.workout as TrainingWorkout | undefined;
             if (!w) return;
             onWorkoutUpdated(w);
             return;
           }
-
           if (ev.event === 'assistant_message_saved') {
             const persisted = data.message as TrainingChatMessage | undefined;
             if (!persisted) return;
@@ -198,12 +157,8 @@ export function ChatPanel({
             draftId = '';
             return;
           }
-
           if (ev.event === 'error') {
-            const msg =
-              typeof data.error === 'string'
-                ? mapErrorCode(data.error)
-                : '对话失败，请稍后重试';
+            const msg = typeof data.error === 'string' ? mapErrorCode(data.error) : '对话失败，请稍后重试';
             setError(msg);
             return;
           }
@@ -222,45 +177,67 @@ export function ChatPanel({
     }
   }, [composerValue, planId, streaming, onWorkoutUpdated]);
 
-  // Touch onWorkoutFieldUpdated so the lint rule for unused props is happy
-  // even though the backend currently routes status updates through the same
-  // `workout_updated` event; we still expose the callback for parity with the
-  // route handler shape and future use.
   void onWorkoutFieldUpdated;
 
   return (
-    <section className="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-col gap-3 max-h-[calc(100vh-8rem)] sticky top-4">
-      <header className="flex items-center justify-between">
-        <h3 className="text-base font-semibold">AI 教练对话</h3>
-        {streaming && <span className="text-xs text-emerald-600">教练正在回复…</span>}
-      </header>
+    <Card style={{
+      padding: 0, position: 'sticky', top: 76, alignSelf: 'start',
+      maxHeight: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        padding: '16px 18px', borderBottom: `1px solid ${T.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+      }}>
+        <div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>// AI.COACH</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>对话教练</div>
+        </div>
+        {streaming ? (
+          <span className="track-blink" style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
+            ● THINKING…
+          </span>
+        ) : (
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.2 }}>● READY</span>
+        )}
+      </div>
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[20rem]"
+        style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 360 }}
       >
         {items.length === 0 && (
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            可以问任何关于本周计划的问题，例如「为什么周三是阈值跑」「腿酸,周三能换 LSD 吗」。
+          <p style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.6, margin: 0 }}>
+            // 可以问任何关于本周计划的问题，例如：「为什么周三是阈值跑」「腿酸，能换 LSD 吗」。
           </p>
         )}
-        {items.map((item) => {
-          if (item.kind === 'persisted') {
-            return <PersistedBubble key={item.message.id} message={item.message} />;
-          }
-          return <DraftBubble key={item.draft.id} draft={item.draft} />;
-        })}
+        {items.map((item) => (
+          item.kind === 'persisted'
+            ? <PersistedBubble key={item.message.id} message={item.message} />
+            : <DraftBubble key={item.draft.id} draft={item.draft} />
+        ))}
+        {streaming && !draft && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, paddingLeft: 4 }}>
+            <span className="track-blink" style={{ width: 6, height: 6, background: T.lime, borderRadius: 999, display: 'inline-block' }} />
+            <span>教练正在回复…</span>
+          </div>
+        )}
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+        <div style={{
+          margin: '0 12px 8px', padding: '8px 10px', borderRadius: 6,
+          background: T.redSoft, border: `1px solid ${T.red}40`,
+          fontSize: 12, color: T.red,
+        }}>
           {error}
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <textarea
+      <div style={{ padding: 12, borderTop: `1px solid ${T.border}` }}>
+        <TrackTextarea
           value={composerValue}
+          rows={2}
+          disabled={streaming}
           onChange={(e) => setComposerValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -268,33 +245,33 @@ export function ChatPanel({
               void handleSend();
             }
           }}
-          disabled={streaming}
-          placeholder={streaming ? '正在等待回复…' : '问问你的 AI 教练（Enter 发送）'}
-          rows={2}
-          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:bg-zinc-50 disabled:text-zinc-400 resize-none"
+          placeholder={streaming ? '正在等待回复…' : '问问你的 AI 教练（Enter 发送，Shift+Enter 换行）'}
+          style={{ resize: 'none', fontSize: 13 }}
         />
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => void handleSend()}
-            disabled={streaming || composerValue.trim().length === 0}
-            className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400"
-          >
-            发送
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
+            ⏎ SEND · ⇧⏎ NEWLINE
+          </span>
+          <Btn size="sm" onClick={() => void handleSend()} disabled={streaming || composerValue.trim().length === 0}>
+            发送 ↵
+          </Btn>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }
 
 function PersistedBubble({ message }: { message: TrainingChatMessage }) {
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-zinc-100 text-zinc-900 px-3 py-2 text-sm whitespace-pre-wrap">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{
+          maxWidth: '88%', padding: '10px 12px', borderRadius: 10,
+          background: T.lime, color: T.bg, fontSize: 13, lineHeight: 1.5,
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        }}>
           {message.content}
-          <div className="text-[10px] text-zinc-400 mt-1 text-right">
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: 'rgba(11,14,12,0.55)', textAlign: 'right', marginTop: 4 }}>
             {formatTime(message.createdAt)}
           </div>
         </div>
@@ -304,48 +281,52 @@ function PersistedBubble({ message }: { message: TrainingChatMessage }) {
   if (message.role === 'assistant') {
     const tcs = (message.toolCalls ?? []) as UiToolCall[] | null;
     return (
-      <div className="flex justify-start">
-        <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-emerald-50 border border-emerald-100 text-zinc-900 px-3 py-2 text-sm space-y-2">
+      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <div style={{
+          maxWidth: '92%', padding: '10px 12px', borderRadius: 10,
+          background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`,
+          fontSize: 13, color: T.ink, lineHeight: 1.6,
+        }}>
           {message.content && (
-            <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0">
+            <div className="track-md">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}
           {tcs && tcs.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {tcs.map((tc, i) => (
-                <ToolPill key={i} tc={tc} />
-              ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {tcs.map((tc, i) => <ToolPill key={i} tc={tc} />)}
             </div>
           )}
-          <div className="text-[10px] text-emerald-700/60">
-            {formatTime(message.createdAt)}
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
+            {formatTime(message.createdAt)} · COACH
           </div>
         </div>
       </div>
     );
   }
-  // 'tool' messages aren't rendered directly — they're already represented by
-  // their parent assistant turn's pills + workout_updated callback.
   return null;
 }
 
 function DraftBubble({ draft }: { draft: DraftAssistant }) {
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-emerald-50 border border-emerald-100 text-zinc-900 px-3 py-2 text-sm space-y-2">
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div style={{
+        maxWidth: '92%', padding: '10px 12px', borderRadius: 10,
+        background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.cyan}40`,
+        fontSize: 13, color: T.ink, lineHeight: 1.6,
+      }}>
         {draft.content.length > 0 ? (
-          <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0">
+          <div className="track-md">
             <ReactMarkdown>{draft.content}</ReactMarkdown>
           </div>
         ) : (
-          <div className="text-xs text-emerald-700/70">教练正在思考…</div>
+          <div className="track-blink" style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 1 }}>
+            ● 教练正在思考…
+          </div>
         )}
         {draft.toolCalls.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {draft.toolCalls.map((tc, i) => (
-              <ToolPill key={i} tc={tc} />
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {draft.toolCalls.map((tc, i) => <ToolPill key={i} tc={tc} />)}
           </div>
         )}
       </div>
@@ -357,10 +338,15 @@ function ToolPill({ tc }: { tc: UiToolCall }) {
   const label = TOOL_LABELS[tc.name] ?? tc.name;
   const summary = summarizeToolCall(tc);
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-white px-2 py-0.5 text-[11px] text-emerald-800">
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      fontFamily: T.mono, fontSize: 11, padding: '4px 8px', borderRadius: 4,
+      background: 'rgba(95,216,255,0.06)', border: `1px solid ${T.cyan}40`,
+      color: T.cyan, letterSpacing: 0.5,
+    }}>
       <span aria-hidden>🔧</span>
-      <span className="font-medium">{label}</span>
-      {summary && <span className="text-emerald-700/80">· {summary}</span>}
+      <span style={{ fontWeight: 600 }}>{label}</span>
+      {summary && <span style={{ color: T.inkDim }}>· {summary}</span>}
     </span>
   );
 }
@@ -373,9 +359,7 @@ function summarizeToolCall(tc: UiToolCall): string | null {
   }
   if (tc.name === 'update_workout_field') {
     const value = tc.arguments.value;
-    if (typeof value === 'string') {
-      return STATUS_ZH[value] ?? value;
-    }
+    if (typeof value === 'string') return STATUS_ZH[value] ?? value;
     return null;
   }
   return null;
@@ -384,10 +368,7 @@ function summarizeToolCall(tc: UiToolCall): string | null {
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(
-      2,
-      '0',
-    )}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch {
     return '';
   }
@@ -395,19 +376,12 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
-    case 'llm_not_configured':
-      return 'AI 模型尚未配置，请联系管理员。';
-    case 'persist_user_message_failed':
-      return '保存用户消息失败，请重试。';
-    case 'persist_assistant_message_failed':
-      return '保存助手回复失败，请重试。';
-    case 'plan_request_corrupt':
-      return '该计划记录已损坏，无法继续对话。';
-    case 'not_found':
-      return '计划不存在或不属于当前账号。';
+    case 'llm_not_configured': return 'AI 模型尚未配置，请联系管理员。';
+    case 'persist_user_message_failed': return '保存用户消息失败，请重试。';
+    case 'persist_assistant_message_failed': return '保存助手回复失败，请重试。';
+    case 'plan_request_corrupt': return '该计划记录已损坏，无法继续对话。';
+    case 'not_found': return '计划不存在或不属于当前账号。';
     case 'chat_failed':
-    default:
-      return '对话失败，请稍后重试。';
+    default: return '对话失败，请稍后重试。';
   }
 }
-

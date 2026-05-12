@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -9,9 +10,12 @@ import {
   type TrainingPlanRequest,
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
+import {
+  T, Btn, Card, CardHeader, Field, PageHero, Banner, SectionLabel,
+  TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
+  type SportKind,
+} from '@/components/track';
 
-// ---------------------------------------------------------------------------
-// Local types — match the SSE payload shapes emitted by api/src/routes/training.ts
 // ---------------------------------------------------------------------------
 
 interface ScheduleDay {
@@ -40,31 +44,20 @@ interface StreamedWorkout {
   adaptation: string;
 }
 
-// ---------------------------------------------------------------------------
-// Date helpers
-// ---------------------------------------------------------------------------
-
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
-
 function toIsoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
 function nextOrCurrentMonday(): string {
   const today = new Date();
-  const dow = today.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-  // If today is Mon, use today. Otherwise next Monday.
+  const dow = today.getDay();
   const offset = dow === 1 ? 0 : (8 - dow) % 7 || 7;
   const target = new Date(today);
   target.setDate(today.getDate() + offset);
   return toIsoDate(target);
 }
-
-// ---------------------------------------------------------------------------
-// Form state
-// ---------------------------------------------------------------------------
 
 type SportPriorityChoice = 'auto' | 'running' | 'cycling' | 'swimming';
 type TargetMetricPref = 'auto' | 'heart_rate' | 'pace';
@@ -75,13 +68,13 @@ interface FormState {
   goalDistance: string;
   weekStartDate: string;
   daysPerWeek: number;
-  preferredRestDay: string; // '' | 'monday'..'sunday'
+  preferredRestDay: string;
   sportRunning: boolean;
   sportCycling: boolean;
   sportSwimming: boolean;
   sportPriority: SportPriorityChoice;
   targetMetricPreference: TargetMetricPref;
-  maxHardSessionsPerWeek: number | ''; // '' = auto/null
+  maxHardSessionsPerWeek: number | '';
   availableTime: string;
   injuries: string;
   notes: string;
@@ -120,23 +113,16 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.weekStartDate)) {
     return { error: '请选择周一日期' };
   }
-  // Validate week start is a Monday (local).
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.weekStartDate)!;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  if (d.getDay() !== 1) {
-    return { error: '周一日期必须是周一' };
-  }
-  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) {
-    return { error: '每周训练天数需为 1–7' };
-  }
-  if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) {
-    return { error: '至少选择一项训练项目' };
-  }
+  if (d.getDay() !== 1) return { error: '周一日期必须是周一' };
+  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: '每周训练天数需为 1–7' };
+  if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) return { error: '至少选择一项训练项目' };
 
   const sportPriorities: Sport[] | undefined =
     f.sportPriority === 'auto' ? undefined : [f.sportPriority];
 
-  const payload: TrainingPlanRequest = {
+  return {
     goal: f.goal.trim() || undefined,
     raceDate: f.raceDate || null,
     goalDistance: f.goalDistance.trim() || null,
@@ -156,7 +142,6 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
       f.maxHardSessionsPerWeek === '' ? null : Number(f.maxHardSessionsPerWeek),
     targetMetricPreference: f.targetMetricPreference,
   };
-  return payload;
 }
 
 function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkout {
@@ -181,9 +166,11 @@ function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkout {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const SPORT_OPTIONS: { k: SportKind; label: string; field: keyof FormState }[] = [
+  { k: 'running', label: '跑步', field: 'sportRunning' },
+  { k: 'cycling', label: '骑行', field: 'sportCycling' },
+  { k: 'swimming', label: '游泳', field: 'sportSwimming' },
+];
 
 export default function NewTrainingPlanPage() {
   const router = useRouter();
@@ -192,15 +179,10 @@ export default function NewTrainingPlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [progressMsg, setProgressMsg] = useState<string>('');
   const [days, setDays] = useState<ScheduleDay[] | null>(null);
-  const [workouts, setWorkouts] = useState<Map<number, StreamedWorkout>>(
-    new Map(),
-  );
+  const [workouts, setWorkouts] = useState<Map<number, StreamedWorkout>>(new Map());
   const [summary, setSummary] = useState<string>('');
   const abortRef = useRef<AbortController | null>(null);
 
-  // Tracks which dayIndex slot the next workout-without-dayIndex event fills.
-  // The /plans endpoint emits workouts in schedule order without a dayIndex,
-  // so we fill 1..7 in arrival order. Reset on each new submission.
   const slotRef = useRef<number>(1);
   const planIdRef = useRef<string | null>(null);
   const fatalRef = useRef<string | null>(null);
@@ -275,8 +257,7 @@ export default function NewTrainingPlanPage() {
         return;
       }
       case 'summary_delta': {
-        const delta =
-          data && typeof data.delta === 'string' ? (data.delta as string) : '';
+        const delta = data && typeof data.delta === 'string' ? (data.delta as string) : '';
         if (delta) {
           setSummary((prev) => prev + delta);
           setProgressMsg('正在生成总结与监测建议…');
@@ -284,14 +265,8 @@ export default function NewTrainingPlanPage() {
         return;
       }
       case 'error': {
-        const msg =
-          data && typeof data.error === 'string'
-            ? (data.error as string)
-            : '生成失败';
+        const msg = data && typeof data.error === 'string' ? (data.error as string) : '生成失败';
         fatalRef.current = msg;
-        // Abort the stream so subsequent events can't keep mutating React
-        // state we're about to discard. The catch block in handleSubmit
-        // sees AbortError and falls through to the fatalRef branch.
         abortRef.current?.abort();
         return;
       }
@@ -348,311 +323,295 @@ export default function NewTrainingPlanPage() {
   }
 
   const dayCount = useMemo(() => (days ? days.length : 0), [days]);
+  const selectedSports = SPORT_OPTIONS.filter((s) => form[s.field] === true);
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold">新建训练计划</h1>
-        <p className="text-zinc-500 mt-1">
-          基于近期 Garmin 数据 + 你的目标，生成一周训练。
-        </p>
-      </header>
+    <>
+      <div style={{ marginBottom: 18 }}>
+        <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
+          ← TRAINING.LIST
+        </Link>
+      </div>
+
+      <PageHero
+        eyebrow="// NEW.PLAN"
+        title="新建训练计划"
+        sub="AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。"
+      />
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div style={{ marginBottom: 20 }}>
+          <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6">
-        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-          <Field label="目标">
-            <input
-              value={form.goal}
-              onChange={(e) => setField('goal', e.target.value)}
-              maxLength={500}
-              placeholder="例如：半马 PB / 完成首场全马 / 提升耐力"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
-          <Field label="比赛日期（可选）">
-            <input
-              type="date"
-              value={form.raceDate}
-              onChange={(e) => setField('raceDate', e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
+        <Card style={{ padding: 26 }}>
+          <CardHeader eyebrow="// CONFIG" title="基础设置" />
+          <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <Field label="SPORT" full>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {SPORT_OPTIONS.map((s) => {
+                  const active = form[s.field] as boolean;
+                  const c = SPORT_META[s.k].color;
+                  return (
+                    <button key={s.k} type="button"
+                      onClick={() => setField(s.field, !active as FormState[typeof s.field])}
+                      style={{
+                        flex: '1 1 0', minWidth: 110, padding: 12, borderRadius: 8, cursor: 'pointer',
+                        background: active ? `${c}20` : 'transparent',
+                        border: `1px solid ${active ? c : T.border}`,
+                        color: active ? c : T.inkDim, fontFamily: T.mono, fontSize: 11, letterSpacing: 1.5, fontWeight: 600,
+                        display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start',
+                      }}>
+                      <span style={{ fontSize: 14, color: active ? c : T.ink, letterSpacing: -0.2, fontFamily: T.sans }}>{s.label}</span>
+                      <span>SPORT.{SPORT_META[s.k].code}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
 
-          <Field label="目标距离（可选）">
-            <input
-              value={form.goalDistance}
-              onChange={(e) => setField('goalDistance', e.target.value)}
-              maxLength={50}
-              placeholder="21.1km / 10km / 100km bike"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
+            <Field label="GOAL · 目标">
+              <TrackInput
+                value={form.goal}
+                onChange={(e) => setField('goal', e.target.value)}
+                maxLength={500}
+                placeholder="半马 PB / 完成首场全马 / 提升耐力"
+              />
+            </Field>
 
-          <Field label="周一日期（必填）">
-            <input
-              type="date"
-              value={form.weekStartDate}
-              onChange={(e) => setField('weekStartDate', e.target.value)}
-              required
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
+            <Field label="GOAL.DISTANCE · 目标距离">
+              <TrackInput
+                mono
+                value={form.goalDistance}
+                onChange={(e) => setField('goalDistance', e.target.value)}
+                maxLength={50}
+                placeholder="21.1km / 10km / 100km bike"
+              />
+            </Field>
 
-          <Field label="每周训练天数">
-            <input
-              type="number"
-              min={1}
-              max={7}
-              value={form.daysPerWeek}
-              onChange={(e) =>
-                setField('daysPerWeek', Number(e.target.value) || 1)
-              }
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-              required
-            />
-          </Field>
+            <Field label="WEEK.START · 周一日期">
+              <TrackInput
+                type="date"
+                value={form.weekStartDate}
+                onChange={(e) => setField('weekStartDate', e.target.value)}
+                required
+              />
+            </Field>
 
-          <Field label="偏好休息日">
-            <select
-              value={form.preferredRestDay}
-              onChange={(e) => setField('preferredRestDay', e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 bg-white"
-            >
-              {REST_DAYS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </Field>
+            <Field label="RACE.DATE · 比赛日期 (可选)">
+              <TrackInput
+                type="date"
+                value={form.raceDate}
+                onChange={(e) => setField('raceDate', e.target.value)}
+              />
+            </Field>
 
-          <Field label="训练项目（至少一项）">
-            <div className="flex flex-wrap gap-3 pt-2">
-              <CheckLabel
-                checked={form.sportRunning}
-                onChange={(v) => setField('sportRunning', v)}
+            <Field label={`DAYS / WEEK · ${form.daysPerWeek}`} full>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[3, 4, 5, 6, 7].map((d) => (
+                  <button key={d} type="button" onClick={() => setField('daysPerWeek', d)} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 6, cursor: 'pointer',
+                    background: d === form.daysPerWeek ? T.lime : 'transparent',
+                    color: d === form.daysPerWeek ? T.bg : T.inkDim,
+                    border: `1px solid ${d === form.daysPerWeek ? T.lime : T.border}`,
+                    fontFamily: T.mono, fontSize: 13, fontWeight: 600,
+                  }}>{d}</button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="REST.DAY · 偏好休息日">
+              <TrackSelect
+                value={form.preferredRestDay}
+                onChange={(e) => setField('preferredRestDay', e.target.value)}
               >
-                🏃 跑步
-              </CheckLabel>
-              <CheckLabel
-                checked={form.sportCycling}
-                onChange={(v) => setField('sportCycling', v)}
-              >
-                🚴 骑行
-              </CheckLabel>
-              <CheckLabel
-                checked={form.sportSwimming}
-                onChange={(v) => setField('sportSwimming', v)}
-              >
-                🏊 游泳
-              </CheckLabel>
-            </div>
-          </Field>
+                {REST_DAYS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </TrackSelect>
+            </Field>
 
-          <Field label="主项目优先级">
-            <select
-              value={form.sportPriority}
-              onChange={(e) =>
-                setField('sportPriority', e.target.value as SportPriorityChoice)
-              }
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 bg-white"
-            >
-              <option value="auto">自动</option>
-              <option value="running">跑步优先</option>
-              <option value="cycling">骑行优先</option>
-              <option value="swimming">游泳优先</option>
-            </select>
-          </Field>
+            <Field label="PRIORITY · 主项目">
+              <TrackSelect
+                value={form.sportPriority}
+                onChange={(e) => setField('sportPriority', e.target.value as SportPriorityChoice)}
+              >
+                <option value="auto">自动</option>
+                <option value="running">跑步优先</option>
+                <option value="cycling">骑行优先</option>
+                <option value="swimming">游泳优先</option>
+              </TrackSelect>
+            </Field>
 
-          <Field label="主指标偏好">
-            <div className="flex flex-wrap gap-4 pt-2">
-              {(
-                [
+            <Field label="METRIC · 主指标偏好" full>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([
                   { v: 'auto', label: '自动' },
                   { v: 'heart_rate', label: '心率优先' },
                   { v: 'pace', label: '配速优先' },
-                ] as const
-              ).map((opt) => (
-                <label key={opt.v} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="targetMetricPreference"
-                    value={opt.v}
-                    checked={form.targetMetricPreference === opt.v}
-                    onChange={() => setField('targetMetricPreference', opt.v)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
+                ] as const).map((opt) => {
+                  const active = form.targetMetricPreference === opt.v;
+                  return (
+                    <button key={opt.v} type="button"
+                      onClick={() => setField('targetMetricPreference', opt.v)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 6, cursor: 'pointer',
+                        background: active ? T.limeGlow : 'transparent',
+                        color: active ? T.lime : T.inkDim,
+                        border: `1px solid ${active ? T.lime : T.border}`,
+                        fontFamily: T.sans, fontSize: 13, fontWeight: 500,
+                      }}>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+
+            <Field label="HARD.MAX · 每周高强度上限">
+              <TrackInput
+                type="number"
+                min={0}
+                max={7}
+                value={form.maxHardSessionsPerWeek}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(
+                    'maxHardSessionsPerWeek',
+                    v === '' ? '' : Math.max(0, Math.min(7, Number(v))),
+                  );
+                }}
+                placeholder="留空 = 自动"
+              />
+            </Field>
+
+            <Field label="TIME · 可用时间 (可选)">
+              <TrackInput
+                value={form.availableTime}
+                onChange={(e) => setField('availableTime', e.target.value)}
+                maxLength={200}
+                placeholder="工作日 60min / 周末 90+min"
+              />
+            </Field>
+
+            <Field label="INJURY · 伤病禁忌" full>
+              <TrackTextarea
+                value={form.injuries}
+                onChange={(e) => setField('injuries', e.target.value)}
+                maxLength={500}
+                rows={2}
+                placeholder="例：左膝软骨敏感，避免大量下坡"
+              />
+            </Field>
+
+            <Field label="NOTES · 备注" full>
+              <TrackTextarea
+                value={form.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+                maxLength={2000}
+                rows={3}
+                placeholder="任何想让 AI 教练知道的事…"
+              />
+            </Field>
+
+            <div style={{ gridColumn: '1 / -1', marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
+              {progressMsg && !error && (
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 1, marginRight: 'auto' }} className={submitting ? 'track-blink' : ''}>
+                  ● {progressMsg}
+                </span>
+              )}
+              {submitting && (
+                <Btn variant="ghost" type="button" onClick={handleCancel}>取消</Btn>
+              )}
+              <Link href="/training" style={{ textDecoration: 'none' }}>
+                <Btn variant="ghost" type="button">返回</Btn>
+              </Link>
+              <Btn type="submit" disabled={submitting}>
+                {submitting ? '生成中…' : '生成计划 →'}
+              </Btn>
             </div>
-          </Field>
+          </form>
+        </Card>
 
-          <Field label="每周最大高强度课（留空 = 自动）">
-            <input
-              type="number"
-              min={0}
-              max={7}
-              value={form.maxHardSessionsPerWeek}
-              onChange={(e) => {
-                const v = e.target.value;
-                setField(
-                  'maxHardSessionsPerWeek',
-                  v === '' ? '' : Math.max(0, Math.min(7, Number(v))),
-                );
-              }}
-              placeholder="例如 2"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
-
-          <Field label="可用时间（可选）">
-            <input
-              value={form.availableTime}
-              onChange={(e) => setField('availableTime', e.target.value)}
-              maxLength={200}
-              placeholder="工作日 60 分钟，周末 90+"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
-
-          <Field label="伤病/禁忌（可选）" full>
-            <textarea
-              value={form.injuries}
-              onChange={(e) => setField('injuries', e.target.value)}
-              maxLength={500}
-              rows={2}
-              placeholder="例如：左膝软骨敏感，避免大量下坡"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
-
-          <Field label="备注（可选）" full>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setField('notes', e.target.value)}
-              maxLength={2000}
-              rows={3}
-              placeholder="任何其他想让 AI 教练知道的事…"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-            />
-          </Field>
-
-          <div className="sm:col-span-2 flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 hover:bg-emerald-700"
-            >
-              {submitting ? '生成中…' : '生成计划'}
-            </button>
-            {submitting && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-3 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50"
-              >
-                取消
-              </button>
-            )}
-            {progressMsg && !error && (
-              <span className="text-sm text-zinc-500">{progressMsg}</span>
-            )}
+        <Card style={{ padding: 22, alignSelf: 'start' }}>
+          <CardHeader eyebrow="// AI.PREVIEW" title="AI 将基于以下输入" />
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <Row k="WEEK.START" v={form.weekStartDate} c={T.lime} />
+            <Row k="DAYS/WEEK" v={`${form.daysPerWeek} 天`} />
+            <Row k="SPORTS" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].code).join(' · ') : '—'} c={T.cyan} />
+            <Row k="PRIORITY" v={form.sportPriority === 'auto' ? 'AUTO' : SPORT_META[form.sportPriority as SportKind].code} />
+            <Row k="METRIC" v={form.targetMetricPreference === 'auto' ? 'AUTO' : form.targetMetricPreference === 'heart_rate' ? 'HR' : 'PACE'} />
+            <Row k="HARD.MAX" v={form.maxHardSessionsPerWeek === '' ? 'AUTO' : `${form.maxHardSessionsPerWeek}/wk`} />
           </div>
-        </form>
-      </section>
+          <div style={{
+            marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,
+            color: T.inkDim, lineHeight: 1.7, background: 'rgba(0,0,0,0.25)',
+            border: `1px solid ${T.border}`, borderRadius: 6,
+          }}>
+            <span style={{ color: T.cyan }}>● </span>
+            AI 会读取你 Garmin 最近 60 天的活动，估算 LT/VO2max 并据此设置心率与配速区间。
+          </div>
+        </Card>
+      </div>
 
       {(days || workouts.size > 0 || summary) && (
-        <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold">生成进度</h2>
-          {summary && (
-            <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-line">
-              {summary}
-            </p>
-          )}
-          {days && (
-            <div className="grid gap-2 sm:grid-cols-7">
-              {Array.from({ length: 7 }).map((_, i) => {
-                const idx = i + 1;
-                const day = days.find((d) => d.dayIndex === idx);
-                const w = workouts.get(idx);
-                return (
-                  <div
-                    key={idx}
-                    className="border border-zinc-200 rounded-lg p-2 text-xs min-h-[88px]"
-                  >
-                    <div className="font-medium text-zinc-700">
-                      {day?.dayLabel ?? `第 ${idx} 天`}
-                    </div>
-                    <div className="text-zinc-500 mt-1">
-                      {day ? SPORT_LABELS[day.sport] : '…'}
-                    </div>
-                    {w ? (
-                      <div className="mt-1 text-zinc-800 leading-snug">
-                        {w.title}
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel>STREAM.PROGRESS</SectionLabel>
+          <Card style={{ padding: 22 }}>
+            {summary && (
+              <p style={{ fontSize: 13, color: T.ink, lineHeight: 1.7, whiteSpace: 'pre-line', margin: '0 0 14px' }}>
+                {summary}
+              </p>
+            )}
+            {days && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
+                {Array.from({ length: 7 }).map((_, i) => {
+                  const idx = i + 1;
+                  const day = days.find((d) => d.dayIndex === idx);
+                  const w = workouts.get(idx);
+                  const sport = day ? SPORT_META[day.sport as SportKind] : null;
+                  return (
+                    <div key={idx} style={{
+                      border: `1px solid ${T.border}`, borderRadius: 8, padding: 10,
+                      minHeight: 90, background: 'rgba(255,255,255,0.02)',
+                    }}>
+                      <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>
+                        DAY {String(idx).padStart(2, '0')}
                       </div>
-                    ) : (
-                      <div className="mt-1 text-zinc-400">…</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {dayCount > 0 && workouts.size === 7 && (
-            <p className="text-xs text-emerald-600">
-              已完成所有日程（{workouts.size}/7），即将跳转…
-            </p>
-          )}
-        </section>
+                      <div style={{ fontFamily: T.mono, fontSize: 10, color: sport?.color ?? T.inkFaint, letterSpacing: 1, marginTop: 4 }}>
+                        {day ? (sport?.code ?? SPORT_LABELS[day.sport]) : '…'}
+                      </div>
+                      {w ? (
+                        <div style={{ marginTop: 6, fontSize: 12, color: T.ink, lineHeight: 1.4, wordBreak: 'break-word' }}>
+                          {w.title}
+                        </div>
+                      ) : (
+                        <div className="track-blink" style={{ marginTop: 6, fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>…</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {dayCount > 0 && workouts.size === 7 && (
+              <p style={{ marginTop: 12, fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1 }}>
+                ● 所有日程已就绪（{workouts.size}/7），即将跳转…
+              </p>
+            )}
+          </Card>
+        </div>
       )}
+    </>
+  );
+}
+
+function Row({ k, v, c }: { k: string; v: string; c?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '6px 0', borderBottom: `1px dashed ${T.border}` }}>
+      <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, width: 100 }}>{k}</span>
+      <span style={{ flex: 1, fontFamily: T.mono, fontSize: 13, color: c ?? T.ink }}>{v}</span>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Inline subcomponents (matches admin/page.tsx style)
-// ---------------------------------------------------------------------------
-
-function Field({
-  label,
-  full,
-  children,
-}: {
-  label: string;
-  full?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className={`block ${full ? 'sm:col-span-2' : ''}`}>
-      <span className="text-xs text-zinc-500">{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
-  );
-}
-
-function CheckLabel({
-  checked,
-  onChange,
-  children,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      {children}
-    </label>
   );
 }

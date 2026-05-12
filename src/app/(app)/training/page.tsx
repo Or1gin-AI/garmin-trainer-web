@@ -7,43 +7,35 @@ import {
   type PlanStatus,
   type TrainingPlanSummary,
 } from '@/lib/api';
+import {
+  T, Btn, Card, SectionLabel, StatusBadge, PageHero, Banner,
+  type StatusKind,
+} from '@/components/track';
 
-const STATUS_LABEL: Record<PlanStatus, string> = {
-  generating: '生成中',
-  ready: '就绪',
-  failed: '失败',
-  archived: '已归档',
+const STATUS_MAP: Record<PlanStatus, StatusKind> = {
+  generating: 'generating',
+  ready: 'ready',
+  failed: 'failed',
+  archived: 'archived',
 };
-
-const STATUS_CLASS: Record<PlanStatus, string> = {
-  generating: 'bg-blue-100 text-blue-700',
-  ready: 'bg-emerald-100 text-emerald-700',
-  failed: 'bg-red-100 text-red-700',
-  archived: 'bg-zinc-100 text-zinc-500',
-};
-
-function StatusPill({ status }: { status: PlanStatus }) {
-  return (
-    <span className={`px-2 py-0.5 text-xs rounded-full ${STATUS_CLASS[status]}`}>
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 function formatWeekStart(d: string): string {
-  // Treat YYYY-MM-DD as local date (not UTC) to avoid TZ off-by-one.
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
   if (!m) return d;
   const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return `${Number(m[2])}月${Number(m[3])}日 ${WEEKDAY_LABELS[date.getDay()]}`;
+  return `${Number(m[2])}月${Number(m[3])}日 · ${WEEKDAY_LABELS[date.getDay()]}`;
 }
 
 function summaryPreview(s: string | null): string {
   if (!s) return '—';
   const trimmed = s.replace(/\s+/g, ' ').trim();
-  return trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed;
+  return trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
+}
+
+function planCode(id: string): string {
+  return `PLAN.${id.slice(0, 4).toUpperCase()}`;
 }
 
 export default function TrainingListPage() {
@@ -56,76 +48,99 @@ export default function TrainingListPage() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
+  const active = (plans ?? []).filter((p) => p.status !== 'archived');
+  const archived = (plans ?? []).filter((p) => p.status === 'archived');
+
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">训练计划</h1>
-          <p className="text-zinc-500 mt-1">
-            基于近期 Garmin 数据生成的周计划。每周一份。
-          </p>
-        </div>
-        <Link
-          href="/training/new"
-          className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-        >
-          新建计划
-        </Link>
-      </header>
+    <>
+      <PageHero
+        eyebrow="// PLANS"
+        title="训练计划"
+        sub="AI 根据你的目标 + Garmin 历史数据生成的周计划。每条计划独立运行，可随时与 AI 教练对话调整。"
+        actions={
+          <Link href="/training/new" style={{ textDecoration: 'none' }}>
+            <Btn>+ 新建计划</Btn>
+          </Link>
+        }
+      />
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div style={{ marginBottom: 20 }}>
+          <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
 
       {plans === null && !error && (
-        <p className="text-sm text-zinc-500">加载中…</p>
+        <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+          // LOADING…
+        </div>
       )}
 
       {plans && plans.length === 0 && (
-        <section className="bg-white border border-zinc-200 rounded-2xl p-10 text-center">
-          <p className="text-zinc-600">你还没有训练计划。</p>
-          <Link
-            href="/training/new"
-            className="inline-block mt-4 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-          >
-            新建第一个计划
+        <Card style={{ padding: 40, textAlign: 'center' }}>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>// EMPTY</div>
+          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>你还没有训练计划。</p>
+          <Link href="/training/new" style={{ textDecoration: 'none' }}>
+            <Btn>新建第一个计划</Btn>
           </Link>
-        </section>
+        </Card>
       )}
 
-      {plans && plans.length > 0 && (
-        <section className="grid gap-4 sm:grid-cols-2">
-          {plans.map((p) => (
-            <article
-              key={p.id}
-              className="bg-white border border-zinc-200 rounded-2xl p-5 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">
-                  {formatWeekStart(p.weekStartDate)}
-                </h2>
-                <StatusPill status={p.status} />
-              </div>
-              <p className="text-sm text-zinc-600 leading-relaxed flex-1">
-                {summaryPreview(p.summary)}
-              </p>
-              <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span>
-                  创建于 {new Date(p.createdAt).toLocaleDateString('zh-CN')}
-                </span>
-                <Link
-                  href={`/training/${p.id}`}
-                  className="text-emerald-600 hover:underline font-medium"
-                >
-                  查看详情 →
-                </Link>
-              </div>
-            </article>
-          ))}
-        </section>
+      {active.length > 0 && (
+        <>
+          <SectionLabel>ACTIVE</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+            {active.map((p) => (
+              <PlanRow key={p.id} plan={p} />
+            ))}
+          </div>
+        </>
       )}
-    </div>
+
+      {archived.length > 0 && (
+        <>
+          <SectionLabel>ARCHIVED</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {archived.map((p) => (
+              <PlanRow key={p.id} plan={p} archived />
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function PlanRow({ plan, archived }: { plan: TrainingPlanSummary; archived?: boolean }) {
+  return (
+    <Link href={`/training/${plan.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Card hover style={{ padding: 20, opacity: archived ? 0.55 : 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) auto', gap: 18, alignItems: 'center' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, fontWeight: 600 }}>
+                {planCode(plan.id)}
+              </span>
+              <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3, color: T.ink }}>
+              {formatWeekStart(plan.weekStartDate)}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              {summaryPreview(plan.summary)}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>CREATED</div>
+            <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim }}>
+              {new Date(plan.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+
+          <Btn variant="ghost" size="sm">详情 →</Btn>
+        </div>
+      </Card>
+    </Link>
   );
 }

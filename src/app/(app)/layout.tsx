@@ -1,17 +1,34 @@
 'use client';
 
-import { useEffect } from 'react';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
+import { api, type MeResponse, type GarminAccountSummary } from '@/lib/api';
+import { T } from '@/components/track';
 
-const NAV = [
-  { href: '/dashboard', label: '同步' },
-  { href: '/training', label: '训练' },
-  { href: '/garmin', label: 'Garmin 账号' },
-  { href: '/subscription', label: '订阅' },
+interface NavItem {
+  href: string;
+  label: string;
+  sub: string;
+  matchPrefix?: string;
+}
+
+const NAV: NavItem[] = [
+  { href: '/dashboard', label: '同步', sub: 'SYNC' },
+  { href: '/training', label: '训练', sub: 'TRAIN' },
+  { href: '/garmin', label: 'Garmin', sub: 'ACCT' },
+  { href: '/subscription', label: '订阅', sub: 'SUB' },
 ];
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return null;
+  const diffMs = t - Date.now();
+  if (diffMs <= 0) return 0;
+  return Math.ceil(diffMs / 86400000);
+}
 
 export default function AppLayout({
   children,
@@ -21,6 +38,8 @@ export default function AppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, isPending } = useSession();
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [accounts, setAccounts] = useState<GarminAccountSummary[]>([]);
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -28,70 +47,117 @@ export default function AppLayout({
     }
   }, [isPending, session, router]);
 
+  useEffect(() => {
+    if (!session) return;
+    api.get<MeResponse>('/api/me').then(setMe).catch(() => {});
+    api.get<{ accounts: GarminAccountSummary[] }>('/api/garmin/accounts')
+      .then((r) => setAccounts(r.accounts))
+      .catch(() => {});
+  }, [session]);
+
   if (isPending || !session) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-zinc-400">
-        载入中…
+      <main className="track-page" style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: T.inkDim, fontFamily: T.mono, fontSize: 12, letterSpacing: 1.5,
+      }}>
+        <span className="track-blink">// LOADING…</span>
       </main>
     );
   }
 
   const role = (session.user as { role?: string }).role;
-  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: '管理后台' }] : NAV;
+  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: '管理后台', sub: 'ADMIN' }] : NAV;
+
+  const cnOk = accounts.find((a) => a.region === 'cn')?.hasSession ?? false;
+  const intlOk = accounts.find((a) => a.region === 'global')?.hasSession ?? false;
+  const proDays = me?.plan.isProActive ? daysUntil(me?.plan.expiresAt ?? null) : null;
+  const displayName =
+    (session.user as { username?: string; name?: string; email: string }).username
+    || session.user.name
+    || session.user.email;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-200 bg-white sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2.5 font-semibold tracking-tight"
-          >
-            <Image
-              src="/logo.jpg"
-              alt="Garmin Trainer"
-              width={44}
-              height={44}
-              priority
-              className="rounded-lg"
-            />
-            <span>Garmin Trainer</span>
+    <div className="track-page" style={{ paddingBottom: 80 }}>
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'rgba(11,14,12,0.86)', backdropFilter: 'blur(14px)',
+        borderBottom: `1px solid ${T.border}`,
+      }}>
+        <div style={{
+          maxWidth: T.pageMaxW, margin: '0 auto', padding: '0 28px',
+          height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
+        }}>
+          <Link href="/dashboard" style={{
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: T.ink,
+          }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: 6, background: T.lime,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: T.mono, fontWeight: 700, fontSize: 13, color: T.bg,
+              boxShadow: `0 0 16px ${T.limeGlow}`,
+            }}>GT</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3, lineHeight: 1 }}>GARMIN TRAINER</div>
+              <div style={{ fontSize: 10, color: T.inkFaint, fontFamily: T.mono, marginTop: 2, letterSpacing: 1 }}>
+                CN.SES <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? 'OK' : '—'}</span>
+                {' '}·{' '}
+                INTL.SES <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? 'OK' : '—'}</span>
+              </div>
+            </div>
           </Link>
-          <nav className="flex items-center gap-1">
-            {nav.map((item) => {
-              const active = pathname?.startsWith(item.href);
+
+          <nav style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {nav.map((n) => {
+              const active = pathname === n.href || pathname?.startsWith(n.href + '/');
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition ${
-                    active
-                      ? 'bg-zinc-900 text-white'
-                      : 'hover:bg-zinc-100 text-zinc-700'
-                  }`}
-                >
-                  {item.label}
+                <Link key={n.href} href={n.href} style={{
+                  padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                  background: active ? T.lime : 'transparent',
+                  color: active ? T.bg : T.inkDim,
+                  textDecoration: 'none', fontFamily: T.sans,
+                  display: 'flex', alignItems: 'baseline', gap: 8,
+                }}>
+                  <span>{n.label}</span>
+                  <span style={{
+                    fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,
+                    color: active ? 'rgba(11,14,12,0.5)' : T.inkFaint,
+                  }}>{n.sub}</span>
                 </Link>
               );
             })}
           </nav>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-zinc-500 hidden sm:inline">
-              {session.user.email}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12, color: T.inkFaint }}>
+            {me?.plan.isProActive ? (
+              <span style={{
+                padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.amber}40`,
+                color: T.amber, fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, fontWeight: 600,
+              }}>★ PRO{proDays != null ? ` · ${proDays}D` : ''}</span>
+            ) : (
+              <Link href="/subscription" style={{
+                padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.border}`,
+                color: T.inkDim, fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, fontWeight: 600,
+                textDecoration: 'none',
+              }}>FREE</Link>
+            )}
+            <span style={{ fontFamily: T.mono, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {displayName}
             </span>
             <button
               onClick={async () => {
                 await signOut();
                 router.push('/sign-in');
               }}
-              className="text-zinc-500 hover:text-zinc-900"
-            >
-              退出
-            </button>
+              className="track-link"
+              style={{ background: 'transparent', border: 'none', fontFamily: T.sans, fontSize: 12, padding: 0 }}
+            >退出</button>
           </div>
         </div>
       </header>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">{children}</main>
+      <main style={{
+        maxWidth: T.pageMaxW, margin: '0 auto', padding: '32px 28px',
+      }}>{children}</main>
     </div>
   );
 }

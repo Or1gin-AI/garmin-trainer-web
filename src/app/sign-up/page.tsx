@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signUp } from '@/lib/auth-client';
+import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
 
 const NAME_RE = /^[\p{L}\p{N}_-]{2,30}$/u;
 
@@ -19,9 +19,7 @@ function humanizeError(message: string): string {
   if (m.includes('username') && m.includes('invalid')) {
     return '昵称只能用中英文 / 数字 / _ - ，2-30 位';
   }
-  if (m.includes('password') && m.includes('short')) {
-    return '密码至少 8 位';
-  }
+  if (m.includes('password') && m.includes('short')) return '密码至少 8 位';
   return message;
 }
 
@@ -68,83 +66,79 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Image
-            src="/logo.jpg"
-            alt="Garmin Trainer"
-            width={72}
-            height={72}
-            priority
-            className="mx-auto rounded-2xl mb-4"
-          />
-          <h1 className="text-2xl font-bold">注册账号</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            已有账号？
-            <Link href="/sign-in" className="text-emerald-600 ml-1">
-              直接登录
-            </Link>
-          </p>
-        </div>
-        <form
-          onSubmit={onSubmit}
-          className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200"
-        >
-          <div>
-            <label className="text-sm font-medium">昵称</label>
-            <input
+    <main className="track-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 420,
+        background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
+        padding: '36px 32px',
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 8, background: T.lime,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
+          boxShadow: `0 0 28px ${T.limeGlow}`, marginBottom: 18,
+        }}>GT</div>
+
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// SIGN.UP</div>
+        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
+        <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
+          已有账号？
+          <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>直接登录</Link>
+        </p>
+
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Field label="USERNAME">
+            <TrackInput
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
-              placeholder="2-30 位，可用中英文 / 数字 / _ -"
+              placeholder="2-30 位 · 中英文 / 数字 / _ -"
             />
-          </div>
-          <div>
-            <label className="text-sm font-medium">邮箱</label>
-            <input
+          </Field>
+
+          <Field label="EMAIL">
+            <TrackInput
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
+              placeholder="you@example.com"
             />
-          </div>
-          <div>
-            <label className="text-sm font-medium">密码</label>
-            <input
+          </Field>
+
+          <Field label="PASSWORD" hint={<span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1 }}>MIN 8 CHARS</span>}>
+            <TrackInput
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
             />
-            <p className="text-xs text-zinc-500 mt-1">至少 8 位</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium">确认密码</label>
-            <input
+          </Field>
+
+          <Field label="CONFIRM.PASSWORD">
+            <TrackInput
               type="password"
               required
               minLength={8}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
             />
             {confirm && password !== confirm && (
-              <p className="text-xs text-red-600 mt-1">两次密码不一致</p>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.red, letterSpacing: 1, marginTop: 4 }}>
+                ! 密码不一致
+              </div>
             )}
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 hover:bg-emerald-700"
-          >
-            {loading ? '注册中…' : '创建账号'}
-          </button>
+          </Field>
+
+          {error && <Banner kind="error" code="ERR">{error}</Banner>}
+
+          <Btn type="submit" disabled={loading} style={{ marginTop: 4 }}>
+            {loading ? '注册中…' : '创建账号 →'}
+          </Btn>
         </form>
       </div>
     </main>

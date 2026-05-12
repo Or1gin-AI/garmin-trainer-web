@@ -13,21 +13,18 @@ import {
   type WorkoutStatus,
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
+import {
+  T, Btn, Card, CardHeader, StatTile, SectionLabel, StatusBadge, PageHero, Banner,
+  type StatusKind,
+} from '@/components/track';
 import { WorkoutCard } from './_components/WorkoutCard';
 import { ChatPanel } from './_components/ChatPanel';
 
-const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
-  generating: '生成中',
-  ready: '就绪',
-  failed: '失败',
-  archived: '已归档',
-};
-
-const PLAN_STATUS_CLASS: Record<PlanStatus, string> = {
-  generating: 'bg-blue-100 text-blue-700',
-  ready: 'bg-emerald-100 text-emerald-700',
-  failed: 'bg-red-100 text-red-700',
-  archived: 'bg-zinc-100 text-zinc-500',
+const STATUS_MAP: Record<PlanStatus, StatusKind> = {
+  generating: 'generating',
+  ready: 'ready',
+  failed: 'failed',
+  archived: 'archived',
 };
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -36,7 +33,11 @@ function formatWeekStart(d: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
   if (!m) return d;
   const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return `${m[1]} 年 ${Number(m[2])} 月 ${Number(m[3])} 日（${WEEKDAYS[date.getDay()]}）`;
+  return `${m[1]} · ${Number(m[2])}月${Number(m[3])}日 ${WEEKDAYS[date.getDay()]}`;
+}
+
+function planCode(id: string): string {
+  return `PLAN.${id.slice(0, 4).toUpperCase()}`;
 }
 
 export default function TrainingPlanDetailPage() {
@@ -60,19 +61,14 @@ export default function TrainingPlanDetailPage() {
       setNotFound(false);
     } catch (e) {
       const err = e as Error & { status?: number };
-      if (err.status === 404) {
-        setNotFound(true);
-      } else {
-        setError(err.message);
-      }
+      if (err.status === 404) setNotFound(true);
+      else setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [planId]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(
     () => () => {
@@ -126,13 +122,8 @@ export default function TrainingPlanDetailPage() {
         onEvent: (ev: SseEvent) => {
           const data = (ev.data ?? null) as Record<string, unknown> | null;
           if (ev.event === 'error') {
-            fatal =
-              data && typeof data.error === 'string'
-                ? (data.error as string)
-                : '重新生成失败';
+            fatal = data && typeof data.error === 'string' ? (data.error as string) : '重新生成失败';
           }
-          // We don't need to merge the partial workout here — once 'done' fires
-          // we refetch the plan, which is simpler and gets us the canonical row.
         },
       });
     } catch (e) {
@@ -151,99 +142,107 @@ export default function TrainingPlanDetailPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">加载中…</p>;
+    return (
+      <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+        // LOADING…
+      </div>
+    );
   }
   if (notFound) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">计划不存在</h1>
-        <p className="text-sm text-zinc-500">
-          这份计划可能已被删除，或不属于当前账号。
-        </p>
-        <Link
-          href="/training"
-          className="inline-block px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-        >
-          返回列表
+      <Card style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>// 404 · NOT_FOUND</div>
+        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>计划不存在</h2>
+        <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>这份计划可能已被删除，或不属于当前账号。</p>
+        <Link href="/training" style={{ textDecoration: 'none' }}>
+          <Btn>返回列表</Btn>
         </Link>
-      </div>
+      </Card>
     );
   }
   if (!detail) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error ?? '加载失败'}
-      </div>
+      <Banner kind="error" code="ERR">{error ?? '加载失败'}</Banner>
     );
   }
 
   const { plan, workouts } = detail;
   const ordered = [...workouts].sort((a, b) => a.dayIndex - b.dayIndex);
+  const completed = ordered.filter((w) => w.status === 'completed').length;
+  const totalKm = ordered.reduce((s, w) => s + (Number(w.distanceKm) || 0), 0);
+  const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-sm text-zinc-500">
-        <Link href="/training" className="hover:text-zinc-900">
-          ← 返回列表
+    <>
+      <div style={{ marginBottom: 18 }}>
+        <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
+          ← TRAINING.LIST
         </Link>
       </div>
 
-      <header className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {formatWeekStart(plan.weekStartDate)}
-            </h1>
-            <p className="text-xs text-zinc-500 mt-1">
-              创建于 {new Date(plan.createdAt).toLocaleString('zh-CN')}
-            </p>
-          </div>
-          <span
-            className={`px-2 py-0.5 text-xs rounded-full ${PLAN_STATUS_CLASS[plan.status]}`}
-          >
-            {PLAN_STATUS_LABEL[plan.status]}
-          </span>
-        </div>
-        {plan.summary && (
-          <p className="text-sm text-zinc-700 whitespace-pre-line leading-relaxed">
-            {plan.summary}
-          </p>
-        )}
-        {(plan.monitoring || plan.adjustmentRules) && (
-          <div className="grid sm:grid-cols-2 gap-3 pt-2">
-            {plan.monitoring && (
-              <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3">
-                <div className="text-xs text-zinc-500 mb-1">监测建议</div>
-                <p className="text-sm text-zinc-800 whitespace-pre-line leading-relaxed">
-                  {plan.monitoring}
-                </p>
-              </div>
-            )}
-            {plan.adjustmentRules && (
-              <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3">
-                <div className="text-xs text-zinc-500 mb-1">调整规则</div>
-                <p className="text-sm text-zinc-800 whitespace-pre-line leading-relaxed">
-                  {plan.adjustmentRules}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </header>
+      <PageHero
+        eyebrow={`// ${planCode(plan.id)} · WEEK`}
+        title={formatWeekStart(plan.weekStartDate)}
+        sub={`创建于 ${new Date(plan.createdAt).toLocaleString('zh-CN')}`}
+        actions={
+          <>
+            <StatusBadge kind={STATUS_MAP[plan.status]} />
+            <Link href="/training/new" style={{ textDecoration: 'none' }}>
+              <Btn variant="ghost" size="sm">+ 新计划</Btn>
+            </Link>
+          </>
+        }
+      />
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div style={{ marginBottom: 20 }}>
+          <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">本周训练</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
+        <StatTile label="COMPLETED" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
+        <StatTile label="WEEK.KM" value={totalKm.toFixed(1)} unit="KM" accent={T.cyan} />
+        <StatTile label="WEEK.MIN" value={String(totalMin)} unit="MIN" accent={T.cyan} />
+        <StatTile label="DAYS" value={`${ordered.length}`} unit="SESSIONS" accent={T.amber} />
+      </div>
+
+      {(plan.summary || plan.monitoring || plan.adjustmentRules) && (
+        <Card style={{ padding: 22, marginBottom: 24 }}>
+          <CardHeader eyebrow="// SUMMARY" title="本周概要" />
+          {plan.summary && (
+            <p style={{ marginTop: 14, fontSize: 13, color: T.ink, lineHeight: 1.75, whiteSpace: 'pre-line' }}>
+              {plan.summary}
+            </p>
+          )}
+          {(plan.monitoring || plan.adjustmentRules) && (
+            <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: plan.monitoring && plan.adjustmentRules ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)', gap: 12 }}>
+              {plan.monitoring && (
+                <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginBottom: 6 }}>MONITORING</div>
+                  <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.monitoring}</p>
+                </div>
+              )}
+              {plan.adjustmentRules && (
+                <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.5, marginBottom: 6 }}>ADJUST.RULES</div>
+                  <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.adjustmentRules}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) minmax(0, 1fr)', gap: 18 }}>
+        <div>
+          <SectionLabel>WORKOUTS · 本周训练</SectionLabel>
           {ordered.length === 0 ? (
-            <p className="text-sm text-zinc-500">暂无训练日。</p>
+            <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
+              暂无训练日。
+            </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {ordered.map((w) => (
                 <WorkoutCard
                   key={w.id}
@@ -257,43 +256,41 @@ export default function TrainingPlanDetailPage() {
               ))}
             </div>
           )}
-        </section>
+        </div>
 
-        <aside>
-          <ChatPanel
-            planId={planId}
-            initialMessages={detail.messages}
-            onWorkoutUpdated={(w) => {
-              setDetail((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      workouts: prev.workouts.map((row) =>
-                        row.id === w.id ? { ...row, ...w } : row,
-                      ),
-                    }
-                  : prev,
-              );
-              highlight(w.dayIndex);
-            }}
-            onWorkoutFieldUpdated={(workoutId, field, value) => {
-              if (field !== 'status') return;
-              setDetail((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      workouts: prev.workouts.map((row) =>
-                        row.id === workoutId
-                          ? { ...row, status: value as WorkoutStatus }
-                          : row,
-                      ),
-                    }
-                  : prev,
-              );
-            }}
-          />
-        </aside>
+        <ChatPanel
+          planId={planId}
+          initialMessages={detail.messages}
+          onWorkoutUpdated={(w) => {
+            setDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    workouts: prev.workouts.map((row) =>
+                      row.id === w.id ? { ...row, ...w } : row,
+                    ),
+                  }
+                : prev,
+            );
+            highlight(w.dayIndex);
+          }}
+          onWorkoutFieldUpdated={(workoutId, field, value) => {
+            if (field !== 'status') return;
+            setDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    workouts: prev.workouts.map((row) =>
+                      row.id === workoutId
+                        ? { ...row, status: value as WorkoutStatus }
+                        : row,
+                    ),
+                  }
+                : prev,
+            );
+          }}
+        />
       </div>
-    </div>
+    </>
   );
 }

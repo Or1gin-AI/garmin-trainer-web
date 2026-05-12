@@ -1,10 +1,10 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { authClient, useSession } from '@/lib/auth-client';
+import { T, Btn, Banner } from '@/components/track';
 
 function VerifyEmailInner() {
   const params = useSearchParams();
@@ -35,63 +35,60 @@ function VerifyEmailInner() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Image
-            src="/logo.jpg"
-            alt="Garmin Trainer"
-            width={72}
-            height={72}
-            priority
-            className="mx-auto rounded-2xl mb-4"
-          />
-        </div>
+    <main className="track-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 420,
+        background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
+        padding: '36px 32px',
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 8, background: T.lime,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
+          boxShadow: `0 0 28px ${T.limeGlow}`, marginBottom: 18,
+        }}>GT</div>
 
         {verified ? (
-          <div className="bg-white p-6 rounded-2xl border border-zinc-200 space-y-3 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl">
-              ✓
-            </div>
-            <h1 className="text-xl font-semibold">邮箱已验证</h1>
-            <p className="text-sm text-zinc-600">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>// EMAIL.VERIFIED</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>邮箱已验证</h1>
+            <Banner kind="ok" code="OK">
               {session ? '正在为你跳转到主页…' : '现在可以登录使用 Garmin Trainer。'}
-            </p>
+            </Banner>
             {!session && (
-              <Link
-                href="/sign-in"
-                className="inline-block w-full py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
-              >
-                去登录
+              <Link href="/sign-in" style={{ textDecoration: 'none' }}>
+                <Btn style={{ width: '100%' }}>去登录 →</Btn>
               </Link>
             )}
           </div>
         ) : (
-          <div className="bg-white p-6 rounded-2xl border border-zinc-200 space-y-4">
-            <h1 className="text-xl font-semibold text-center">查收验证邮件</h1>
-            <p className="text-sm text-zinc-700 leading-relaxed">
-              我们已经向 {email ? <span className="font-medium">{email}</span> : '你的邮箱'} 发送了一封验证邮件。
-              点击邮件中的"验证邮箱"按钮即可完成注册。链接 1 小时内有效。
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// VERIFY.PENDING</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>查收验证邮件</h1>
+            <p style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.65, margin: 0 }}>
+              我们已经向 {email
+                ? <span style={{ fontFamily: T.mono, color: T.ink }}>{email}</span>
+                : '你的邮箱'} 发送了验证邮件。点击邮件中的「验证邮箱」按钮即可完成注册。链接 1 小时内有效。
             </p>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              没收到？可能在垃圾邮件文件夹。也可以点下方按钮重新发送。
+            <p style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 0.5, margin: 0 }}>
+              // 没收到？检查垃圾邮件文件夹，或点击下方按钮重新发送。
             </p>
             {email && (
-              <button
+              <Btn
+                variant="ghost"
                 type="button"
                 onClick={resend}
                 disabled={resending || resent}
-                className="w-full py-2 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
               >
-                {resending ? '发送中…' : resent ? '已重新发送' : '重新发送验证邮件'}
-              </button>
+                {resending ? '发送中…' : resent ? '✓ 已重新发送' : '重新发送验证邮件'}
+              </Btn>
             )}
-            <Link
-              href="/sign-in"
-              className="block text-center text-sm text-emerald-600"
-            >
-              返回登录
-            </Link>
+            <div style={{ textAlign: 'center', marginTop: 4 }}>
+              <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← 返回登录</Link>
+            </div>
           </div>
         )}
       </div>
@@ -101,7 +98,7 @@ function VerifyEmailInner() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen" />}>
+    <Suspense fallback={<main className="track-page" style={{ minHeight: '100vh' }} />}>
       <VerifyEmailInner />
     </Suspense>
   );

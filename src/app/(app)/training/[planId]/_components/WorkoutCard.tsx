@@ -2,59 +2,34 @@
 
 import { useState } from 'react';
 import { SPORT_LABELS, type TrainingWorkout } from '@/lib/api';
+import {
+  T, Btn, Card, StatusBadge, IntensityMeter, SportTag, WorkoutCodename,
+  type StatusKind, type IntensityKind, type SportKind,
+} from '@/components/track';
 
-const STATUS_CLASS: Record<TrainingWorkout['status'], string> = {
-  planned: 'bg-zinc-100 text-zinc-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  skipped: 'bg-amber-100 text-amber-700',
-  regenerating: 'bg-blue-100 text-blue-700',
+const STATUS_MAP: Record<TrainingWorkout['status'], StatusKind> = {
+  planned: 'planned',
+  completed: 'completed',
+  skipped: 'skipped',
+  regenerating: 'regenerating',
 };
 
-const STATUS_LABEL: Record<TrainingWorkout['status'], string> = {
-  planned: '已计划',
-  completed: '已完成',
-  skipped: '已跳过',
-  regenerating: '生成中…',
-};
-
-const INTENSITY_LABEL: Record<NonNullable<TrainingWorkout['intensity']>, string> = {
-  low: '低强度',
-  medium: '中等',
-  high: '高强度',
-};
-
-const INTENSITY_CLASS: Record<NonNullable<TrainingWorkout['intensity']>, string> = {
-  low: 'text-emerald-600',
-  medium: 'text-amber-600',
-  high: 'text-red-600',
-};
-
-function formatDate(d: string): string {
+function formatDate(d: string): { dd: string; mm: string } {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (!m) return d;
-  return `${Number(m[2])}月${Number(m[3])}日`;
+  if (!m) return { dd: '', mm: d };
+  return { dd: m[3], mm: `${Number(m[2])}/${Number(m[3])}` };
 }
 
 function primaryTarget(w: TrainingWorkout): { label: string; value: string } | null {
+  const pickHR = () => (w.targetHeartRate && w.targetHeartRate !== '不适用' ? { label: 'HR', value: w.targetHeartRate } : null);
+  const pickPace = () => (w.targetPace && w.targetPace !== '不适用' ? { label: 'PACE', value: w.targetPace } : null);
+  const pickPower = () => (w.targetPower && w.targetPower !== '不适用' ? { label: 'PWR', value: w.targetPower } : null);
   switch (w.targetMetric) {
-    case 'heart_rate':
-      return { label: '目标心率', value: w.targetHeartRate };
-    case 'pace':
-      return { label: '目标配速', value: w.targetPace };
-    case 'power':
-      return { label: '目标功率', value: w.targetPower };
-    case 'mixed':
-      // Show whichever isn't 不适用 first.
-      if (w.targetHeartRate && w.targetHeartRate !== '不适用') {
-        return { label: '目标心率', value: w.targetHeartRate };
-      }
-      if (w.targetPace && w.targetPace !== '不适用') {
-        return { label: '目标配速', value: w.targetPace };
-      }
-      return null;
-    case 'none':
-    default:
-      return null;
+    case 'heart_rate': return pickHR();
+    case 'pace': return pickPace();
+    case 'power': return pickPower();
+    case 'mixed': return pickHR() ?? pickPace() ?? pickPower();
+    default: return null;
   }
 }
 
@@ -77,124 +52,134 @@ export function WorkoutCard({
 }: WorkoutCardProps) {
   const [open, setOpen] = useState(false);
   const target = primaryTarget(w);
+  const isRest = w.sport === 'rest';
+  const intensityKind: IntensityKind = isRest ? 'rest' : (w.intensity ?? 'low');
+  const sportKind = w.sport as SportKind;
+  const { dd, mm } = formatDate(w.date);
 
-  const statusKey: TrainingWorkout['status'] = w.status;
-  const intensityKey = w.intensity ?? null;
+  const accent = highlighted ? T.amber : (w.status === 'regenerating' ? T.cyan : null);
 
   return (
-    <article
-      className={
-        'bg-white border rounded-2xl p-4 flex flex-col gap-3 transition-shadow ' +
-        (highlighted
-          ? 'border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.25)]'
-          : 'border-zinc-200')
-      }
+    <Card
+      hot={highlighted}
+      glow={highlighted}
+      style={{ padding: 0, overflow: 'hidden', opacity: busy ? 0.7 : 1, transition: 'opacity .15s' }}
+      accent={accent}
     >
-      <header className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-xs text-zinc-500">
-            第 {w.dayIndex} 天 · {formatDate(w.date)}
+      <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr) auto', alignItems: 'center', padding: '14px 18px', gap: 16 }}>
+        <div style={{ textAlign: 'center', borderRight: `1px solid ${T.border}`, paddingRight: 16 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>DAY</div>
+          <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: highlighted ? T.lime : T.ink, letterSpacing: -1, lineHeight: 1 }}>
+            {String(w.dayIndex).padStart(2, '0')}
           </div>
-          <h3 className="text-base font-semibold mt-0.5">{w.title || '—'}</h3>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 4, letterSpacing: 1 }}>{mm || dd}</div>
         </div>
-        <span
-          className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${STATUS_CLASS[statusKey]}`}
-        >
-          {STATUS_LABEL[statusKey]}
-        </span>
-      </header>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span className="text-zinc-700">{SPORT_LABELS[w.sport]}</span>
-        {intensityKey && (
-          <span className={INTENSITY_CLASS[intensityKey]}>
-            {INTENSITY_LABEL[intensityKey]}
-          </span>
-        )}
-        {w.durationMinutes !== null && (
-          <span className="text-zinc-500">{w.durationMinutes} 分钟</span>
-        )}
-        {w.distanceKm !== null && (
-          <span className="text-zinc-500">
-            {Number(w.distanceKm).toFixed(1)} km
-          </span>
-        )}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+            <SportTag kind={sportKind} />
+            {!isRest && w.intensity && <IntensityMeter kind={intensityKind} label={false} />}
+            <StatusBadge kind={STATUS_MAP[w.status]} size="sm" />
+          </div>
+          <WorkoutCodename
+            code={w.templateId || w.workoutType || w.title || '—'}
+            name={w.title}
+            size="sm"
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          {!isRest && (
+            <div style={{ display: 'flex', gap: 14, fontFamily: T.mono, fontSize: 12, color: T.ink }}>
+              {w.durationMinutes != null && (
+                <span>{w.durationMinutes}<span style={{ color: T.inkFaint, marginLeft: 2 }}>min</span></span>
+              )}
+              {w.distanceKm != null && (
+                <span>{Number(w.distanceKm).toFixed(1)}<span style={{ color: T.inkFaint, marginLeft: 2 }}>km</span></span>
+              )}
+            </div>
+          )}
+          {target && (
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 0.5 }}>
+              {target.label} {target.value}
+            </div>
+          )}
+        </div>
       </div>
 
-      {target && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm">
-          <span className="text-emerald-700 text-xs uppercase tracking-wider mr-2">
-            {target.label}
-          </span>
-          <span className="font-medium text-emerald-900">{target.value}</span>
-        </div>
-      )}
-
-      {(w.workoutStructure || (w.targets ?? []).length > 0 || w.adaptation) && (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-xs text-zinc-500 hover:text-zinc-800 self-start"
-        >
-          {open ? '收起 ▴' : '查看详情 ▾'}
-        </button>
-      )}
-
-      {open && (
-        <div className="space-y-2 text-sm">
+      {open && !isRest && (
+        <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${T.border}` }}>
           {w.workoutStructure && (
-            <div>
-              <div className="text-xs text-zinc-500 mb-1">训练结构</div>
-              <p className="text-zinc-800 whitespace-pre-line leading-relaxed">
-                {w.workoutStructure}
-              </p>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>STRUCTURE</div>
+              <div style={{
+                fontFamily: T.mono, fontSize: 12, color: T.ink, lineHeight: 1.7,
+                background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 6, border: `1px solid ${T.border}`,
+                whiteSpace: 'pre-line',
+              }}>{w.workoutStructure}</div>
             </div>
           )}
           {(w.targets ?? []).length > 0 && (
-            <div>
-              <div className="text-xs text-zinc-500 mb-1">关键指标</div>
-              <ul className="list-disc list-inside text-zinc-800 space-y-0.5">
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>KEY.TARGETS</div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: T.ink }}>
                 {(w.targets ?? []).map((t, i) => (
-                  <li key={i}>{t}</li>
+                  <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ color: T.lime, fontFamily: T.mono, fontSize: 10 }}>›</span>{t}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
           {w.adaptation && (
-            <div>
-              <div className="text-xs text-zinc-500 mb-1">适应性说明</div>
-              <p className="text-zinc-700 leading-relaxed">{w.adaptation}</p>
+            <div style={{
+              marginTop: 14, padding: 12, background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
+              borderRadius: 6, fontSize: 12, color: T.ink, lineHeight: 1.6,
+            }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginRight: 8 }}>ADAPT</span>
+              {w.adaptation}
+            </div>
+          )}
+          {!w.workoutStructure && (w.targets ?? []).length === 0 && !w.adaptation && (
+            <div style={{ marginTop: 14, fontFamily: T.mono, fontSize: 11, color: T.inkFaint }}>
+              // 无更多细节
             </div>
           )}
         </div>
       )}
 
-      <footer className="flex flex-wrap gap-2 pt-1 border-t border-zinc-100">
-        <button
-          type="button"
-          onClick={onComplete}
-          disabled={busy || w.status === 'completed'}
-          className="px-2.5 py-1 rounded-md text-xs font-medium border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          {w.status === 'completed' ? '已完成' : '完成'}
-        </button>
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={busy || w.status === 'skipped'}
-          className="px-2.5 py-1 rounded-md text-xs font-medium border border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          {w.status === 'skipped' ? '已跳过' : '跳过'}
-        </button>
-        <button
-          type="button"
-          onClick={onRegenerate}
-          disabled={busy}
-          className="ml-auto px-2.5 py-1 rounded-md text-xs font-medium border border-zinc-300 text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
-        >
-          重新生成此天
-        </button>
-      </footer>
-    </article>
+      {!isRest && (
+        <div style={{
+          display: 'flex', gap: 8, padding: '10px 18px',
+          borderTop: `1px solid ${T.border}`, background: 'rgba(0,0,0,0.15)',
+          alignItems: 'center',
+        }}>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            style={{
+              background: 'transparent', border: 'none', color: T.inkDim, cursor: 'pointer',
+              fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2, padding: 0,
+            }}
+          >{open ? '▴ COLLAPSE' : '▾ EXPAND'}</button>
+          <span style={{ flex: 1, fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2, marginLeft: 8 }}>
+            {SPORT_LABELS[w.sport]}
+          </span>
+          <Btn variant="ok" size="sm" onClick={onComplete} disabled={busy || w.status === 'completed'}>
+            {w.status === 'completed' ? '✓ DONE' : '完成'}
+          </Btn>
+          <Btn variant="ghost" size="sm" onClick={onSkip} disabled={busy || w.status === 'skipped'}>
+            {w.status === 'skipped' ? '— SKIPPED' : '跳过'}
+          </Btn>
+          <Btn variant="ghost" size="sm" onClick={onRegenerate} disabled={busy}>↻ 重生成</Btn>
+        </div>
+      )}
+
+      {isRest && (
+        <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
+          // REST.DAY · 主动恢复 / 拉伸即可
+        </div>
+      )}
+    </Card>
   );
 }

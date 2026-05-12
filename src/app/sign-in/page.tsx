@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, authClient } from '@/lib/auth-client';
+import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
 
 type SignInError = { message?: string; status?: number; code?: string } | null | undefined;
 
@@ -24,15 +24,9 @@ function isEmailNotVerified(err: SignInError): boolean {
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('invalid') && m.includes('password')) {
-    return '账号或密码错误';
-  }
-  if (m.includes('not found') || m.includes('no user')) {
-    return '账号不存在';
-  }
-  if (m.includes('unauthorized')) {
-    return '账号或密码错误';
-  }
+  if (m.includes('invalid') && m.includes('password')) return '账号或密码错误';
+  if (m.includes('not found') || m.includes('no user')) return '账号不存在';
+  if (m.includes('unauthorized')) return '账号或密码错误';
   return message;
 }
 
@@ -56,10 +50,7 @@ export default function SignInPage() {
     const isEmail = identifier.includes('@');
     const { error: err } = isEmail
       ? await signIn.email({ email: identifier, password })
-      : await (signIn as unknown as UsernameSignIn).username({
-          username: identifier,
-          password,
-        });
+      : await (signIn as unknown as UsernameSignIn).username({ username: identifier, password });
     setLoading(false);
     if (err) {
       if (isEmailNotVerified(err) && isEmail) {
@@ -84,85 +75,115 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Image
-            src="/logo.jpg"
-            alt="Garmin Trainer"
-            width={72}
-            height={72}
-            priority
-            className="mx-auto rounded-2xl mb-4"
-          />
-          <h1 className="text-2xl font-bold">登录</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            还没有账号？
-            <Link href="/sign-up" className="text-emerald-600 ml-1">
-              立即注册
-            </Link>
-          </p>
-        </div>
-        <form
-          onSubmit={onSubmit}
-          className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200"
-        >
+    <main className="track-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 880,
+        display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 0,
+        background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '40px 36px', borderRight: `1px solid ${T.border}`,
+          background: `radial-gradient(circle at 20% 0%, ${T.limeGlow}, transparent 60%)`,
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 480,
+        }}>
           <div>
-            <label className="text-sm font-medium">昵称或邮箱</label>
-            <input
+            <div style={{
+              width: 44, height: 44, borderRadius: 8, background: T.lime,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
+              boxShadow: `0 0 28px ${T.limeGlow}`,
+            }}>GT</div>
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginTop: 28 }}>
+              GARMIN_TRAINER
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.1, margin: '8px 0 14px', color: T.ink }}>
+              你的 AI 教练已就位
+            </h1>
+            <p style={{ color: T.inkDim, fontSize: 14, lineHeight: 1.65, margin: 0, maxWidth: 320 }}>
+              连接 Garmin · 自动同步活动 · 让 AI 根据你的真实状态生成下一周训练。
+            </p>
+          </div>
+          <div style={{
+            fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2, lineHeight: 1.8,
+            borderTop: `1px solid ${T.border}`, paddingTop: 16,
+          }}>
+            <div>SYS.STAT &nbsp; <span style={{ color: T.green }}>● ALL.GREEN</span></div>
+            <div>REGIONS &nbsp; <span style={{ color: T.ink }}>CN + INTL</span></div>
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// AUTH</div>
+            <h2 style={{ margin: '6px 0 0', fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>登录</h2>
+          </div>
+
+          <Field label="USERNAME / EMAIL">
+            <TrackInput
               required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
-              placeholder="用户名 或 you@example.com"
+              placeholder="用户名 · you@example.com"
               autoComplete="username"
             />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">密码</label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-zinc-500 hover:text-emerald-600"
-              >
+          </Field>
+
+          <Field
+            label="PASSWORD"
+            hint={
+              <Link href="/forgot-password" className="track-link" style={{ fontSize: 11 }}>
                 忘记密码？
               </Link>
-            </div>
-            <input
+            }
+          >
+            <TrackInput
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
             />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          </Field>
+
+          {error && <Banner kind="error" code="ERR">{error}</Banner>}
+
           {unverifiedEmail && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
-              <p>该邮箱尚未验证，请先完成邮箱验证后再登录。</p>
+            <Banner kind="warn" code="UNVERIFIED">
+              该邮箱尚未验证。
               {resent ? (
-                <p className="text-emerald-700">验证邮件已重新发送，请查收。</p>
+                <span style={{ color: T.green, marginLeft: 6 }}>验证邮件已重新发送。</span>
               ) : (
                 <button
                   type="button"
                   onClick={resendVerification}
                   disabled={resending}
-                  className="underline disabled:opacity-50"
+                  className="track-link"
+                  style={{ background: 'transparent', border: 'none', padding: 0, marginLeft: 6, fontSize: 13 }}
                 >
                   {resending ? '发送中…' : '重新发送验证邮件'}
                 </button>
               )}
-            </div>
+            </Banner>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 hover:bg-emerald-700"
-          >
-            {loading ? '登录中…' : '登录'}
-          </button>
+
+          <Btn type="submit" disabled={loading || !identifier || !password} style={{ marginTop: 6 }}>
+            {loading ? '验证中…' : '登录 →'}
+          </Btn>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: T.inkFaint, fontSize: 12 }}>
+            <span style={{ flex: 1, height: 1, background: T.border }} />
+            <span style={{ fontFamily: T.mono, letterSpacing: 1.5, fontSize: 10 }}>OR</span>
+            <span style={{ flex: 1, height: 1, background: T.border }} />
+          </div>
+
+          <p style={{ fontSize: 13, color: T.inkDim, margin: 0, textAlign: 'center' }}>
+            还没有账号？
+            <Link href="/sign-up" className="track-link" style={{ marginLeft: 6 }}>立即注册</Link>
+          </p>
         </form>
       </div>
     </main>

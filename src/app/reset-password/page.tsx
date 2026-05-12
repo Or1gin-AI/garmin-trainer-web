@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
+import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
@@ -14,7 +15,6 @@ function humanizeError(message: string): string {
 }
 
 function Inner() {
-  const router = useRouter();
   const params = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [password, setPassword] = useState('');
@@ -26,34 +26,31 @@ function Inner() {
   useEffect(() => {
     const t = params.get('token');
     const err = params.get('error');
-    if (err) {
-      setError(humanizeError(err));
-    }
+    if (err) setError(humanizeError(err));
     if (t) setToken(t);
   }, [params]);
 
   if (!token) {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-red-600">
-          {error || '链接缺少 token，请回到"找回密码"页面重新发起'}
-        </p>
-        <Link href="/forgot-password" className="text-sm text-emerald-600">
-          重新发起找回密码
-        </Link>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Banner kind="error" code="ERR">
+          {error || '链接缺少 token，请回到「找回密码」页面重新发起。'}
+        </Banner>
+        <div style={{ textAlign: 'center' }}>
+          <Link href="/forgot-password" className="track-link" style={{ fontSize: 13 }}>
+            重新发起找回密码 →
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (done) {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-emerald-700">密码已重置，请用新密码登录。</p>
-        <Link
-          href="/sign-in"
-          className="block text-center px-4 py-2 rounded-lg bg-emerald-600 text-white"
-        >
-          去登录
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Banner kind="ok" code="DONE">密码已重置，请用新密码登录。</Banner>
+        <Link href="/sign-in" style={{ textDecoration: 'none' }}>
+          <Btn style={{ width: '100%' }}>去登录 →</Btn>
         </Link>
       </div>
     );
@@ -84,52 +81,49 @@ function Inner() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200"
-    >
-      <div>
-        <label className="text-sm font-medium">新密码</label>
-        <input
+    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <Field label="NEW.PASSWORD">
+        <TrackInput
           type="password"
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
         />
-      </div>
-      <div>
-        <label className="text-sm font-medium">确认新密码</label>
-        <input
+      </Field>
+      <Field label="CONFIRM.PASSWORD">
+        <TrackInput
           type="password"
           required
           minLength={8}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-500"
         />
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 hover:bg-emerald-700"
-      >
-        {loading ? '重置中…' : '重置密码'}
-      </button>
+      </Field>
+      {error && <Banner kind="error" code="ERR">{error}</Banner>}
+      <Btn type="submit" disabled={loading}>
+        {loading ? '重置中…' : '重置密码 →'}
+      </Btn>
     </form>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">重置密码</h1>
-        </div>
-        <Suspense fallback={<p className="text-sm text-zinc-500">加载中…</p>}>
+    <main className="track-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 420,
+        background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
+        padding: '36px 32px',
+      }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// PWD.RESET</div>
+        <h1 style={{ margin: '6px 0 22px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>
+          重置密码
+        </h1>
+        <Suspense fallback={<div className="track-blink" style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }}>// LOADING…</div>}>
           <Inner />
         </Suspense>
       </div>
