@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  SPORT_LABELS,
   trainingPlanStreamUrl,
   type Sport,
   type TrainingPlanRequest,
@@ -15,19 +14,18 @@ import {
   TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
   type SportKind,
 } from '@/components/track';
+import {
+  WeekCalendar,
+  type CalendarDay,
+  type CalendarCellWorkout,
+} from '@/components/training/WeekCalendar';
+import { CoachPanel } from '@/components/training/CoachPanel';
+import { applyToolEvent } from '@/components/training/ToolCallStack';
+import type { ToolEventUi } from '@/components/training/ToolCallCard';
 
 // ---------------------------------------------------------------------------
 
-interface ScheduleDay {
-  dayIndex: number;
-  date: string;
-  dayLabel: string;
-  sport: Sport;
-  templateId: string;
-  reason?: string;
-}
-
-interface StreamedWorkout {
+interface StreamedWorkoutRaw {
   templateId: string;
   sport: Sport;
   workoutType: string;
@@ -144,7 +142,7 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   };
 }
 
-function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkout {
+function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkoutRaw {
   return {
     templateId: String(raw.templateId ?? ''),
     sport: raw.sport as Sport,
@@ -172,18 +170,20 @@ const SPORT_OPTIONS: { k: SportKind; label: string; field: keyof FormState }[] =
   { k: 'swimming', label: '游泳', field: 'sportSwimming' },
 ];
 
+type View = 'form' | 'staging' | 'finishing';
+
 export default function NewTrainingPlanPage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialForm);
-  const [submitting, setSubmitting] = useState(false);
+  const [view, setView] = useState<View>('form');
   const [error, setError] = useState<string | null>(null);
-  const [progressMsg, setProgressMsg] = useState<string>('');
-  const [days, setDays] = useState<ScheduleDay[] | null>(null);
-  const [workouts, setWorkouts] = useState<Map<number, StreamedWorkout>>(new Map());
+  const [days, setDays] = useState<CalendarDay[] | null>(null);
+  const [workouts, setWorkouts] = useState<Map<number, CalendarCellWorkout>>(new Map());
   const [summary, setSummary] = useState<string>('');
+  const [toolEvents, setToolEvents] = useState<Map<string, ToolEventUi>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
+  const orderCounterRef = useRef({ current: 0 });
 
-  const slotRef = useRef<number>(1);
   const planIdRef = useRef<string | null>(null);
   const fatalRef = useRef<string | null>(null);
 
@@ -198,14 +198,14 @@ export default function NewTrainingPlanPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function reset() {
-    slotRef.current = 1;
+  function resetGenerationState() {
     planIdRef.current = null;
     fatalRef.current = null;
+    orderCounterRef.current = { current: 0 };
     setDays(null);
     setWorkouts(new Map());
+    setToolEvents(new Map());
     setSummary('');
-    setProgressMsg('');
     setError(null);
   }
 
@@ -217,21 +217,32 @@ export default function NewTrainingPlanPage() {
         if (id) planIdRef.current = id;
         return;
       }
+      case 'tool_event': {
+        if (!data) return;
+        const payload = data as {
+          id: string;
+          name: string;
+          displayName: string;
+          phase: 'start' | 'done' | 'error';
+          summary?: string;
+          errorMessage?: string;
+          durationMs?: number;
+        };
+        setToolEvents((prev) => applyToolEvent(prev, payload, orderCounterRef.current));
+        return;
+      }
       case 'schedule': {
         const rawDays = data && Array.isArray(data.days) ? data.days : [];
-        const next: ScheduleDay[] = rawDays.map((d: unknown) => {
+        const next: CalendarDay[] = rawDays.map((d: unknown) => {
           const r = d as Record<string, unknown>;
           return {
             dayIndex: Number(r.dayIndex),
             date: String(r.date),
             dayLabel: String(r.dayLabel ?? ''),
             sport: r.sport as Sport,
-            templateId: String(r.templateId ?? ''),
-            reason: typeof r.reason === 'string' ? r.reason : undefined,
           };
         });
         setDays(next);
-        setProgressMsg('已生成日程，正在补充每日训练…');
         return;
       }
       case 'workout': {
@@ -244,14 +255,19 @@ export default function NewTrainingPlanPage() {
         const dayIndex =
           data && typeof data.dayIndex === 'number'
             ? (data.dayIndex as number)
-            : (() => {
-                const v = slotRef.current;
-                slotRef.current = Math.min(7, slotRef.current + 1);
-                return v;
-              })();
+            : 0;
+        if (!dayIndex) return;
         setWorkouts((prev) => {
           const m = new Map(prev);
-          m.set(dayIndex, mapped);
+          m.set(dayIndex, {
+            title: mapped.title,
+            durationMinutes: mapped.durationMinutes,
+            distanceKm: mapped.distanceKm,
+            targetPace: mapped.targetPace,
+            targetHeartRate: mapped.targetHeartRate,
+            intensity: mapped.intensity,
+            status: 'planned',
+          });
           return m;
         });
         return;
@@ -260,7 +276,6 @@ export default function NewTrainingPlanPage() {
         const delta = data && typeof data.delta === 'string' ? (data.delta as string) : '';
         if (delta) {
           setSummary((prev) => prev + delta);
-          setProgressMsg('正在生成总结与监测建议…');
         }
         return;
       }
@@ -277,8 +292,8 @@ export default function NewTrainingPlanPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting) return;
-    reset();
+    if (view !== 'form') return;
+    resetGenerationState();
 
     const built = buildPayload(form);
     if ('error' in built) {
@@ -286,8 +301,7 @@ export default function NewTrainingPlanPage() {
       return;
     }
 
-    setSubmitting(true);
-    setProgressMsg('正在生成计划…');
+    setView('staging');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
@@ -299,32 +313,102 @@ export default function NewTrainingPlanPage() {
         onEvent: handleEvent,
       });
     } catch (e) {
-      fatalRef.current = (e as Error).message || '生成失败';
-    } finally {
-      setSubmitting(false);
+      const errObj = e as Error & { status?: number };
+      if (errObj.status === 402) {
+        fatalRef.current = '当前未开通 Pro 或本月计划生成额度已用完。';
+      } else if (!ctrl.signal.aborted) {
+        fatalRef.current = errObj.message || '生成失败';
+      }
     }
 
     if (fatalRef.current) {
       setError(fatalRef.current);
-      setProgressMsg('');
+      setView('form');
       return;
     }
     if (planIdRef.current) {
-      router.push(`/training/${planIdRef.current}`);
+      setView('finishing');
+      setTimeout(() => {
+        router.push(`/training/${planIdRef.current}`);
+      }, 900);
     } else {
-      setProgressMsg('生成已完成，但未获取到计划 ID。请回到列表页查看。');
+      setError('生成已完成，但未获取到计划 ID。请回到列表页查看。');
+      setView('form');
     }
   }
 
   function handleCancel() {
     abortRef.current?.abort();
-    setSubmitting(false);
-    setProgressMsg('已取消');
+    setView('form');
   }
 
-  const dayCount = useMemo(() => (days ? days.length : 0), [days]);
   const selectedSports = SPORT_OPTIONS.filter((s) => form[s.field] === true);
+  const eventsArray = useMemo(() => Array.from(toolEvents.values()), [toolEvents]);
 
+  // ---- Staging / Finishing view ----
+  if (view !== 'form') {
+    const allDone = workouts.size >= (days?.length ?? 0) && (days?.length ?? 0) > 0;
+    const statusLabel = view === 'finishing'
+      ? '准备就绪，跳转中…'
+      : allDone
+        ? '所有日程已就绪'
+        : '正在生成…';
+    const statusTone = view === 'finishing' || allDone ? 'green' as const : 'cyan' as const;
+    return (
+      <>
+        <div style={{ marginBottom: 18 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
+            // 生成中… 取消即返回填写表单
+          </span>
+        </div>
+
+        <PageHero
+          eyebrow="// AI 正在工作"
+          title="生成本周计划"
+          sub="AI 教练正在读取你的 Garmin 数据、编排日程并配置每一节课。整个过程透明可见 ↓"
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
+          <Card style={{ padding: 22 }}>
+            <CardHeader
+              eyebrow="// 本周日程"
+              title="周一 → 周日"
+              right={
+                <span
+                  className={view === 'staging' && !allDone ? 'track-blink' : ''}
+                  style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}
+                >
+                  ● {workouts.size}/{days?.length ?? 7} 已生成
+                </span>
+              }
+            />
+            <div style={{ marginTop: 16 }}>
+              <WeekCalendar
+                days={days}
+                workouts={workouts}
+                mode="generation"
+              />
+            </div>
+          </Card>
+
+          <CoachPanel
+            events={eventsArray}
+            summaryText={summary}
+            status={{ label: statusLabel, anim: view === 'staging' && !allDone, tone: statusTone }}
+            eyebrow="// AI 实时过程"
+            title="AI 教练"
+            footer={
+              view === 'staging' ? (
+                <Btn variant="ghost" size="sm" onClick={handleCancel}>取消并返回</Btn>
+              ) : null
+            }
+          />
+        </div>
+      </>
+    );
+  }
+
+  // ---- Form view ----
   return (
     <>
       <div style={{ marginBottom: 18 }}>
@@ -516,20 +600,10 @@ export default function NewTrainingPlanPage() {
             </Field>
 
             <div style={{ gridColumn: '1 / -1', marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
-              {progressMsg && !error && (
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 1, marginRight: 'auto' }} className={submitting ? 'track-blink' : ''}>
-                  ● {progressMsg}
-                </span>
-              )}
-              {submitting && (
-                <Btn variant="ghost" type="button" onClick={handleCancel}>取消</Btn>
-              )}
               <Link href="/training" style={{ textDecoration: 'none' }}>
                 <Btn variant="ghost" type="button">返回</Btn>
               </Link>
-              <Btn type="submit" disabled={submitting}>
-                {submitting ? '生成中…' : '生成计划 →'}
-              </Btn>
+              <Btn type="submit">生成计划 →</Btn>
             </div>
           </form>
         </Card>
@@ -550,58 +624,10 @@ export default function NewTrainingPlanPage() {
             border: `1px solid ${T.border}`, borderRadius: 6,
           }}>
             <span style={{ color: T.cyan }}>● </span>
-            AI 会读取你 Garmin 最近 60 天的活动，估算 LT/VO2max 并据此设置心率与配速区间。
+            点击生成后会进入 AI 教练界面，逐条展示数据加载、日程编排、参数化与校验等步骤。
           </div>
         </Card>
       </div>
-
-      {(days || workouts.size > 0 || summary) && (
-        <div style={{ marginTop: 28 }}>
-          <SectionLabel>生成进度</SectionLabel>
-          <Card style={{ padding: 22 }}>
-            {summary && (
-              <p style={{ fontSize: 13, color: T.ink, lineHeight: 1.7, whiteSpace: 'pre-line', margin: '0 0 14px' }}>
-                {summary}
-              </p>
-            )}
-            {days && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
-                {Array.from({ length: 7 }).map((_, i) => {
-                  const idx = i + 1;
-                  const day = days.find((d) => d.dayIndex === idx);
-                  const w = workouts.get(idx);
-                  const sport = day ? SPORT_META[day.sport as SportKind] : null;
-                  return (
-                    <div key={idx} style={{
-                      border: `1px solid ${T.border}`, borderRadius: 8, padding: 10,
-                      minHeight: 90, background: 'rgba(255,255,255,0.02)',
-                    }}>
-                      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
-                        第 {idx} 天
-                      </div>
-                      <div style={{ fontFamily: T.mono, fontSize: 11, color: sport?.color ?? T.inkFaint, letterSpacing: 0.5, marginTop: 4 }}>
-                        {day ? (sport?.label ?? SPORT_LABELS[day.sport]) : '…'}
-                      </div>
-                      {w ? (
-                        <div style={{ marginTop: 6, fontSize: 12, color: T.ink, lineHeight: 1.4, wordBreak: 'break-word' }}>
-                          {w.title}
-                        </div>
-                      ) : (
-                        <div className="track-blink" style={{ marginTop: 6, fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>…</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {dayCount > 0 && workouts.size === 7 && (
-              <p style={{ marginTop: 12, fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1 }}>
-                ● 所有日程已就绪（{workouts.size}/7），即将跳转…
-              </p>
-            )}
-          </Card>
-        </div>
-      )}
     </>
   );
 }

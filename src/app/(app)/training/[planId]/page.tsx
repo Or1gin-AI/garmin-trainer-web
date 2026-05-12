@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getTrainingPlan,
   patchTrainingWorkout,
   trainingDayRegenerateUrl,
   type PlanStatus,
+  type Sport,
   type TrainingPlanDetail,
   type TrainingWorkout,
   type WorkoutStatus,
@@ -19,6 +20,12 @@ import {
 } from '@/components/track';
 import { WorkoutCard } from './_components/WorkoutCard';
 import { ChatPanel } from './_components/ChatPanel';
+import {
+  WeekCalendar,
+  toCalendarCell,
+  type CalendarDay,
+  type CalendarCellWorkout,
+} from '@/components/training/WeekCalendar';
 
 const STATUS_MAP: Record<PlanStatus, StatusKind> = {
   generating: 'generating',
@@ -40,6 +47,18 @@ function planShortId(id: string): string {
   return `#${id.slice(0, 6).toUpperCase()}`;
 }
 
+function todayDayIndex(weekStartDate: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartDate);
+  if (!m) return null;
+  const start = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  const diff = Math.round((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+  if (diff < 0 || diff > 6) return null;
+  return diff + 1;
+}
+
 export default function TrainingPlanDetailPage() {
   const params = useParams<{ planId: string }>();
   const planId = params?.planId ?? '';
@@ -50,6 +69,7 @@ export default function TrainingPlanDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyWorkoutId, setBusyWorkoutId] = useState<string | null>(null);
   const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regenAbortRef = useRef<AbortController | null>(null);
 
@@ -78,8 +98,17 @@ export default function TrainingPlanDetailPage() {
     [],
   );
 
+  // Auto-pick the day to display when data first lands.
+  useEffect(() => {
+    if (!detail || selectedDay != null) return;
+    const today = todayDayIndex(detail.plan.weekStartDate);
+    const first = detail.workouts[0]?.dayIndex ?? 1;
+    setSelectedDay(today ?? first);
+  }, [detail, selectedDay]);
+
   function highlight(dayIndex: number) {
     setHighlightedDay(dayIndex);
+    setSelectedDay(dayIndex);
     if (highlightTimer.current) clearTimeout(highlightTimer.current);
     highlightTimer.current = setTimeout(() => setHighlightedDay(null), 2000);
   }
@@ -141,6 +170,24 @@ export default function TrainingPlanDetailPage() {
     highlight(workout.dayIndex);
   }
 
+  const calendarDays: CalendarDay[] | null = useMemo(() => {
+    if (!detail) return null;
+    return detail.workouts.map((w) => ({
+      dayIndex: w.dayIndex,
+      date: w.date,
+      sport: w.sport as Sport,
+    }));
+  }, [detail]);
+
+  const calendarWorkouts: Map<number, CalendarCellWorkout> = useMemo(() => {
+    const m = new Map<number, CalendarCellWorkout>();
+    if (!detail) return m;
+    for (const w of detail.workouts) {
+      m.set(w.dayIndex, toCalendarCell(w));
+    }
+    return m;
+  }, [detail]);
+
   if (loading) {
     return (
       <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
@@ -171,6 +218,8 @@ export default function TrainingPlanDetailPage() {
   const completed = ordered.filter((w) => w.status === 'completed').length;
   const totalKm = ordered.reduce((s, w) => s + (Number(w.distanceKm) || 0), 0);
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
+
+  const selected = selectedDay != null ? ordered.find((w) => w.dayIndex === selectedDay) ?? null : null;
 
   return (
     <>
@@ -234,30 +283,38 @@ export default function TrainingPlanDetailPage() {
         </Card>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) minmax(0, 1fr)', gap: 18 }}>
-        <div>
-          <SectionLabel>本周训练</SectionLabel>
-          {ordered.length === 0 ? (
-            <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
-              暂无训练日。
-            </Card>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {ordered.map((w) => (
-                <WorkoutCard
-                  key={w.id}
-                  workout={w}
-                  highlighted={highlightedDay === w.dayIndex}
-                  busy={busyWorkoutId === w.id}
-                  onComplete={() => changeStatus(w.id, 'completed')}
-                  onSkip={() => changeStatus(w.id, 'skipped')}
-                  onRegenerate={() => regenerateDay(w)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+      <SectionLabel>本周日历</SectionLabel>
+      <Card style={{ padding: 18, marginBottom: 18 }}>
+        <WeekCalendar
+          days={calendarDays}
+          workouts={calendarWorkouts}
+          mode="detail"
+          selectedDayIndex={selectedDay ?? undefined}
+          highlightedDayIndex={highlightedDay ?? undefined}
+          onSelectDay={(idx) => setSelectedDay(idx)}
+        />
+      </Card>
 
+      <SectionLabel>当日详情</SectionLabel>
+      <div style={{ marginBottom: 24 }}>
+        {selected ? (
+          <WorkoutCard
+            workout={selected}
+            highlighted={highlightedDay === selected.dayIndex}
+            busy={busyWorkoutId === selected.id}
+            onComplete={() => changeStatus(selected.id, 'completed')}
+            onSkip={() => changeStatus(selected.id, 'skipped')}
+            onRegenerate={() => regenerateDay(selected)}
+          />
+        ) : (
+          <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
+            点击上方日历选择一天查看详情。
+          </Card>
+        )}
+      </div>
+
+      <SectionLabel>AI 教练</SectionLabel>
+      <div style={{ maxWidth: 880 }}>
         <ChatPanel
           planId={planId}
           initialMessages={detail.messages}

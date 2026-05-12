@@ -9,6 +9,8 @@ import {
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
 import { T, Btn, Card, TrackTextarea } from '@/components/track';
+import { ToolCallStack, applyToolEvent } from '@/components/training/ToolCallStack';
+import type { ToolEventUi } from '@/components/training/ToolCallCard';
 
 const TOOL_LABELS: Record<string, string> = {
   regenerate_day: '重新生成训练',
@@ -21,7 +23,7 @@ const STATUS_ZH: Record<string, string> = {
   planned: '计划中',
 };
 
-interface UiToolCall {
+interface PersistedToolCall {
   name: string;
   arguments: Record<string, unknown>;
 }
@@ -29,7 +31,7 @@ interface UiToolCall {
 interface DraftAssistant {
   id: string;
   content: string;
-  toolCalls: UiToolCall[];
+  toolEvents: Map<string, ToolEventUi>;
   createdAt: string;
 }
 
@@ -57,6 +59,7 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const orderCounterRef = useRef({ current: 0 });
 
   useEffect(() => {
     setMessages(initialMessages);
@@ -105,7 +108,12 @@ export function ChatPanel({
     const ensureDraft = () => {
       if (!draftId) {
         draftId = `draft-${Date.now()}`;
-        setDraft({ id: draftId, content: '', toolCalls: [], createdAt: new Date().toISOString() });
+        setDraft({
+          id: draftId,
+          content: '',
+          toolEvents: new Map(),
+          createdAt: new Date().toISOString(),
+        });
       }
     };
 
@@ -134,13 +142,25 @@ export function ChatPanel({
             setDraft((prev) => (prev ? { ...prev, content: prev.content + piece } : prev));
             return;
           }
-          if (ev.event === 'tool_call') {
+          if (ev.event === 'tool_event') {
             ensureDraft();
-            const name = typeof data.name === 'string' ? data.name : 'unknown';
-            const args = data.arguments && typeof data.arguments === 'object'
-              ? (data.arguments as Record<string, unknown>)
-              : {};
-            setDraft((prev) => (prev ? { ...prev, toolCalls: [...prev.toolCalls, { name, arguments: args }] } : prev));
+            const payload = data as {
+              id: string;
+              name: string;
+              displayName: string;
+              phase: 'start' | 'done' | 'error';
+              summary?: string;
+              errorMessage?: string;
+              durationMs?: number;
+            };
+            setDraft((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    toolEvents: applyToolEvent(prev.toolEvents, payload, orderCounterRef.current),
+                  }
+                : prev,
+            );
             return;
           }
           if (ev.event === 'workout_updated') {
@@ -181,8 +201,8 @@ export function ChatPanel({
 
   return (
     <Card style={{
-      padding: 0, position: 'sticky', top: 76, alignSelf: 'start',
-      maxHeight: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column',
+      padding: 0, display: 'flex', flexDirection: 'column',
+      maxHeight: 'min(640px, calc(100vh - 120px))',
     }}>
       <div style={{
         padding: '16px 18px', borderBottom: `1px solid ${T.border}`,
@@ -203,7 +223,7 @@ export function ChatPanel({
 
       <div
         ref={scrollRef}
-        style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 360 }}
+        style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 320 }}
       >
         {items.length === 0 && (
           <p style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.6, margin: 0 }}>
@@ -212,8 +232,8 @@ export function ChatPanel({
         )}
         {items.map((item) => (
           item.kind === 'persisted'
-            ? <PersistedBubble key={item.message.id} message={item.message} />
-            : <DraftBubble key={item.draft.id} draft={item.draft} />
+            ? <PersistedTurn key={item.message.id} message={item.message} />
+            : <DraftTurn key={item.draft.id} draft={item.draft} />
         ))}
         {streaming && !draft && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, paddingLeft: 4 }}>
@@ -261,7 +281,7 @@ export function ChatPanel({
   );
 }
 
-function PersistedBubble({ message }: { message: TrainingChatMessage }) {
+function PersistedTurn({ message }: { message: TrainingChatMessage }) {
   if (message.role === 'user') {
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -279,37 +299,46 @@ function PersistedBubble({ message }: { message: TrainingChatMessage }) {
     );
   }
   if (message.role === 'assistant') {
-    const tcs = (message.toolCalls ?? []) as UiToolCall[] | null;
+    const tcs = (message.toolCalls ?? []) as PersistedToolCall[] | null;
+    const toolEvents: ToolEventUi[] = (tcs ?? []).map((tc, i) => ({
+      id: `${message.id}-${i}`,
+      name: tc.name,
+      displayName: TOOL_LABELS[tc.name] ?? tc.name,
+      phase: 'done',
+      summary: summarizePersistedToolCall(tc),
+      orderKey: i,
+    }));
     return (
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-        <div style={{
-          maxWidth: '92%', padding: '10px 12px', borderRadius: 10,
-          background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`,
-          fontSize: 13, color: T.ink, lineHeight: 1.6,
-        }}>
-          {message.content && (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+        {message.content && (
+          <div style={{
+            maxWidth: '92%', padding: '10px 12px', borderRadius: 10,
+            background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`,
+            fontSize: 13, color: T.ink, lineHeight: 1.6,
+          }}>
             <div className="track-md">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
-          )}
-          {tcs && tcs.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-              {tcs.map((tc, i) => <ToolPill key={i} tc={tc} />)}
+            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
+              {formatTime(message.createdAt)} · 教练
             </div>
-          )}
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
-            {formatTime(message.createdAt)} · 教练
           </div>
-        </div>
+        )}
+        {toolEvents.length > 0 && (
+          <div style={{ maxWidth: '92%', alignSelf: 'flex-start', width: '100%' }}>
+            <ToolCallStack events={toolEvents} />
+          </div>
+        )}
       </div>
     );
   }
   return null;
 }
 
-function DraftBubble({ draft }: { draft: DraftAssistant }) {
+function DraftTurn({ draft }: { draft: DraftAssistant }) {
+  const events = Array.from(draft.toolEvents.values());
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
       <div style={{
         maxWidth: '92%', padding: '10px 12px', borderRadius: 10,
         background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.cyan}40`,
@@ -324,45 +353,28 @@ function DraftBubble({ draft }: { draft: DraftAssistant }) {
             ● 教练正在思考…
           </div>
         )}
-        {draft.toolCalls.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            {draft.toolCalls.map((tc, i) => <ToolPill key={i} tc={tc} />)}
-          </div>
-        )}
       </div>
+      {events.length > 0 && (
+        <div style={{ maxWidth: '92%', alignSelf: 'flex-start', width: '100%' }}>
+          <ToolCallStack events={events} />
+        </div>
+      )}
     </div>
   );
 }
 
-function ToolPill({ tc }: { tc: UiToolCall }) {
-  const label = TOOL_LABELS[tc.name] ?? tc.name;
-  const summary = summarizeToolCall(tc);
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      fontFamily: T.mono, fontSize: 11, padding: '4px 8px', borderRadius: 4,
-      background: 'rgba(95,216,255,0.06)', border: `1px solid ${T.cyan}40`,
-      color: T.cyan, letterSpacing: 0.5,
-    }}>
-      <span aria-hidden>🔧</span>
-      <span style={{ fontWeight: 600 }}>{label}</span>
-      {summary && <span style={{ color: T.inkDim }}>· {summary}</span>}
-    </span>
-  );
-}
-
-function summarizeToolCall(tc: UiToolCall): string | null {
+function summarizePersistedToolCall(tc: PersistedToolCall): string | undefined {
   if (tc.name === 'regenerate_day') {
-    const di = tc.arguments.dayIndex;
-    if (typeof di === 'number') return `第 ${di} 天`;
-    return null;
+    const di = tc.arguments?.dayIndex;
+    if (typeof di === 'number') return `第 ${di} 天已重新生成`;
+    return '已重新生成训练';
   }
   if (tc.name === 'update_workout_field') {
-    const value = tc.arguments.value;
-    if (typeof value === 'string') return STATUS_ZH[value] ?? value;
-    return null;
+    const v = tc.arguments?.value;
+    if (typeof v === 'string') return `状态已设为：${STATUS_ZH[v] ?? v}`;
+    return '已更新训练状态';
   }
-  return null;
+  return undefined;
 }
 
 function formatTime(iso: string): string {
