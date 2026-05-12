@@ -14,6 +14,17 @@ import {
   type LlmConfigUpdateBody,
   type AiUsageEntry,
 } from '@/lib/api';
+import {
+  T,
+  Btn,
+  Card,
+  CardHeader,
+  Field,
+  PageHero,
+  Banner,
+  TrackInput,
+  SectionLabel,
+} from '@/components/track';
 
 interface CodeRow {
   code: string;
@@ -92,196 +103,291 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">管理后台</h1>
-        <p className="text-zinc-500 mt-1">生成卡密、查看用户、配置 AI 模型。</p>
-      </header>
+    <div className="track-page" style={{ minHeight: '100vh', padding: '32px 24px' }}>
+      <div style={{ maxWidth: T.pageMaxW, margin: '0 auto' }}>
+        <PageHero
+          eyebrow="// ADMIN.CONSOLE"
+          title="管理后台"
+          sub="生成卡密 · 管理用户 · 配置 AI 模型 · 查看用量"
+        />
 
-      <div className="flex gap-2 border-b border-zinc-200">
-        <TabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
-          卡密 / 用户
-        </TabButton>
-        <TabButton active={tab === 'ai'} onClick={() => setTab('ai')}>
-          AI 配置
-        </TabButton>
-        <TabButton active={tab === 'usage'} onClick={() => setTab('usage')}>
-          用量
-        </TabButton>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div style={{
+          display: 'flex', gap: 4, marginBottom: 24,
+          borderBottom: `1px solid ${T.border}`,
+        }}>
+          <TabButton active={tab === 'codes'} onClick={() => setTab('codes')} code="CODES">
+            卡密 / 用户
+          </TabButton>
+          <TabButton active={tab === 'ai'} onClick={() => setTab('ai')} code="AI.CFG">
+            AI 配置
+          </TabButton>
+          <TabButton active={tab === 'usage'} onClick={() => setTab('usage')} code="USAGE">
+            用量
+          </TabButton>
         </div>
-      )}
 
-      {tab === 'codes' && (
-        <div className="space-y-10">
-          <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">生成卡密</h2>
-            <form onSubmit={generate} className="grid sm:grid-cols-4 gap-3">
-              <Field label="数量">
-                <input
-                  type="number"
-                  min={1}
-                  max={1000}
-                  value={count}
-                  onChange={(e) => setCount(Number(e.target.value))}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-                />
-              </Field>
-              <Field label="天数">
-                <input
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={planDays}
-                  onChange={(e) => setPlanDays(Number(e.target.value))}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-                />
-              </Field>
-              <Field label="前缀（可选）">
-                <input
-                  value={prefix}
-                  onChange={(e) =>
-                    setPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-                  }
-                  placeholder="例如 PRO"
-                  maxLength={8}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-                />
-              </Field>
-              <Field label="备注">
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-                />
-              </Field>
-              <button
-                type="submit"
-                disabled={busy}
-                className="sm:col-span-4 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50"
+        {error && (
+          <div style={{ marginBottom: 20 }}>
+            <Banner kind="error" code="ERR">{error}</Banner>
+          </div>
+        )}
+
+        {tab === 'codes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <Card style={{ padding: 24 }}>
+              <CardHeader eyebrow="// CODES.GENERATE" title="生成卡密" />
+              <form
+                onSubmit={generate}
+                style={{
+                  marginTop: 18,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  gap: 14,
+                }}
               >
-                {busy ? '生成中…' : '生成'}
-              </button>
-            </form>
-            {generated.length > 0 && (
-              <div className="bg-zinc-900 text-emerald-300 rounded-lg p-4 font-mono text-xs space-y-1 max-h-64 overflow-auto">
-                {generated.map((c) => (
-                  <div key={c}>{c}</div>
-                ))}
+                <Field label="COUNT">
+                  <TrackInput
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={count}
+                    onChange={(e) => setCount(Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="PLAN.DAYS">
+                  <TrackInput
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={planDays}
+                    onChange={(e) => setPlanDays(Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="PREFIX">
+                  <TrackInput
+                    mono
+                    value={prefix}
+                    onChange={(e) =>
+                      setPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                    }
+                    placeholder="PRO"
+                    maxLength={8}
+                  />
+                </Field>
+                <Field label="NOTE">
+                  <TrackInput
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="可选"
+                  />
+                </Field>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <Btn type="submit" disabled={busy}>
+                    {busy ? '生成中…' : '生成卡密 →'}
+                  </Btn>
+                </div>
+              </form>
+
+              {generated.length > 0 && (
+                <div style={{ marginTop: 20 }}>
+                  <SectionLabel right={
+                    <span style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
+                      {generated.length} GENERATED
+                    </span>
+                  }>OUTPUT</SectionLabel>
+                  <div style={{
+                    background: '#0a0d0a',
+                    border: `1px solid ${T.border}`,
+                    borderLeft: `2px solid ${T.lime}`,
+                    borderRadius: 8,
+                    padding: '14px 16px',
+                    fontFamily: T.mono,
+                    fontSize: 12,
+                    color: T.lime,
+                    lineHeight: 1.8,
+                    maxHeight: 280,
+                    overflow: 'auto',
+                  }}>
+                    {generated.map((c) => (
+                      <div key={c}>{c}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            <Card style={{ padding: 24 }}>
+              <CardHeader
+                eyebrow="// USERS"
+                title="用户"
+                right={
+                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+                    {users.length} TOTAL
+                  </span>
+                }
+              />
+              <div style={{ marginTop: 18, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left' }}>
+                      <Th>EMAIL</Th>
+                      <Th>NAME</Th>
+                      <Th>ROLE</Th>
+                      <Th>JOINED</Th>
+                      <Th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} style={{ borderTop: `1px dashed ${T.border}` }}>
+                        <Td>{u.email}</Td>
+                        <Td>{u.name}</Td>
+                        <Td>
+                          <span style={{
+                            fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
+                            color: u.role === 'admin' ? T.lime : T.inkDim,
+                            padding: '2px 6px',
+                            border: `1px solid ${u.role === 'admin' ? T.lime + '60' : T.border}`,
+                            borderRadius: 4,
+                          }}>{u.role.toUpperCase()}</span>
+                        </Td>
+                        <Td mono dim>
+                          {new Date(u.createdAt).toLocaleDateString('zh-CN')}
+                        </Td>
+                        <Td>
+                          <button
+                            onClick={() => grantPro(u.id)}
+                            style={{
+                              fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
+                              color: T.lime,
+                              background: 'transparent',
+                              border: `1px solid ${T.lime}40`,
+                              borderRadius: 4,
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            + GRANT.PRO
+                          </button>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </section>
+            </Card>
 
-          <section className="bg-white border border-zinc-200 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-4">用户</h2>
-            <table className="w-full text-sm">
-              <thead className="text-zinc-500 text-left">
-                <tr>
-                  <th className="font-normal py-2">邮箱</th>
-                  <th className="font-normal">昵称</th>
-                  <th className="font-normal">角色</th>
-                  <th className="font-normal">注册时间</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t border-zinc-100">
-                    <td className="py-2">{u.email}</td>
-                    <td>{u.name}</td>
-                    <td>{u.role}</td>
-                    <td className="text-zinc-500">
-                      {new Date(u.createdAt).toLocaleDateString('zh-CN')}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => grantPro(u.id)}
-                        className="text-emerald-600 hover:underline text-xs"
-                      >
-                        授予 Pro
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+            <Card style={{ padding: 24 }}>
+              <CardHeader
+                eyebrow="// CODES.RECENT"
+                title="最近卡密"
+                right={
+                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+                    {codes.length} ROWS
+                  </span>
+                }
+              />
+              <div style={{ marginTop: 18, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left' }}>
+                      <Th>CODE</Th>
+                      <Th>DAYS</Th>
+                      <Th>NOTE</Th>
+                      <Th>STATUS</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {codes.map((c) => (
+                      <tr key={c.code} style={{ borderTop: `1px dashed ${T.border}` }}>
+                        <Td mono>{c.code}</Td>
+                        <Td>{c.planDays}</Td>
+                        <Td dim>{c.note ?? '—'}</Td>
+                        <Td>
+                          {c.usedBy ? (
+                            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim }}>
+                              {new Date(c.usedAt!).toLocaleDateString('zh-CN')} · {c.usedBy.slice(0, 8)}
+                            </span>
+                          ) : (
+                            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>● UNUSED</span>
+                          )}
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
 
-          <section className="bg-white border border-zinc-200 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-4">最近卡密</h2>
-            <table className="w-full text-xs font-mono">
-              <thead className="text-zinc-500 text-left font-sans">
-                <tr>
-                  <th className="font-normal py-2">卡密</th>
-                  <th className="font-normal">天数</th>
-                  <th className="font-normal">备注</th>
-                  <th className="font-normal">使用情况</th>
-                </tr>
-              </thead>
-              <tbody>
-                {codes.map((c) => (
-                  <tr key={c.code} className="border-t border-zinc-100">
-                    <td className="py-2">{c.code}</td>
-                    <td>{c.planDays}</td>
-                    <td>{c.note ?? '—'}</td>
-                    <td>
-                      {c.usedBy ? (
-                        <span className="text-zinc-500">
-                          {new Date(c.usedAt!).toLocaleDateString('zh-CN')} ·{' '}
-                          {c.usedBy.slice(0, 8)}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-600">未使用</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </div>
-      )}
-
-      {tab === 'ai' && <AiConfigSection />}
-      {tab === 'usage' && <AiUsageSection />}
+        {tab === 'ai' && <AiConfigSection />}
+        {tab === 'usage' && <AiUsageSection />}
+      </div>
     </div>
   );
 }
 
 function TabButton({
-  active,
-  onClick,
-  children,
+  active, onClick, children, code,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  code: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className={
-        'px-4 py-2 -mb-px border-b-2 text-sm font-medium ' +
-        (active
-          ? 'border-emerald-600 text-emerald-700'
-          : 'border-transparent text-zinc-500 hover:text-zinc-800')
-      }
+      style={{
+        background: 'transparent',
+        border: 'none',
+        borderBottom: `2px solid ${active ? T.lime : 'transparent'}`,
+        padding: '12px 18px',
+        marginBottom: -1,
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 2,
+      }}
     >
-      {children}
+      <span style={{
+        fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,
+        color: active ? T.lime : T.inkFaint,
+      }}>{code}</span>
+      <span style={{
+        fontSize: 14, fontWeight: 500,
+        color: active ? T.ink : T.inkDim,
+      }}>{children}</span>
     </button>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Th({ children }: { children?: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className="text-xs text-zinc-500">{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
+    <th style={{
+      fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5,
+      fontWeight: 400, padding: '8px 12px 10px 0',
+    }}>{children}</th>
+  );
+}
+
+function Td({
+  children, mono, dim,
+}: {
+  children: React.ReactNode;
+  mono?: boolean;
+  dim?: boolean;
+}) {
+  return (
+    <td style={{
+      padding: '12px 12px 12px 0',
+      fontFamily: mono ? T.mono : T.sans,
+      fontSize: mono ? 12 : 13,
+      color: dim ? T.inkDim : T.ink,
+      verticalAlign: 'middle',
+    }}>{children}</td>
   );
 }
 
@@ -340,7 +446,7 @@ function AiConfigSection() {
     setForm({
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKey: '', // never prefilled
+      apiKey: '',
       model: row.model,
       maxOutputTokens: row.maxOutputTokens,
       isActive: row.isActive,
@@ -448,152 +554,172 @@ function AiConfigSection() {
   }
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {error && <Banner kind="error" code="ERR">{error}</Banner>}
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">AI 模型配置</h2>
-          <button
-            onClick={startCreate}
-            disabled={busy || editingId !== null}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50"
-          >
-            新增
-          </button>
-        </div>
+      <Card style={{ padding: 24 }}>
+        <CardHeader
+          eyebrow="// LLM.CONFIGS"
+          title="AI 模型配置"
+          right={
+            <Btn
+              size="sm"
+              onClick={startCreate}
+              disabled={busy || editingId !== null}
+            >
+              + 新增
+            </Btn>
+          }
+        />
 
-        {loading ? (
-          <p className="text-sm text-zinc-500">加载中…</p>
-        ) : configs.length === 0 ? (
-          <p className="text-sm text-zinc-500">尚未配置 LLM。点击“新增”添加。</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-zinc-500 text-left">
-                <tr>
-                  <th className="font-normal py-2">名称</th>
-                  <th className="font-normal">Model</th>
-                  <th className="font-normal">Base URL</th>
-                  <th className="font-normal">API Key</th>
-                  <th className="font-normal">Max Out</th>
-                  <th className="font-normal">状态</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {configs.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={
-                      'border-t border-zinc-100 ' +
-                      (row.isActive ? 'bg-emerald-50/40' : '')
-                    }
-                  >
-                    <td className="py-2 font-medium">{row.name}</td>
-                    <td className="font-mono text-xs">{row.model}</td>
-                    <td className="font-mono text-xs text-zinc-600 max-w-[16rem] truncate">
-                      {row.baseUrl}
-                    </td>
-                    <td className="font-mono text-xs text-zinc-500">{row.apiKeyHint}</td>
-                    <td>{row.maxOutputTokens}</td>
-                    <td>
-                      {row.isActive ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                          激活中
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="text-right space-x-2 whitespace-nowrap">
-                      <button
-                        onClick={() => startEdit(row)}
-                        disabled={busy || editingId !== null}
-                        className="text-emerald-600 hover:underline text-xs disabled:opacity-40"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => activate(row.id)}
-                        disabled={busy || row.isActive || editingId !== null}
-                        className="text-blue-600 hover:underline text-xs disabled:opacity-40"
-                      >
-                        激活
-                      </button>
-                      <button
-                        onClick={() => remove(row)}
-                        disabled={busy || row.isActive || editingId !== null}
-                        className="text-red-600 hover:underline text-xs disabled:opacity-40"
-                      >
-                        删除
-                      </button>
-                    </td>
+        <div style={{ marginTop: 18 }}>
+          {loading ? (
+            <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+              // LOADING…
+            </div>
+          ) : configs.length === 0 ? (
+            <div style={{
+              padding: '32px 20px',
+              border: `1px dashed ${T.border}`,
+              borderRadius: 8,
+              textAlign: 'center',
+              color: T.inkDim,
+              fontSize: 13,
+            }}>
+              尚未配置 LLM。点击「+ 新增」开始。
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left' }}>
+                    <Th>NAME</Th>
+                    <Th>MODEL</Th>
+                    <Th>BASE.URL</Th>
+                    <Th>KEY.HINT</Th>
+                    <Th>MAX.OUT</Th>
+                    <Th>STATUS</Th>
+                    <Th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {configs.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderTop: `1px dashed ${T.border}`,
+                        background: row.isActive ? T.limeGlow : 'transparent',
+                      }}
+                    >
+                      <Td>
+                        <span style={{ fontWeight: 600, color: T.ink }}>{row.name}</span>
+                      </Td>
+                      <Td mono>{row.model}</Td>
+                      <Td mono dim>
+                        <span style={{
+                          display: 'inline-block', maxWidth: 220,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          verticalAlign: 'bottom',
+                        }}>{row.baseUrl}</span>
+                      </Td>
+                      <Td mono dim>{row.apiKeyHint}</Td>
+                      <Td mono>{row.maxOutputTokens}</Td>
+                      <Td>
+                        {row.isActive ? (
+                          <span style={{
+                            fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
+                            color: T.lime,
+                            padding: '2px 8px',
+                            border: `1px solid ${T.lime}60`,
+                            borderRadius: 4,
+                          }}>● ACTIVE</span>
+                        ) : (
+                          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkGhost, letterSpacing: 1.2 }}>—</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                          <RowBtn
+                            color={T.lime}
+                            onClick={() => startEdit(row)}
+                            disabled={busy || editingId !== null}
+                          >EDIT</RowBtn>
+                          <RowBtn
+                            color={T.cyan}
+                            onClick={() => activate(row.id)}
+                            disabled={busy || row.isActive || editingId !== null}
+                          >ACTIVATE</RowBtn>
+                          <RowBtn
+                            color={T.red}
+                            onClick={() => remove(row)}
+                            disabled={busy || row.isActive || editingId !== null}
+                          >DELETE</RowBtn>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {editingId !== null && (
-        <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-          <h3 className="text-base font-semibold">
-            {editingId === 'new' ? '新增配置' : `编辑：${form.name}`}
-          </h3>
-          <form onSubmit={submit} className="grid sm:grid-cols-2 gap-3">
-            <Field label="名称">
-              <input
+        <Card hot style={{ padding: 24 }}>
+          <CardHeader
+            eyebrow={editingId === 'new' ? '// LLM.NEW' : '// LLM.EDIT'}
+            title={editingId === 'new' ? '新增配置' : `编辑：${form.name}`}
+          />
+          <form
+            onSubmit={submit}
+            style={{
+              marginTop: 18,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 14,
+            }}
+          >
+            <Field label="NAME">
+              <TrackInput
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 maxLength={50}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2"
                 required
               />
             </Field>
-            <Field label="Model">
-              <input
+            <Field label="MODEL">
+              <TrackInput
+                mono
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
                 maxLength={100}
                 placeholder="例如 gpt-4o-mini"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2"
                 required
               />
             </Field>
-            <Field label="Base URL">
-              <input
+            <Field label="BASE.URL" full>
+              <TrackInput
+                mono
                 value={form.baseUrl}
                 onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
                 placeholder="https://api.openai.com/v1"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2"
                 required
               />
             </Field>
-            <Field
-              label={
-                editingId === 'new'
-                  ? 'API Key'
-                  : 'API Key（留空则保留原值）'
-              }
-            >
-              <input
+            <Field label={editingId === 'new' ? 'API.KEY' : 'API.KEY（留空则保留原值）'}>
+              <TrackInput
+                mono
                 type="password"
                 value={form.apiKey}
                 onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
                 maxLength={200}
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2"
                 {...(editingId === 'new' ? { required: true } : {})}
               />
             </Field>
-            <Field label="Max Output Tokens">
-              <input
+            <Field label="MAX.OUTPUT.TOKENS">
+              <TrackInput
                 type="number"
                 min={1}
                 max={32768}
@@ -601,45 +727,66 @@ function AiConfigSection() {
                 onChange={(e) =>
                   setForm({ ...form, maxOutputTokens: Number(e.target.value) })
                 }
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2"
                 required
               />
             </Field>
-            <Field label="是否激活">
-              <label className="flex items-center gap-2 mt-2">
+            <Field label="ACTIVATE" full>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px',
+                background: T.panelSolid,
+                border: `1px solid ${T.border}`,
+                borderRadius: 8,
+                cursor: 'pointer',
+              }}>
                 <input
                   type="checkbox"
                   checked={form.isActive}
-                  onChange={(e) =>
-                    setForm({ ...form, isActive: e.target.checked })
-                  }
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  style={{ accentColor: T.lime }}
                 />
-                <span className="text-sm text-zinc-700">
+                <span style={{ fontSize: 13, color: T.inkDim }}>
                   保存后将其设为唯一激活配置
                 </span>
               </label>
             </Field>
-            <div className="sm:col-span-2 flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50"
-              >
-                {busy ? '保存中…' : '保存'}
-              </button>
-              <button
-                type="button"
-                onClick={cancelEdit}
-                disabled={busy}
-                className="px-4 py-2 rounded-lg border border-zinc-300 text-zinc-700 font-medium disabled:opacity-50"
-              >
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10 }}>
+              <Btn type="submit" disabled={busy}>
+                {busy ? '保存中…' : '保存 →'}
+              </Btn>
+              <Btn type="button" variant="ghost" onClick={cancelEdit} disabled={busy}>
                 取消
-              </button>
+              </Btn>
             </div>
           </form>
-        </section>
+        </Card>
       )}
     </div>
+  );
+}
+
+function RowBtn({
+  children, color, onClick, disabled,
+}: {
+  children: React.ReactNode;
+  color: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
+        color: disabled ? T.inkGhost : color,
+        background: 'transparent',
+        border: `1px solid ${disabled ? T.border : color + '40'}`,
+        borderRadius: 4,
+        padding: '4px 8px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+    >{children}</button>
   );
 }
 
@@ -655,7 +802,7 @@ function currentMonthIso(): string {
 function shiftMonth(period: string, delta: number): string {
   const [yStr, mStr] = period.split('-');
   const y = Number(yStr);
-  const m = Number(mStr) - 1; // 0-indexed
+  const m = Number(mStr) - 1;
   const d = new Date(Date.UTC(y, m + delta, 1));
   const ny = d.getUTCFullYear();
   const nm = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -686,93 +833,150 @@ function AiUsageSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
+  const totalIn = entries.reduce((s, e) => s + e.inputTokens, 0);
+  const totalOut = entries.reduce((s, e) => s + e.outputTokens, 0);
+  const totalGen = entries.reduce((s, e) => s + e.planGenerationCount, 0);
+  const totalChat = entries.reduce((s, e) => s + e.chatMessageCount, 0);
+
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {error && <Banner kind="error" code="ERR">{error}</Banner>}
 
-      <section className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
-        <div className="flex flex-wrap items-center gap-3 justify-between">
-          <h2 className="text-lg font-semibold">AI 用量</h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPeriod(shiftMonth(period, -1))}
-              className="px-2 py-1 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50"
-            >
-              ←
-            </button>
-            <input
-              type="month"
-              value={period.slice(0, 7)}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (/^\d{4}-\d{2}$/.test(v)) {
-                  setPeriod(`${v}-01`);
-                }
-              }}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
-            />
-            <button
-              onClick={() => setPeriod(shiftMonth(period, 1))}
-              className="px-2 py-1 rounded-lg border border-zinc-300 text-sm text-zinc-700 hover:bg-zinc-50"
-            >
-              →
-            </button>
-            <button
-              onClick={() => refresh(period)}
-              disabled={loading}
-              className="ml-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50"
-            >
-              {loading ? '刷新中…' : '刷新'}
-            </button>
-          </div>
-        </div>
+      <Card style={{ padding: 24 }}>
+        <CardHeader
+          eyebrow="// AI.USAGE"
+          title={`AI 用量 · ${period.slice(0, 7)}`}
+          right={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <RowBtn color={T.inkDim} onClick={() => setPeriod(shiftMonth(period, -1))}>← PREV</RowBtn>
+              <input
+                type="month"
+                value={period.slice(0, 7)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d{4}-\d{2}$/.test(v)) setPeriod(`${v}-01`);
+                }}
+                className="track-input track-input-mono"
+                style={{ width: 130, fontSize: 12, padding: '6px 10px' }}
+              />
+              <RowBtn color={T.inkDim} onClick={() => setPeriod(shiftMonth(period, 1))}>NEXT →</RowBtn>
+              <RowBtn color={T.lime} onClick={() => refresh(period)} disabled={loading}>
+                {loading ? 'SYNC…' : '↻ REFRESH'}
+              </RowBtn>
+            </div>
+          }
+        />
 
-        {loading ? (
-          <p className="text-sm text-zinc-500">加载中…</p>
-        ) : entries.length === 0 ? (
-          <p className="text-sm text-zinc-500">本月暂无用量数据。</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-zinc-500 text-left">
-                <tr>
-                  <th className="font-normal py-2">用户</th>
-                  <th className="font-normal">月份</th>
-                  <th className="font-normal text-right">生成</th>
-                  <th className="font-normal text-right">对话</th>
-                  <th className="font-normal text-right">输入 tokens</th>
-                  <th className="font-normal text-right">输出 tokens</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((e) => (
-                  <tr key={e.userId} className="border-t border-zinc-100">
-                    <td className="py-2">
-                      <div className="font-medium text-zinc-800">{e.email}</div>
-                      {e.displayName && (
-                        <div className="text-xs text-zinc-500">{e.displayName}</div>
-                      )}
-                    </td>
-                    <td className="text-zinc-500">{e.periodStart.slice(0, 7)}</td>
-                    <td className="text-right tabular-nums">{e.planGenerationCount}</td>
-                    <td className="text-right tabular-nums">{e.chatMessageCount}</td>
-                    <td className="text-right tabular-nums">
-                      {e.inputTokens.toLocaleString()}
-                    </td>
-                    <td className="text-right tabular-nums">
-                      {e.outputTokens.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {entries.length > 0 && !loading && (
+          <div style={{
+            marginTop: 18,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            gap: 12,
+          }}>
+            <MiniStat label="USERS" value={entries.length} />
+            <MiniStat label="GEN.RUNS" value={totalGen} />
+            <MiniStat label="IN.TOKENS" value={totalIn.toLocaleString()} />
+            <MiniStat label="OUT.TOKENS" value={totalOut.toLocaleString()} accent />
           </div>
         )}
-      </section>
+
+        <div style={{ marginTop: 18 }}>
+          {loading ? (
+            <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+              // LOADING…
+            </div>
+          ) : entries.length === 0 ? (
+            <div style={{
+              padding: '32px 20px',
+              border: `1px dashed ${T.border}`,
+              borderRadius: 8,
+              textAlign: 'center',
+              color: T.inkDim,
+              fontSize: 13,
+            }}>
+              本月暂无用量数据。
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left' }}>
+                    <Th>USER</Th>
+                    <Th>PERIOD</Th>
+                    <ThRight>GEN</ThRight>
+                    <ThRight>CHAT</ThRight>
+                    <ThRight>IN.TOKENS</ThRight>
+                    <ThRight>OUT.TOKENS</ThRight>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((e) => (
+                    <tr key={e.userId} style={{ borderTop: `1px dashed ${T.border}` }}>
+                      <Td>
+                        <div style={{ color: T.ink, fontWeight: 500 }}>{e.email}</div>
+                        {e.displayName && (
+                          <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{e.displayName}</div>
+                        )}
+                      </Td>
+                      <Td mono dim>{e.periodStart.slice(0, 7)}</Td>
+                      <TdRight mono>{e.planGenerationCount}</TdRight>
+                      <TdRight mono>{e.chatMessageCount}</TdRight>
+                      <TdRight mono>{e.inputTokens.toLocaleString()}</TdRight>
+                      <TdRight mono accent>{e.outputTokens.toLocaleString()}</TdRight>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
+  );
+}
+
+function MiniStat({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
+  return (
+    <div style={{
+      background: T.panelSolid,
+      border: `1px solid ${T.border}`,
+      borderRadius: 8,
+      padding: '12px 14px',
+    }}>
+      <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>{label}</div>
+      <div style={{
+        fontFamily: T.mono, fontSize: 22, fontWeight: 600,
+        color: accent ? T.lime : T.ink, letterSpacing: -0.5,
+      }}>{value}</div>
+    </div>
+  );
+}
+
+function ThRight({ children }: { children: React.ReactNode }) {
+  return (
+    <th style={{
+      fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5,
+      fontWeight: 400, padding: '8px 0 10px 12px', textAlign: 'right',
+    }}>{children}</th>
+  );
+}
+
+function TdRight({
+  children, mono, accent,
+}: {
+  children: React.ReactNode;
+  mono?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <td style={{
+      padding: '12px 0 12px 12px',
+      fontFamily: mono ? T.mono : T.sans,
+      fontSize: mono ? 12 : 13,
+      color: accent ? T.lime : T.ink,
+      textAlign: 'right',
+      fontVariantNumeric: 'tabular-nums',
+    }}>{children}</td>
   );
 }
