@@ -21,9 +21,9 @@ function formatDate(d: string): { dd: string; mm: string } {
 }
 
 function primaryTarget(w: TrainingWorkout): { label: string; value: string } | null {
-  const pickHR = () => (w.targetHeartRate && w.targetHeartRate !== '不适用' ? { label: 'HR', value: w.targetHeartRate } : null);
-  const pickPace = () => (w.targetPace && w.targetPace !== '不适用' ? { label: 'PACE', value: w.targetPace } : null);
-  const pickPower = () => (w.targetPower && w.targetPower !== '不适用' ? { label: 'PWR', value: w.targetPower } : null);
+  const pickHR = () => (w.targetHeartRate && w.targetHeartRate !== '不适用' ? { label: '心率', value: w.targetHeartRate } : null);
+  const pickPace = () => (w.targetPace && w.targetPace !== '不适用' ? { label: '配速', value: w.targetPace } : null);
+  const pickPower = () => (w.targetPower && w.targetPower !== '不适用' ? { label: '功率', value: w.targetPower } : null);
   switch (w.targetMetric) {
     case 'heart_rate': return pickHR();
     case 'pace': return pickPace();
@@ -68,11 +68,11 @@ export function WorkoutCard({
     >
       <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr) auto', alignItems: 'center', padding: '14px 18px', gap: 16 }}>
         <div style={{ textAlign: 'center', borderRight: `1px solid ${T.border}`, paddingRight: 16 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>DAY</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>第</div>
           <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: highlighted ? T.lime : T.ink, letterSpacing: -1, lineHeight: 1 }}>
-            {String(w.dayIndex).padStart(2, '0')}
+            {w.dayIndex}
           </div>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 4, letterSpacing: 1 }}>{mm || dd}</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 4, letterSpacing: 1 }}>天 · {mm || dd}</div>
         </div>
 
         <div style={{ minWidth: 0 }}>
@@ -92,10 +92,10 @@ export function WorkoutCard({
           {!isRest && (
             <div style={{ display: 'flex', gap: 14, fontFamily: T.mono, fontSize: 12, color: T.ink }}>
               {w.durationMinutes != null && (
-                <span>{w.durationMinutes}<span style={{ color: T.inkFaint, marginLeft: 2 }}>min</span></span>
+                <span>{w.durationMinutes}<span style={{ color: T.inkFaint, marginLeft: 2 }}>分钟</span></span>
               )}
               {w.distanceKm != null && (
-                <span>{Number(w.distanceKm).toFixed(1)}<span style={{ color: T.inkFaint, marginLeft: 2 }}>km</span></span>
+                <span>{Number(w.distanceKm).toFixed(1)}<span style={{ color: T.inkFaint, marginLeft: 2 }}>公里</span></span>
               )}
             </div>
           )}
@@ -111,7 +111,7 @@ export function WorkoutCard({
         <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${T.border}` }}>
           {w.workoutStructure && (
             <div style={{ marginTop: 16 }}>
-              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>STRUCTURE</div>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>训练结构</div>
               <div style={{
                 fontFamily: T.mono, fontSize: 12, color: T.ink, lineHeight: 1.7,
                 background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 6, border: `1px solid ${T.border}`,
@@ -121,7 +121,7 @@ export function WorkoutCard({
           )}
           {(w.targets ?? []).length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>KEY.TARGETS</div>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>关键要点</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: T.ink }}>
                 {(w.targets ?? []).map((t, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -136,7 +136,7 @@ export function WorkoutCard({
               marginTop: 14, padding: 12, background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
               borderRadius: 6, fontSize: 12, color: T.ink, lineHeight: 1.6,
             }}>
-              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginRight: 8 }}>ADAPT</span>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginRight: 8 }}>适应</span>
               {w.adaptation}
             </div>
           )}
@@ -161,23 +161,23 @@ export function WorkoutCard({
               background: 'transparent', border: 'none', color: T.inkDim, cursor: 'pointer',
               fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2, padding: 0,
             }}
-          >{open ? '▴ COLLAPSE' : '▾ EXPAND'}</button>
+          >{open ? '▴ 收起' : '▾ 展开'}</button>
           <span style={{ flex: 1, fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2, marginLeft: 8 }}>
             {SPORT_LABELS[w.sport]}
           </span>
           <Btn variant="ok" size="sm" onClick={onComplete} disabled={busy || w.status === 'completed'}>
-            {w.status === 'completed' ? '✓ DONE' : '完成'}
+            {w.status === 'completed' ? '✓ 已完成' : '完成'}
           </Btn>
           <Btn variant="ghost" size="sm" onClick={onSkip} disabled={busy || w.status === 'skipped'}>
-            {w.status === 'skipped' ? '— SKIPPED' : '跳过'}
+            {w.status === 'skipped' ? '— 已跳过' : '跳过'}
           </Btn>
-          <Btn variant="ghost" size="sm" onClick={onRegenerate} disabled={busy}>↻ 重生成</Btn>
+          <Btn variant="ghost" size="sm" onClick={onRegenerate} disabled={busy}>↻ 重新生成</Btn>
         </div>
       )}
 
       {isRest && (
         <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
-          // REST.DAY · 主动恢复 / 拉伸即可
+          // 休息日 · 主动恢复 / 拉伸即可
         </div>
       )}
     </Card>

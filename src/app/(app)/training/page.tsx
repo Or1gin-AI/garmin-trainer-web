@@ -34,8 +34,8 @@ function summaryPreview(s: string | null): string {
   return trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
 }
 
-function planCode(id: string): string {
-  return `PLAN.${id.slice(0, 4).toUpperCase()}`;
+function planShortId(id: string): string {
+  return `#${id.slice(0, 6).toUpperCase()}`;
 }
 
 export default function TrainingListPage() {
@@ -54,7 +54,7 @@ export default function TrainingListPage() {
   return (
     <>
       <PageHero
-        eyebrow="// PLANS"
+        eyebrow="// 训练计划"
         title="训练计划"
         sub="AI 根据你的目标 + Garmin 历史数据生成的周计划。每条计划独立运行，可随时与 AI 教练对话调整。"
         actions={
@@ -72,13 +72,13 @@ export default function TrainingListPage() {
 
       {plans === null && !error && (
         <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // LOADING…
+          // 加载中…
         </div>
       )}
 
       {plans && plans.length === 0 && (
         <Card style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>// EMPTY</div>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>// 暂无计划</div>
           <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>你还没有训练计划。</p>
           <Link href="/training/new" style={{ textDecoration: 'none' }}>
             <Btn>新建第一个计划</Btn>
@@ -88,7 +88,7 @@ export default function TrainingListPage() {
 
       {active.length > 0 && (
         <>
-          <SectionLabel>ACTIVE</SectionLabel>
+          <SectionLabel>进行中</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
             {active.map((p) => (
               <PlanRow key={p.id} plan={p} />
@@ -99,7 +99,7 @@ export default function TrainingListPage() {
 
       {archived.length > 0 && (
         <>
-          <SectionLabel>ARCHIVED</SectionLabel>
+          <SectionLabel>已归档</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {archived.map((p) => (
               <PlanRow key={p.id} plan={p} archived />
@@ -119,7 +119,7 @@ function PlanRow({ plan, archived }: { plan: TrainingPlanSummary; archived?: boo
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, fontWeight: 600 }}>
-                {planCode(plan.id)}
+                {planShortId(plan.id)}
               </span>
               <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />
             </div>
@@ -132,7 +132,7 @@ function PlanRow({ plan, archived }: { plan: TrainingPlanSummary; archived?: boo
           </div>
 
           <div>
-            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>CREATED</div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>创建于</div>
             <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim }}>
               {new Date(plan.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </div>

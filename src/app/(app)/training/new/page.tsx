@@ -329,12 +329,12 @@ export default function NewTrainingPlanPage() {
     <>
       <div style={{ marginBottom: 18 }}>
         <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← TRAINING.LIST
+          ← 返回列表
         </Link>
       </div>
 
       <PageHero
-        eyebrow="// NEW.PLAN"
+        eyebrow="// 新建计划"
         title="新建训练计划"
         sub="AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。"
       />
@@ -347,9 +347,9 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="// CONFIG" title="基础设置" />
+          <CardHeader eyebrow="// 基础设置" title="基础设置" />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-            <Field label="SPORT" full>
+            <Field label="运动项目" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {SPORT_OPTIONS.map((s) => {
                   const active = form[s.field] as boolean;
@@ -358,21 +358,20 @@ export default function NewTrainingPlanPage() {
                     <button key={s.k} type="button"
                       onClick={() => setField(s.field, !active as FormState[typeof s.field])}
                       style={{
-                        flex: '1 1 0', minWidth: 110, padding: 12, borderRadius: 8, cursor: 'pointer',
+                        flex: '1 1 0', minWidth: 110, padding: 14, borderRadius: 8, cursor: 'pointer',
                         background: active ? `${c}20` : 'transparent',
                         border: `1px solid ${active ? c : T.border}`,
-                        color: active ? c : T.inkDim, fontFamily: T.mono, fontSize: 11, letterSpacing: 1.5, fontWeight: 600,
-                        display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start',
+                        color: active ? c : T.inkDim,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                      <span style={{ fontSize: 14, color: active ? c : T.ink, letterSpacing: -0.2, fontFamily: T.sans }}>{s.label}</span>
-                      <span>SPORT.{SPORT_META[s.k].code}</span>
+                      <span style={{ fontSize: 15, color: active ? c : T.ink, letterSpacing: -0.2, fontFamily: T.sans, fontWeight: 600 }}>{s.label}</span>
                     </button>
                   );
                 })}
               </div>
             </Field>
 
-            <Field label="GOAL · 目标">
+            <Field label="目标">
               <TrackInput
                 value={form.goal}
                 onChange={(e) => setField('goal', e.target.value)}
@@ -381,7 +380,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="GOAL.DISTANCE · 目标距离">
+            <Field label="目标距离">
               <TrackInput
                 mono
                 value={form.goalDistance}
@@ -391,7 +390,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="WEEK.START · 周一日期">
+            <Field label="周一日期">
               <TrackInput
                 type="date"
                 value={form.weekStartDate}
@@ -400,7 +399,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="RACE.DATE · 比赛日期 (可选)">
+            <Field label="比赛日期(可选)">
               <TrackInput
                 type="date"
                 value={form.raceDate}
@@ -408,7 +407,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label={`DAYS / WEEK · ${form.daysPerWeek}`} full>
+            <Field label={`每周训练天数 · ${form.daysPerWeek} 天`} full>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[3, 4, 5, 6, 7].map((d) => (
                   <button key={d} type="button" onClick={() => setField('daysPerWeek', d)} style={{
@@ -422,7 +421,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="REST.DAY · 偏好休息日">
+            <Field label="偏好休息日">
               <TrackSelect
                 value={form.preferredRestDay}
                 onChange={(e) => setField('preferredRestDay', e.target.value)}
@@ -433,7 +432,7 @@ export default function NewTrainingPlanPage() {
               </TrackSelect>
             </Field>
 
-            <Field label="PRIORITY · 主项目">
+            <Field label="主项目">
               <TrackSelect
                 value={form.sportPriority}
                 onChange={(e) => setField('sportPriority', e.target.value as SportPriorityChoice)}
@@ -445,7 +444,7 @@ export default function NewTrainingPlanPage() {
               </TrackSelect>
             </Field>
 
-            <Field label="METRIC · 主指标偏好" full>
+            <Field label="主指标偏好" full>
               <div style={{ display: 'flex', gap: 8 }}>
                 {([
                   { v: 'auto', label: '自动' },
@@ -470,7 +469,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="HARD.MAX · 每周高强度上限">
+            <Field label="每周高强度上限">
               <TrackInput
                 type="number"
                 min={0}
@@ -487,16 +486,16 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="TIME · 可用时间 (可选)">
+            <Field label="可用时间(可选)">
               <TrackInput
                 value={form.availableTime}
                 onChange={(e) => setField('availableTime', e.target.value)}
                 maxLength={200}
-                placeholder="工作日 60min / 周末 90+min"
+                placeholder="工作日 60 分钟 / 周末 90+ 分钟"
               />
             </Field>
 
-            <Field label="INJURY · 伤病禁忌" full>
+            <Field label="伤病禁忌" full>
               <TrackTextarea
                 value={form.injuries}
                 onChange={(e) => setField('injuries', e.target.value)}
@@ -506,7 +505,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="NOTES · 备注" full>
+            <Field label="备注" full>
               <TrackTextarea
                 value={form.notes}
                 onChange={(e) => setField('notes', e.target.value)}
@@ -536,14 +535,14 @@ export default function NewTrainingPlanPage() {
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="// AI.PREVIEW" title="AI 将基于以下输入" />
+          <CardHeader eyebrow="// AI 预览" title="AI 将基于以下输入" />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <Row k="WEEK.START" v={form.weekStartDate} c={T.lime} />
-            <Row k="DAYS/WEEK" v={`${form.daysPerWeek} 天`} />
-            <Row k="SPORTS" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].code).join(' · ') : '—'} c={T.cyan} />
-            <Row k="PRIORITY" v={form.sportPriority === 'auto' ? 'AUTO' : SPORT_META[form.sportPriority as SportKind].code} />
-            <Row k="METRIC" v={form.targetMetricPreference === 'auto' ? 'AUTO' : form.targetMetricPreference === 'heart_rate' ? 'HR' : 'PACE'} />
-            <Row k="HARD.MAX" v={form.maxHardSessionsPerWeek === '' ? 'AUTO' : `${form.maxHardSessionsPerWeek}/wk`} />
+            <Row k="周一日期" v={form.weekStartDate} c={T.lime} />
+            <Row k="每周天数" v={`${form.daysPerWeek} 天`} />
+            <Row k="运动项目" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].label).join(' · ') : '—'} c={T.cyan} />
+            <Row k="主项目" v={form.sportPriority === 'auto' ? '自动' : SPORT_META[form.sportPriority as SportKind].label} />
+            <Row k="主指标" v={form.targetMetricPreference === 'auto' ? '自动' : form.targetMetricPreference === 'heart_rate' ? '心率优先' : '配速优先'} />
+            <Row k="高强度" v={form.maxHardSessionsPerWeek === '' ? '自动' : `${form.maxHardSessionsPerWeek} 次/周`} />
           </div>
           <div style={{
             marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,
@@ -558,7 +557,7 @@ export default function NewTrainingPlanPage() {
 
       {(days || workouts.size > 0 || summary) && (
         <div style={{ marginTop: 28 }}>
-          <SectionLabel>STREAM.PROGRESS</SectionLabel>
+          <SectionLabel>生成进度</SectionLabel>
           <Card style={{ padding: 22 }}>
             {summary && (
               <p style={{ fontSize: 13, color: T.ink, lineHeight: 1.7, whiteSpace: 'pre-line', margin: '0 0 14px' }}>
@@ -577,11 +576,11 @@ export default function NewTrainingPlanPage() {
                       border: `1px solid ${T.border}`, borderRadius: 8, padding: 10,
                       minHeight: 90, background: 'rgba(255,255,255,0.02)',
                     }}>
-                      <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>
-                        DAY {String(idx).padStart(2, '0')}
+                      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
+                        第 {idx} 天
                       </div>
-                      <div style={{ fontFamily: T.mono, fontSize: 10, color: sport?.color ?? T.inkFaint, letterSpacing: 1, marginTop: 4 }}>
-                        {day ? (sport?.code ?? SPORT_LABELS[day.sport]) : '…'}
+                      <div style={{ fontFamily: T.mono, fontSize: 11, color: sport?.color ?? T.inkFaint, letterSpacing: 0.5, marginTop: 4 }}>
+                        {day ? (sport?.label ?? SPORT_LABELS[day.sport]) : '…'}
                       </div>
                       {w ? (
                         <div style={{ marginTop: 6, fontSize: 12, color: T.ink, lineHeight: 1.4, wordBreak: 'break-word' }}>

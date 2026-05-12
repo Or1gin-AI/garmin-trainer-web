@@ -189,15 +189,15 @@ export function ChatPanel({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       }}>
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>// AI.COACH</div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>// AI 教练</div>
           <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>对话教练</div>
         </div>
         {streaming ? (
           <span className="track-blink" style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
-            ● THINKING…
+            ● 思考中…
           </span>
         ) : (
-          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.2 }}>● READY</span>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.2 }}>● 待命</span>
         )}
       </div>
 
@@ -250,7 +250,7 @@ export function ChatPanel({
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
           <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
-            ⏎ SEND · ⇧⏎ NEWLINE
+            ⏎ 发送 · ⇧⏎ 换行
           </span>
           <Btn size="sm" onClick={() => void handleSend()} disabled={streaming || composerValue.trim().length === 0}>
             发送 ↵
@@ -298,7 +298,7 @@ function PersistedBubble({ message }: { message: TrainingChatMessage }) {
             </div>
           )}
           <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
-            {formatTime(message.createdAt)} · COACH
+            {formatTime(message.createdAt)} · 教练
           </div>
         </div>
       </div>

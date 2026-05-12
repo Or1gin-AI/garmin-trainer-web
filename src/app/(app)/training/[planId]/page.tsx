@@ -36,8 +36,8 @@ function formatWeekStart(d: string): string {
   return `${m[1]} · ${Number(m[2])}月${Number(m[3])}日 ${WEEKDAYS[date.getDay()]}`;
 }
 
-function planCode(id: string): string {
-  return `PLAN.${id.slice(0, 4).toUpperCase()}`;
+function planShortId(id: string): string {
+  return `#${id.slice(0, 6).toUpperCase()}`;
 }
 
 export default function TrainingPlanDetailPage() {
@@ -144,14 +144,14 @@ export default function TrainingPlanDetailPage() {
   if (loading) {
     return (
       <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-        // LOADING…
+        // 加载中…
       </div>
     );
   }
   if (notFound) {
     return (
       <Card style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>// 404 · NOT_FOUND</div>
+        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>// 404 · 未找到</div>
         <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>计划不存在</h2>
         <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>这份计划可能已被删除，或不属于当前账号。</p>
         <Link href="/training" style={{ textDecoration: 'none' }}>
@@ -176,12 +176,12 @@ export default function TrainingPlanDetailPage() {
     <>
       <div style={{ marginBottom: 18 }}>
         <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← TRAINING.LIST
+          ← 返回列表
         </Link>
       </div>
 
       <PageHero
-        eyebrow={`// ${planCode(plan.id)} · WEEK`}
+        eyebrow={`// 计划 ${planShortId(plan.id)} · 本周`}
         title={formatWeekStart(plan.weekStartDate)}
         sub={`创建于 ${new Date(plan.createdAt).toLocaleString('zh-CN')}`}
         actions={
@@ -201,15 +201,15 @@ export default function TrainingPlanDetailPage() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
-        <StatTile label="COMPLETED" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
-        <StatTile label="WEEK.KM" value={totalKm.toFixed(1)} unit="KM" accent={T.cyan} />
-        <StatTile label="WEEK.MIN" value={String(totalMin)} unit="MIN" accent={T.cyan} />
-        <StatTile label="DAYS" value={`${ordered.length}`} unit="SESSIONS" accent={T.amber} />
+        <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
+        <StatTile label="本周公里" value={totalKm.toFixed(1)} unit="公里" accent={T.cyan} />
+        <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
+        <StatTile label="训练日" value={`${ordered.length}`} unit="次" accent={T.amber} />
       </div>
 
       {(plan.summary || plan.monitoring || plan.adjustmentRules) && (
         <Card style={{ padding: 22, marginBottom: 24 }}>
-          <CardHeader eyebrow="// SUMMARY" title="本周概要" />
+          <CardHeader eyebrow="// 本周概要" title="本周概要" />
           {plan.summary && (
             <p style={{ marginTop: 14, fontSize: 13, color: T.ink, lineHeight: 1.75, whiteSpace: 'pre-line' }}>
               {plan.summary}
@@ -219,13 +219,13 @@ export default function TrainingPlanDetailPage() {
             <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: plan.monitoring && plan.adjustmentRules ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)', gap: 12 }}>
               {plan.monitoring && (
                 <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginBottom: 6 }}>MONITORING</div>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginBottom: 6 }}>监测重点</div>
                   <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.monitoring}</p>
                 </div>
               )}
               {plan.adjustmentRules && (
                 <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.5, marginBottom: 6 }}>ADJUST.RULES</div>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.5, marginBottom: 6 }}>调整规则</div>
                   <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.adjustmentRules}</p>
                 </div>
               )}
@@ -236,7 +236,7 @@ export default function TrainingPlanDetailPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) minmax(0, 1fr)', gap: 18 }}>
         <div>
-          <SectionLabel>WORKOUTS · 本周训练</SectionLabel>
+          <SectionLabel>本周训练</SectionLabel>
           {ordered.length === 0 ? (
             <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
               暂无训练日。
