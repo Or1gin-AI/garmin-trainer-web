@@ -328,6 +328,37 @@ export interface TrainingCalendarEvent {
   metrics: Record<string, number | string | null>;
 }
 
+export interface EvaluationPairing {
+  workoutId: string;
+  workoutTitle: string;
+  sport: string;
+  matchedActivityRef: { region: string; activityId: string } | null;
+  verdict: 'matched' | 'partial' | 'missed' | 'different_sport';
+  subScore: number;
+  notes: string[];
+}
+
+export interface TrainingEvaluationResult {
+  title: string;
+  summary: string;
+  plannedWorkoutCount: number;
+  activityCount: number;
+  score?: number;
+  verdict?: string;
+  adherence?: {
+    sportMatched: boolean;
+    durationRatio: number | null;
+    distanceRatio: number | null;
+    intensityMatched: boolean | null;
+  };
+  load?: { planned: string | null; actual: number | null; comment: string };
+  intensity?: { planned: string | null; actual: string | null; comment: string };
+  highlights?: string[];
+  risks?: string[];
+  suggestions?: string[];
+  pairings?: EvaluationPairing[];
+}
+
 export interface TrainingEvaluationSummary {
   id: string;
   date: string;
@@ -335,12 +366,7 @@ export interface TrainingEvaluationSummary {
   plannedWorkoutIds: string[];
   activityRefs: Array<{ region: GarminRegion | 'manual'; activityId: string }>;
   status: 'pending' | 'ready' | 'failed';
-  result: {
-    title: string;
-    summary: string;
-    plannedWorkoutCount: number;
-    activityCount: number;
-  } | null;
+  result: TrainingEvaluationResult | null;
   note: string | null;
   createdAt: string;
 }
