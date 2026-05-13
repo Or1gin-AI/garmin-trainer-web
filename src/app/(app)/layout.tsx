@@ -17,6 +17,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/dashboard', label: '同步', sub: 'SYNC' },
   { href: '/training', label: '训练', sub: 'TRAIN' },
+  { href: '/calendar', label: '日历', sub: 'CAL' },
   { href: '/garmin', label: 'Garmin', sub: 'ACCT' },
   { href: '/subscription', label: '订阅', sub: 'SUB' },
 ];

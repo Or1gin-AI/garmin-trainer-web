@@ -1,7 +1,7 @@
 'use client';
 
 import { T, SPORT, type SportKind } from '@/components/track';
-import type { Sport, TrainingWorkout, WorkoutStatus } from '@/lib/api';
+import type { Sport, TargetMetric, TrainingWorkout, WorkoutStatus } from '@/lib/api';
 
 export interface CalendarDay {
   dayIndex: number;
@@ -12,8 +12,11 @@ export interface CalendarDay {
 
 export interface CalendarCellWorkout {
   title: string;
+  slotIndex?: number | null;
+  sessionLabel?: string | null;
   durationMinutes?: number | null;
   distanceKm?: number | null;
+  targetMetric?: TargetMetric;
   targetPace?: string;
   targetHeartRate?: string;
   intensity?: 'low' | 'medium' | 'high' | null;
@@ -22,7 +25,7 @@ export interface CalendarCellWorkout {
 
 export interface WeekCalendarProps {
   days: CalendarDay[] | null;
-  workouts: Map<number, CalendarCellWorkout>;
+  workouts: Map<number, CalendarCellWorkout | CalendarCellWorkout[]>;
   selectedDayIndex?: number | null;
   highlightedDayIndex?: number | null;
   onSelectDay?: (dayIndex: number) => void;
@@ -44,6 +47,18 @@ function formatMD(d: string): string {
 
 const WEEKDAY_ZH = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
+function usableTarget(value: string | undefined): string | null {
+  return value && value !== '不适用' ? value : null;
+}
+
+function primaryTarget(w: CalendarCellWorkout): string | null {
+  const hr = usableTarget(w.targetHeartRate);
+  const pace = usableTarget(w.targetPace);
+  if (w.targetMetric === 'heart_rate') return hr;
+  if (w.targetMetric === 'pace') return pace;
+  return hr ?? pace;
+}
+
 export function WeekCalendar({
   days,
   workouts,
@@ -64,7 +79,9 @@ export function WeekCalendar({
       {Array.from({ length: 7 }).map((_, i) => {
         const idx = i + 1;
         const day = days?.find((d) => d.dayIndex === idx) ?? null;
-        const w = workouts.get(idx) ?? null;
+        const raw = workouts.get(idx) ?? null;
+        const items = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+        const w = items[0] ?? null;
         const sportKind = (day?.sport as SportKind | undefined) ?? null;
         const sport = sportKind ? SPORT[sportKind] : null;
         const selected = selectedDayIndex === idx;
@@ -176,8 +193,13 @@ export function WeekCalendar({
                 opacity: w ? 1 : 0.55,
               }}
             >
-              {w ? (
-                w.title || '—'
+              {items.length > 0 ? (
+                items.map((item, itemIdx) => (
+                  <div key={`${item.title}-${itemIdx}`} style={{ marginBottom: itemIdx < items.length - 1 ? 4 : 0 }}>
+                    {items.length > 1 && item.sessionLabel ? `${item.sessionLabel} · ` : ''}
+                    {item.title || '—'}
+                  </div>
+                ))
               ) : day ? (
                 <span
                   className="track-blink"
@@ -207,14 +229,9 @@ export function WeekCalendar({
                 {w.distanceKm == null && w.durationMinutes != null && (
                   <span>{w.durationMinutes}min</span>
                 )}
-                {w.targetPace && w.targetPace !== '不适用' && (
-                  <span style={{ color: T.lime }}>{w.targetPace}</span>
+                {primaryTarget(w) && (
+                  <span style={{ color: T.lime }}>{primaryTarget(w)}</span>
                 )}
-                {(!w.targetPace || w.targetPace === '不适用') &&
-                  w.targetHeartRate &&
-                  w.targetHeartRate !== '不适用' && (
-                    <span style={{ color: T.lime }}>{w.targetHeartRate}</span>
-                  )}
               </div>
             )}
 
@@ -241,8 +258,11 @@ export function WeekCalendar({
 export function toCalendarCell(w: TrainingWorkout): CalendarCellWorkout {
   return {
     title: w.title,
+    slotIndex: w.slotIndex,
+    sessionLabel: w.sessionLabel,
     durationMinutes: w.durationMinutes ?? null,
     distanceKm: w.distanceKm ?? null,
+    targetMetric: w.targetMetric,
     targetPace: w.targetPace,
     targetHeartRate: w.targetHeartRate,
     intensity: w.intensity,

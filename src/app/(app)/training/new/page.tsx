@@ -73,7 +73,11 @@ interface FormState {
   sportPriority: SportPriorityChoice;
   targetMetricPreference: TargetMetricPref;
   maxHardSessionsPerWeek: number | '';
+  dailyPreferredMinutes: number | '';
+  allowAdvancedWorkouts: boolean;
+  allowDoubleDays: boolean;
   availableTime: string;
+  preferredTrainingWindows: string;
   injuries: string;
   notes: string;
 }
@@ -91,7 +95,11 @@ const initialForm = (): FormState => ({
   sportPriority: 'auto',
   targetMetricPreference: 'auto',
   maxHardSessionsPerWeek: 2,
+  dailyPreferredMinutes: '',
+  allowAdvancedWorkouts: false,
+  allowDoubleDays: false,
   availableTime: '',
+  preferredTrainingWindows: '',
   injuries: '',
   notes: '',
 });
@@ -128,6 +136,14 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
     daysPerWeek: f.daysPerWeek,
     preferredRestDay: f.preferredRestDay || undefined,
     availableTime: f.availableTime.trim() || undefined,
+    preferredTrainingWindows: f.preferredTrainingWindows
+      .split(/[，,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean),
+    dailyPreferredMinutes:
+      f.dailyPreferredMinutes === '' ? null : Number(f.dailyPreferredMinutes),
+    allowAdvancedWorkouts: f.allowAdvancedWorkouts,
+    allowDoubleDays: f.allowDoubleDays,
     injuries: f.injuries.trim() || undefined,
     notes: f.notes.trim() || undefined,
     sports: {
@@ -178,7 +194,7 @@ export default function NewTrainingPlanPage() {
   const [view, setView] = useState<View>('form');
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState<CalendarDay[] | null>(null);
-  const [workouts, setWorkouts] = useState<Map<number, CalendarCellWorkout>>(new Map());
+  const [workouts, setWorkouts] = useState<Map<number, CalendarCellWorkout[]>>(new Map());
   const [summary, setSummary] = useState<string>('');
   const [toolEvents, setToolEvents] = useState<Map<string, ToolEventUi>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
@@ -256,18 +272,29 @@ export default function NewTrainingPlanPage() {
           data && typeof data.dayIndex === 'number'
             ? (data.dayIndex as number)
             : 0;
+        const slotIndex =
+          data && typeof data.slotIndex === 'number'
+            ? (data.slotIndex as number)
+            : 1;
         if (!dayIndex) return;
         setWorkouts((prev) => {
           const m = new Map(prev);
-          m.set(dayIndex, {
+          const list = m.get(dayIndex) ?? [];
+          const cell: CalendarCellWorkout = {
             title: mapped.title,
+            slotIndex,
             durationMinutes: mapped.durationMinutes,
             distanceKm: mapped.distanceKm,
+            targetMetric: mapped.targetMetric as CalendarCellWorkout['targetMetric'],
             targetPace: mapped.targetPace,
             targetHeartRate: mapped.targetHeartRate,
             intensity: mapped.intensity,
             status: 'planned',
-          });
+          };
+          const next = list.filter((item) => (item.slotIndex ?? 1) !== slotIndex);
+          next.push(cell);
+          next.sort((a, b) => (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
+          m.set(dayIndex, next);
           return m;
         });
         return;
@@ -570,6 +597,20 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
+            <Field label="每日偏好时长">
+              <TrackInput
+                type="number"
+                min={15}
+                max={600}
+                value={form.dailyPreferredMinutes}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField('dailyPreferredMinutes', v === '' ? '' : Math.max(15, Math.min(600, Number(v))));
+                }}
+                placeholder="例：75"
+              />
+            </Field>
+
             <Field label="可用时间(可选)">
               <TrackInput
                 value={form.availableTime}
@@ -577,6 +618,41 @@ export default function NewTrainingPlanPage() {
                 maxLength={200}
                 placeholder="工作日 60 分钟 / 周末 90+ 分钟"
               />
+            </Field>
+
+            <Field label="偏好时段">
+              <TrackInput
+                value={form.preferredTrainingWindows}
+                onChange={(e) => setField('preferredTrainingWindows', e.target.value)}
+                maxLength={200}
+                placeholder="上午, 晚上"
+              />
+            </Field>
+
+            <Field label="高级训练" full>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={form.allowAdvancedWorkouts}
+                  onChange={(e) => {
+                    setField('allowAdvancedWorkouts', e.target.checked);
+                    if (!e.target.checked) setField('allowDoubleDays', false);
+                  }}
+                />
+                允许 VO2max、短间歇、无氧、冲刺、坡跑/爬坡、比赛专项等高级课
+              </label>
+            </Field>
+
+            <Field label="多时段/一天多练" full>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={form.allowDoubleDays}
+                  disabled={!form.allowAdvancedWorkouts}
+                  onChange={(e) => setField('allowDoubleDays', e.target.checked)}
+                />
+                允许同一天安排两练，包括双阈值；仅在高级训练开启后生效
+              </label>
             </Field>
 
             <Field label="伤病禁忌" full>
@@ -617,6 +693,8 @@ export default function NewTrainingPlanPage() {
             <Row k="主项目" v={form.sportPriority === 'auto' ? '自动' : SPORT_META[form.sportPriority as SportKind].label} />
             <Row k="主指标" v={form.targetMetricPreference === 'auto' ? '自动' : form.targetMetricPreference === 'heart_rate' ? '心率优先' : '配速优先'} />
             <Row k="高强度" v={form.maxHardSessionsPerWeek === '' ? '自动' : `${form.maxHardSessionsPerWeek} 次/周`} />
+            <Row k="高级课" v={form.allowAdvancedWorkouts ? '允许' : '关闭'} />
+            <Row k="多练" v={form.allowDoubleDays ? '允许' : '关闭'} />
           </div>
           <div style={{
             marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,

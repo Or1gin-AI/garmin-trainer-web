@@ -1,0 +1,651 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  clearCalendarTrainingPlan,
+  createTrainingEvaluation,
+  getTrainingCalendar,
+  importPlanToCalendar,
+  listTrainingPlans,
+  type GarminRegion,
+  type TrainingCalendarEvent,
+  type TrainingCalendarResponse,
+  type TrainingEvaluationSummary,
+  type TrainingPlanSummary,
+} from '@/lib/api';
+import {
+  T, Btn, Card, PageHero, SectionLabel, Banner, StatusBadge,
+} from '@/components/track';
+
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+function dateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseDate(d: string): Date {
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m - 1, day);
+}
+
+function addDays(d: Date, days: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + days);
+  return out;
+}
+
+function monthStart(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function monthEnd(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+function monthLabel(d: Date): string {
+  return `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+}
+
+function monthGrid(d: Date): Array<string | null> {
+  const first = monthStart(d);
+  const last = monthEnd(d);
+  const out: Array<string | null> = Array.from({ length: first.getDay() }, () => null);
+  for (let cursor = first; cursor <= last; cursor = addDays(cursor, 1)) {
+    out.push(dateOnly(cursor));
+  }
+  while (out.length % 7 !== 0) out.push(null);
+  return out;
+}
+
+function formatMD(date: string): string {
+  const d = parseDate(date);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function sportLabel(sport: string): string {
+  if (sport === 'running') return '跑步';
+  if (sport === 'cycling') return '骑行';
+  if (sport === 'swimming') return '游泳';
+  if (sport === 'rest') return '休息';
+  if (sport === 'strength') return '力量';
+  if (sport === 'mobility') return '恢复';
+  return '运动';
+}
+
+function regionLabel(region: string | null): string {
+  if (region === 'cn') return '国区';
+  if (region === 'global') return '国际区';
+  return 'Garmin';
+}
+
+function metricText(e: TrainingCalendarEvent): string[] {
+  const out: string[] = [];
+  if (e.distanceKm != null && e.distanceKm > 0) out.push(`${Number(e.distanceKm).toFixed(1)}km`);
+  if (e.durationMinutes != null && e.durationMinutes > 0) out.push(`${e.durationMinutes}min`);
+  if (e.kind === 'garmin_activity') {
+    const avgHr = e.metrics.averageHr;
+    const load = e.metrics.trainingLoad;
+    const power = e.metrics.averagePower;
+    if (typeof avgHr === 'number') out.push(`${Math.round(avgHr)}bpm`);
+    if (typeof power === 'number') out.push(`${Math.round(power)}W`);
+    if (typeof load === 'number') out.push(`Load ${Math.round(load)}`);
+    return out;
+  }
+  if (e.targetPower && e.targetPower !== '不适用') out.push(e.targetPower);
+  else if (e.targetHeartRate && e.targetHeartRate !== '不适用') out.push(e.targetHeartRate);
+  else if (e.targetPace && e.targetPace !== '不适用') out.push(e.targetPace);
+  return out;
+}
+
+function eventAccent(e: TrainingCalendarEvent): string {
+  if (e.kind === 'garmin_activity') return T.cyan;
+  if (e.intensity === 'high') return T.red;
+  if (e.intensity === 'medium') return T.amber;
+  return T.lime;
+}
+
+function formatWeekStart(d: string): string {
+  const date = parseDate(d);
+  return `${date.getMonth() + 1}/${date.getDate()} ${WEEKDAYS[date.getDay()]}`;
+}
+
+function activityKey(e: TrainingCalendarEvent): string {
+  return `${e.region}:${String(e.activityId)}`;
+}
+
+function eventTime(e: TrainingCalendarEvent): string | null {
+  if (!e.startTimeLocal) return null;
+  return new Date(e.startTimeLocal).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export default function CalendarPage() {
+  const [data, setData] = useState<TrainingCalendarResponse | null>(null);
+  const [plans, setPlans] = useState<TrainingPlanSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
+  const [evaluationBusy, setEvaluationBusy] = useState(false);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const range = useMemo(() => ({
+    from: dateOnly(addDays(today, -30)),
+    to: dateOnly(addDays(today, 30)),
+  }), [today]);
+  const [visibleMonth, setVisibleMonth] = useState(monthStart(today));
+  const [selectedDate, setSelectedDate] = useState(dateOnly(today));
+  const [selectedActivityKeys, setSelectedActivityKeys] = useState<string[]>([]);
+
+  async function refresh() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [calendarRes, plansRes] = await Promise.all([
+        getTrainingCalendar(range),
+        listTrainingPlans(),
+      ]);
+      setData(calendarRes);
+      setPlans(plansRes.plans.filter((p) => p.status === 'ready'));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { refresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setSelectedActivityKeys([]);
+    setNotice(null);
+  }, [selectedDate]);
+
+  const eventsByDate = useMemo(() => {
+    const m = new Map<string, TrainingCalendarEvent[]>();
+    for (const e of data?.events ?? []) {
+      const list = m.get(e.date) ?? [];
+      list.push(e);
+      m.set(e.date, list);
+    }
+    return m;
+  }, [data]);
+
+  const evaluationsByDate = useMemo(() => {
+    const m = new Map<string, TrainingEvaluationSummary[]>();
+    for (const e of data?.evaluations ?? []) {
+      const list = m.get(e.date) ?? [];
+      list.push(e);
+      m.set(e.date, list);
+    }
+    return m;
+  }, [data]);
+
+  const selectedEvents = eventsByDate.get(selectedDate) ?? [];
+  const selectedPlanEvents = selectedEvents.filter((e) => e.kind === 'planned_workout');
+  const selectedActivityEvents = selectedEvents.filter((e) => e.kind === 'garmin_activity');
+  const selectedEvaluations = evaluationsByDate.get(selectedDate) ?? [];
+  const activitySourceErrors = (data?.calendar.activitySources ?? []).filter((source) => source.error);
+  const gridDays = monthGrid(visibleMonth);
+  const prevMonth = monthStart(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1));
+  const nextMonth = monthStart(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1));
+  const canPrev = dateOnly(monthEnd(prevMonth)) >= range.from;
+  const canNext = dateOnly(nextMonth) <= range.to;
+
+  async function clearActivePlan() {
+    if (!window.confirm('确认从日历移除当前训练计划？')) return;
+    try {
+      await clearCalendarTrainingPlan();
+      setNotice('已移除当前日历计划。');
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function applyPlan(plan: TrainingPlanSummary) {
+    const ok = window.confirm('确认将这份训练计划应用到日历？它会从今天起按 7 天课表循环应用到未来 30 天，并替换当前应用的计划。');
+    if (!ok) return;
+    setBusyPlanId(plan.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await importPlanToCalendar(plan.id);
+      setNotice('已应用到未来 30 天日历。');
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyPlanId(null);
+    }
+  }
+
+  function toggleActivity(e: TrainingCalendarEvent) {
+    const key = activityKey(e);
+    setSelectedActivityKeys((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
+    );
+  }
+
+  async function submitEvaluation() {
+    if (!data?.calendar.activePlanId) {
+      setError('请先应用一份训练计划，再提交训练评价。');
+      return;
+    }
+    const selected = selectedActivityEvents.filter((event) =>
+      selectedActivityKeys.includes(activityKey(event)),
+    );
+    if (selected.length === 0) {
+      setError('请先选择这一天的 Garmin 运动记录。');
+      return;
+    }
+    setEvaluationBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await createTrainingEvaluation({
+        date: selectedDate,
+        activityRefs: selected.map((event) => ({
+          region: (event.region ?? 'manual') as GarminRegion | 'manual',
+          activityId: String(event.activityId),
+        })),
+      });
+      setSelectedActivityKeys([]);
+      setNotice('训练评价已生成。');
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setEvaluationBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <PageHero
+        eyebrow="// 个人日历"
+        title="训练日历"
+        sub={`${range.from} 至 ${range.to} · 一次查看一个月`}
+        actions={
+          <>
+            {data?.calendar.activePlan ? (
+              <>
+                <StatusBadge kind="ready" />
+                <Link href={`/training/${data.calendar.activePlan.id}`} style={{ textDecoration: 'none' }}>
+                  <Btn variant="ghost" size="sm">当前计划</Btn>
+                </Link>
+                <Btn variant="ghost" size="sm" onClick={clearActivePlan}>移除计划</Btn>
+              </>
+            ) : (
+              <Link href="/training/new" style={{ textDecoration: 'none' }}>
+                <Btn variant="ghost" size="sm">新建计划</Btn>
+              </Link>
+            )}
+          </>
+        }
+      />
+
+      {error && <div style={{ marginBottom: 18 }}><Banner kind="error" code="ERR">{error}</Banner></div>}
+      {notice && <div style={{ marginBottom: 18 }}><Banner kind="ok" code="OK">{notice}</Banner></div>}
+      {activitySourceErrors.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <Banner kind="warn" code="GARMIN">
+            {activitySourceErrors
+              .map((source) => `${regionLabel(source.region)}活动读取失败，请重新连接 Garmin`)
+              .join('；')}
+          </Banner>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+          // 加载日历…
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          <SectionLabel>应用训练计划</SectionLabel>
+          <Card style={{ padding: 16, marginBottom: 22 }}>
+            {plans.length === 0 ? (
+              <div style={{ color: T.inkFaint, fontSize: 13 }}>暂无可应用计划。</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {plans.map((p) => {
+                  const active = data?.calendar.activePlanId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1fr) auto',
+                        alignItems: 'center',
+                        gap: 12,
+                        border: `1px solid ${active ? T.lime : T.border}`,
+                        borderRadius: 8,
+                        padding: 12,
+                        background: active ? 'rgba(198,255,58,0.04)' : 'rgba(255,255,255,0.02)',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: T.mono, fontSize: 10, color: active ? T.lime : T.inkFaint, letterSpacing: 1.2, marginBottom: 4 }}>
+                          {formatWeekStart(p.weekStartDate)} · 未来 30 天循环
+                        </div>
+                        <div style={{ color: T.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.summary ?? '训练计划'}
+                        </div>
+                      </div>
+                      <Btn
+                        variant={active ? 'ok' : 'ghost'}
+                        size="sm"
+                        onClick={() => applyPlan(p)}
+                        disabled={active || busyPlanId === p.id}
+                      >
+                        {active ? '已应用' : busyPlanId === p.id ? '应用中…' : '应用到未来30天'}
+                      </Btn>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          <SectionLabel
+            right={
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(prevMonth)} disabled={!canPrev}>上一月</Btn>
+                <div style={{ fontFamily: T.mono, fontSize: 12, color: T.ink }}>{monthLabel(visibleMonth)}</div>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(nextMonth)} disabled={!canNext}>下一月</Btn>
+              </div>
+            }
+          >
+            月视图
+          </SectionLabel>
+          <div style={{ overflowX: 'auto', marginBottom: 24, paddingBottom: 6 }}>
+            <div style={{ minWidth: 980 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(132px, 1fr))', gap: 10, marginBottom: 10 }}>
+                {WEEKDAYS.map((day) => (
+                  <div key={day} style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2, padding: '0 4px' }}>
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, minmax(132px, 1fr))',
+                  gap: 10,
+                }}
+              >
+                {gridDays.map((day, i) => {
+                  if (!day) {
+                    return <div key={`blank-${i}`} style={{ minHeight: 172 }} />;
+                  }
+                  const d = parseDate(day);
+                  const isToday = day === dateOnly(today);
+                  const selected = day === selectedDate;
+                  const inRange = day >= range.from && day <= range.to;
+                  const list = eventsByDate.get(day) ?? [];
+                  const plannedCount = list.filter((e) => e.kind === 'planned_workout').length;
+                  const activityCount = list.filter((e) => e.kind === 'garmin_activity').length;
+                  const hasEvaluation = (evaluationsByDate.get(day) ?? []).length > 0;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => inRange && setSelectedDate(day)}
+                      disabled={!inRange}
+                      style={{
+                        all: 'unset',
+                        boxSizing: 'border-box',
+                        minHeight: 172,
+                        padding: 12,
+                        borderRadius: 8,
+                        border: `1px solid ${selected ? T.lime : isToday ? T.cyan : T.border}`,
+                        background: selected ? 'rgba(198,255,58,0.06)' : 'rgba(255,255,255,0.02)',
+                        cursor: inRange ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        opacity: inRange ? 1 : 0.32,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
+                        <span style={{ fontFamily: T.mono, fontSize: 11, color: selected ? T.lime : T.inkFaint, letterSpacing: 1.1 }}>
+                          {formatMD(day)}
+                        </span>
+                        <span style={{ fontFamily: T.mono, fontSize: 10, color: isToday ? T.cyan : T.inkFaint }}>
+                          {WEEKDAYS[d.getDay()]}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                        {plannedCount > 0 && <MiniBadge color={T.lime}>计划 {plannedCount}</MiniBadge>}
+                        {activityCount > 0 && <MiniBadge color={T.cyan}>记录 {activityCount}</MiniBadge>}
+                        {hasEvaluation && <MiniBadge color={T.amber}>评价</MiniBadge>}
+                      </div>
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        {list.slice(0, 4).map((e) => (
+                          <div
+                            key={e.id}
+                            style={{
+                              borderLeft: `2px solid ${eventAccent(e)}`,
+                              paddingLeft: 7,
+                              minWidth: 0,
+                            }}
+                          >
+                            <div style={{ fontSize: 11, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {e.kind === 'garmin_activity' ? '记录' : e.sessionLabel ?? '计划'} · {e.title}
+                            </div>
+                            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {metricText(e).slice(0, 2).join(' · ')}
+                            </div>
+                          </div>
+                        ))}
+                        {list.length > 4 && (
+                          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint }}>
+                            +{list.length - 4} 条
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <SectionLabel>{selectedDate} 训练评价</SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {selectedPlanEvents.length === 0 ? (
+                <Card style={{ padding: 24, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
+                  这一天没有计划训练。
+                </Card>
+              ) : (
+                selectedPlanEvents.map((e) => <EventDetail key={e.id} event={e} />)
+              )}
+            </div>
+            <Card style={{ padding: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.3, marginBottom: 5 }}>
+                    GARMIN.ACTIVITIES
+                  </div>
+                  <h2 style={{ margin: 0, color: T.ink, fontSize: 18, fontWeight: 700 }}>选择当天实际运动</h2>
+                </div>
+                <Btn size="sm" onClick={submitEvaluation} disabled={evaluationBusy || selectedActivityKeys.length === 0}>
+                  {evaluationBusy ? '生成中…' : '生成评价'}
+                </Btn>
+              </div>
+              {selectedActivityEvents.length === 0 ? (
+                <div style={{ padding: 24, border: `1px dashed ${T.border}`, borderRadius: 8, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
+                  这一天没有 Garmin 运动记录。
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {selectedActivityEvents.map((event) => (
+                    <ActivitySelectRow
+                      key={event.id}
+                      event={event}
+                      checked={selectedActivityKeys.includes(activityKey(event))}
+                      onToggle={() => toggleActivity(event)}
+                    />
+                  ))}
+                </div>
+              )}
+              {selectedEvaluations.length > 0 && (
+                <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+                  {selectedEvaluations.map((evaluation) => (
+                    <EvaluationResultCard key={evaluation.id} evaluation={evaluation} />
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSummary }) {
+  const ready = evaluation.status === 'ready';
+  const color = ready ? T.lime : evaluation.status === 'failed' ? T.red : T.amber;
+  const result = evaluation.result;
+  return (
+    <div
+      style={{
+        border: `1px solid ${color}40`,
+        borderRadius: 8,
+        padding: 12,
+        background: ready ? T.limeGlow : evaluation.status === 'failed' ? T.redSoft : T.amberSoft,
+      }}
+    >
+      <div style={{ fontFamily: T.mono, fontSize: 10, color, letterSpacing: 1.2, marginBottom: 6 }}>
+        EVALUATION.{evaluation.status.toUpperCase()}
+      </div>
+      <div style={{ color: T.ink, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+        {result?.title ?? '训练评价'}
+      </div>
+      <div style={{ color: T.inkDim, fontSize: 12, lineHeight: 1.6 }}>
+        {result?.summary ?? '评价已提交，等待生成。'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+        <MiniBadge color={T.lime}>计划 {result?.plannedWorkoutCount ?? evaluation.plannedWorkoutIds.length}</MiniBadge>
+        <MiniBadge color={T.cyan}>运动 {result?.activityCount ?? evaluation.activityRefs.length}</MiniBadge>
+      </div>
+    </div>
+  );
+}
+
+function MiniBadge({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <span style={{
+      fontFamily: T.mono,
+      fontSize: 9,
+      color,
+      border: `1px solid ${color}40`,
+      borderRadius: 4,
+      padding: '2px 5px',
+      background: 'rgba(255,255,255,0.03)',
+      whiteSpace: 'nowrap',
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function ActivitySelectRow({
+  event,
+  checked,
+  onToggle,
+}: {
+  event: TrainingCalendarEvent;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const metrics = metricText(event);
+  return (
+    <label
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'auto minmax(0, 1fr)',
+        gap: 10,
+        alignItems: 'flex-start',
+        border: `1px solid ${checked ? T.cyan : T.border}`,
+        borderRadius: 8,
+        padding: 10,
+        background: checked ? 'rgba(95,216,255,0.06)' : 'rgba(255,255,255,0.02)',
+        cursor: 'pointer',
+      }}
+    >
+      <input type="checkbox" checked={checked} onChange={onToggle} style={{ marginTop: 3 }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+          <div style={{ color: T.ink, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {event.title}
+          </div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, whiteSpace: 'nowrap' }}>
+            {eventTime(event) ?? regionLabel(event.region)}
+          </div>
+        </div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+          {regionLabel(event.region)} · {sportLabel(event.sport)}{metrics.length ? ` · ${metrics.join(' · ')}` : ''}
+        </div>
+      </div>
+    </label>
+  );
+}
+
+function EventDetail({ event }: { event: TrainingCalendarEvent }) {
+  const metrics = metricText(event);
+  return (
+    <Card style={{ padding: 18, borderColor: `${eventAccent(event)}60` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: eventAccent(event), letterSpacing: 1.3, marginBottom: 5 }}>
+            PLAN · {sportLabel(event.sport)}
+          </div>
+          <h2 style={{ margin: 0, color: T.ink, fontSize: 18, fontWeight: 700 }}>
+            {event.title}
+          </h2>
+        </div>
+        {event.planId && (
+          <Link href={`/training/${event.planId}`} style={{ textDecoration: 'none' }}>
+            <Btn variant="ghost" size="sm">计划详情</Btn>
+          </Link>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: event.workoutStructure || event.targets?.length ? 12 : 0 }}>
+        {metrics.map((m) => (
+          <span key={m} style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim, border: `1px solid ${T.border}`, borderRadius: 4, padding: '4px 7px' }}>
+            {m}
+          </span>
+        ))}
+      </div>
+      {event.workoutStructure && (
+        <p style={{ margin: '0 0 10px', color: T.ink, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+          {event.workoutStructure}
+        </p>
+      )}
+      {event.targets && event.targets.length > 0 && (
+        <div style={{ display: 'grid', gap: 5 }}>
+          {event.targets.map((t) => (
+            <div key={t} style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim }}>
+              {t}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}

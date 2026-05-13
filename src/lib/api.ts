@@ -70,6 +70,8 @@ export interface GarminAccountSummary {
   lastValidatedAt: string | null;
 }
 
+export type GarminRegion = 'cn' | 'global';
+
 export interface LlmConfigSummary {
   id: number;
   name: string;
@@ -205,7 +207,10 @@ export interface TrainingWorkout {
   id: string;
   planId: string;
   dayIndex: number;
+  slotIndex: number;
   date: string;
+  sessionLabel: string | null;
+  timeOfDay: 'morning' | 'midday' | 'afternoon' | 'evening' | null;
   sport: Sport;
   templateId: string;
   workoutType: string | null;
@@ -247,6 +252,114 @@ export interface TrainingPlanDetail {
   messages: TrainingChatMessage[];
 }
 
+export interface GarminPushedWorkoutSummary {
+  id: string;
+  localWorkoutId: string;
+  garminWorkoutId: string | null;
+  garminScheduleId: string | null;
+  scheduledDate: string;
+  workoutName: string;
+  status: 'scheduled' | 'deleting' | 'deleted' | 'failed';
+  lastError: string | null;
+  updatedAt: string;
+}
+
+export interface GarminPlanPublishStatus {
+  region: GarminRegion;
+  uploaded: boolean;
+  total: number;
+  scheduled: number;
+  deleting: number;
+  deleted: number;
+  failed: number;
+  activeCount: number;
+  lastUpdatedAt: string | null;
+  workouts: GarminPushedWorkoutSummary[];
+}
+
+export interface GarminPlanPushResult {
+  status: GarminPlanPublishStatus;
+  pushed: number;
+  skipped: number;
+  failed: number;
+  deletedBeforePush: number;
+  blockedByCleanup: boolean;
+  failures: Array<{ localWorkoutId: string; message: string }>;
+}
+
+export interface GarminPlanDeleteResult {
+  status: GarminPlanPublishStatus;
+  deleted: number;
+  failed: number;
+  failures: Array<{
+    id: string;
+    localWorkoutId: string;
+    garminWorkoutId: string | null;
+    garminScheduleId: string | null;
+    message: string;
+  }>;
+}
+
+export interface TrainingCalendarEvent {
+  id: string;
+  kind: 'planned_workout' | 'garmin_activity';
+  date: string;
+  startTimeLocal: string | null;
+  title: string;
+  sport: Sport | 'other';
+  source: 'training_plan' | 'garmin';
+  planId: string | null;
+  workoutId: string | null;
+  activityId: string | number | null;
+  region: GarminRegion | 'manual' | null;
+  status: WorkoutStatus | null;
+  slotIndex: number | null;
+  sessionLabel: string | null;
+  durationMinutes: number | null;
+  distanceKm: number | null;
+  intensity: 'low' | 'medium' | 'high' | null;
+  targetMetric: TargetMetric | null;
+  targetHeartRate: string | null;
+  targetPace: string | null;
+  targetPower: string | null;
+  workoutStructure: string | null;
+  targets: string[] | null;
+  metrics: Record<string, number | string | null>;
+}
+
+export interface TrainingEvaluationSummary {
+  id: string;
+  date: string;
+  planId: string | null;
+  plannedWorkoutIds: string[];
+  activityRefs: Array<{ region: GarminRegion | 'manual'; activityId: string }>;
+  status: 'pending' | 'ready' | 'failed';
+  result: {
+    title: string;
+    summary: string;
+    plannedWorkoutCount: number;
+    activityCount: number;
+  } | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface TrainingCalendarResponse {
+  calendar: {
+    activePlan: TrainingPlanSummary | null;
+    activePlanId: string | null;
+    from: string;
+    to: string;
+    activitySources?: Array<{
+      region: GarminRegion;
+      count: number;
+      error: string | null;
+    }>;
+  };
+  events: TrainingCalendarEvent[];
+  evaluations: TrainingEvaluationSummary[];
+}
+
 export interface TrainingPlanRequest {
   goal?: string;
   raceDate?: string | null;
@@ -255,6 +368,12 @@ export interface TrainingPlanRequest {
   daysPerWeek: number;
   preferredRestDay?: string;
   availableTime?: string;
+  preferredTrainingWindows?: string[];
+  dailyPreferredMinutes?: number | null;
+  expectedLoad?: number | null;
+  allowAdvancedWorkouts?: boolean;
+  allowDoubleDays?: boolean;
+  exportFormats?: Array<'intervals_icu' | 'word' | 'pdf' | 'excel'>;
   injuries?: string;
   notes?: string;
   sports: { running: boolean; cycling: boolean; swimming: boolean };
@@ -274,6 +393,69 @@ export async function getTrainingPlan(id: string): Promise<TrainingPlanDetail> {
   );
 }
 
+export async function getTrainingPlanGarminStatus(
+  id: string,
+  region: GarminRegion,
+): Promise<GarminPlanPublishStatus> {
+  const r = await api.get<{ status: GarminPlanPublishStatus }>(
+    `/api/training/plans/${encodeURIComponent(id)}/garmin?region=${encodeURIComponent(region)}`,
+  );
+  return r.status;
+}
+
+export async function pushTrainingPlanToGarmin(
+  id: string,
+  region: GarminRegion,
+): Promise<GarminPlanPushResult> {
+  return api.post<GarminPlanPushResult>(
+    `/api/training/plans/${encodeURIComponent(id)}/garmin`,
+    { region },
+  );
+}
+
+export async function deleteTrainingPlanFromGarmin(
+  id: string,
+  region: GarminRegion,
+): Promise<GarminPlanDeleteResult> {
+  return api.del<GarminPlanDeleteResult>(
+    `/api/training/plans/${encodeURIComponent(id)}/garmin?region=${encodeURIComponent(region)}`,
+  );
+}
+
+export async function getTrainingCalendar(params?: {
+  from?: string;
+  to?: string;
+}): Promise<TrainingCalendarResponse> {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return api.get<TrainingCalendarResponse>(`/api/training/calendar${suffix}`);
+}
+
+export async function createTrainingEvaluation(body: {
+  date: string;
+  activityRefs: Array<{ region: GarminRegion | 'manual'; activityId: string | number }>;
+  note?: string;
+}): Promise<{ evaluation: TrainingEvaluationSummary }> {
+  return api.post<{ evaluation: TrainingEvaluationSummary }>(
+    '/api/training/calendar/evaluations',
+    body,
+  );
+}
+
+export async function importPlanToCalendar(
+  planId: string,
+): Promise<{ activePlanId: string; activePlan: TrainingPlanSummary }> {
+  return api.post<{ activePlanId: string; activePlan: TrainingPlanSummary }>(
+    `/api/training/plans/${encodeURIComponent(planId)}/import-calendar`,
+  );
+}
+
+export async function clearCalendarTrainingPlan(): Promise<{ activePlanId: null }> {
+  return api.del<{ activePlanId: null }>('/api/training/calendar/active-plan');
+}
+
 export async function patchTrainingWorkout(
   id: string,
   body: { status: WorkoutStatus },
@@ -290,6 +472,10 @@ export const trainingDayRegenerateUrl = (planId: string) =>
   `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/regenerate-day`;
 export const trainingChatStreamUrl = (planId: string) =>
   `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/chat`;
+export const trainingPlanExportUrl = (
+  planId: string,
+  format: 'intervals_icu' | 'word' | 'pdf' | 'excel',
+) => `${API_BASE}/api/training/plans/${encodeURIComponent(planId)}/export/${format}`;
 
 export async function listTrainingChatMessages(
   planId: string,

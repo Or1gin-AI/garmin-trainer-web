@@ -4,9 +4,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  deleteTrainingPlanFromGarmin,
+  getTrainingPlanGarminStatus,
   getTrainingPlan,
   patchTrainingWorkout,
+  pushTrainingPlanToGarmin,
   trainingDayRegenerateUrl,
+  trainingPlanExportUrl,
+  type GarminPlanPublishStatus,
+  type GarminRegion,
   type PlanStatus,
   type Sport,
   type TrainingPlanDetail,
@@ -35,6 +41,22 @@ const STATUS_MAP: Record<PlanStatus, StatusKind> = {
 };
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const EXPORT_FORMATS = [
+  { key: 'intervals_icu', label: 'Intervals.icu' },
+  { key: 'word', label: 'Word' },
+  { key: 'pdf', label: 'PDF' },
+  { key: 'excel', label: 'Excel' },
+] as const;
+type ExportFormat = (typeof EXPORT_FORMATS)[number]['key'];
+
+const GARMIN_REGIONS: Array<{ key: GarminRegion; label: string; code: string; host: string }> = [
+  { key: 'cn', label: '国区', code: 'CN', host: 'garmin.cn' },
+  { key: 'global', label: '国际区', code: 'INTL', host: 'garmin.com' },
+];
+
+function garminRegionLabel(region: GarminRegion): string {
+  return GARMIN_REGIONS.find((r) => r.key === region)?.label ?? region;
+}
 
 function formatWeekStart(d: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
@@ -68,6 +90,12 @@ export default function TrainingPlanDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyWorkoutId, setBusyWorkoutId] = useState<string | null>(null);
+  const [pendingExport, setPendingExport] = useState<ExportFormat | null>(null);
+  const [garminRegion, setGarminRegion] = useState<GarminRegion>('cn');
+  const [garminStatus, setGarminStatus] = useState<GarminPlanPublishStatus | null>(null);
+  const [garminBusy, setGarminBusy] = useState<'push' | 'delete' | null>(null);
+  const [garminNotice, setGarminNotice] = useState<string | null>(null);
+  const [confirmGarminDelete, setConfirmGarminDelete] = useState(false);
   const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,8 +104,12 @@ export default function TrainingPlanDetailPage() {
   const refresh = useCallback(async () => {
     if (!planId) return;
     try {
-      const d = await getTrainingPlan(planId);
+      const [d, status] = await Promise.all([
+        getTrainingPlan(planId),
+        getTrainingPlanGarminStatus(planId, garminRegion).catch(() => null),
+      ]);
       setDetail(d);
+      setGarminStatus(status);
       setNotFound(false);
     } catch (e) {
       const err = e as Error & { status?: number };
@@ -86,9 +118,15 @@ export default function TrainingPlanDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [planId]);
+  }, [planId, garminRegion]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    setGarminStatus(null);
+    setGarminNotice(null);
+    setConfirmGarminDelete(false);
+  }, [garminRegion]);
 
   useEffect(
     () => () => {
@@ -135,6 +173,53 @@ export default function TrainingPlanDetailPage() {
     }
   }
 
+  async function pushGarminPlan() {
+    if (!planId || garminBusy) return;
+    const regionLabel = garminRegionLabel(garminRegion);
+    setGarminBusy('push');
+    setGarminNotice(null);
+    setError(null);
+    try {
+      const result = await pushTrainingPlanToGarmin(planId, garminRegion);
+      setGarminStatus(result.status);
+      setGarminNotice(
+        result.blockedByCleanup
+          ? `${regionLabel}旧副本有 ${result.failed} 节删除失败，已停止上传，避免重复堆积。`
+          : result.failed > 0
+          ? `已上传 ${result.pushed} 节到${regionLabel}，${result.failed} 节失败，可重试。`
+          : result.deletedBeforePush > 0
+            ? `已清理${regionLabel}旧副本 ${result.deletedBeforePush} 节，并重新上传 ${result.pushed} 节。`
+            : `已上传 ${result.pushed} 节到${regionLabel} Garmin。`,
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGarminBusy(null);
+    }
+  }
+
+  async function deleteGarminPlan() {
+    if (!planId || garminBusy) return;
+    const regionLabel = garminRegionLabel(garminRegion);
+    setGarminBusy('delete');
+    setGarminNotice(null);
+    setError(null);
+    try {
+      const result = await deleteTrainingPlanFromGarmin(planId, garminRegion);
+      setGarminStatus(result.status);
+      setConfirmGarminDelete(false);
+      setGarminNotice(
+        result.failed > 0
+          ? `已从${regionLabel}删除 ${result.deleted} 节，${result.failed} 节失败，可重试。`
+          : `已从${regionLabel} Garmin 删除 ${result.deleted} 节。`,
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGarminBusy(null);
+    }
+  }
+
   async function regenerateDay(workout: TrainingWorkout) {
     if (!planId) return;
     setBusyWorkoutId(workout.id);
@@ -146,7 +231,7 @@ export default function TrainingPlanDetailPage() {
     try {
       await streamSse({
         url: trainingDayRegenerateUrl(planId),
-        body: { dayIndex: workout.dayIndex, reason: '' },
+        body: { dayIndex: workout.dayIndex, slotIndex: workout.slotIndex ?? 1, reason: '' },
         signal: ctrl.signal,
         onEvent: (ev: SseEvent) => {
           const data = (ev.data ?? null) as Record<string, unknown> | null;
@@ -170,20 +255,35 @@ export default function TrainingPlanDetailPage() {
     highlight(workout.dayIndex);
   }
 
+  function confirmExport() {
+    if (!pendingExport || !detail) return;
+    window.location.href = trainingPlanExportUrl(detail.plan.id, pendingExport);
+    setPendingExport(null);
+  }
+
   const calendarDays: CalendarDay[] | null = useMemo(() => {
     if (!detail) return null;
-    return detail.workouts.map((w) => ({
-      dayIndex: w.dayIndex,
-      date: w.date,
-      sport: w.sport as Sport,
-    }));
+    const firstByDay = new Map<number, TrainingWorkout>();
+    for (const w of detail.workouts) {
+      if (!firstByDay.has(w.dayIndex)) firstByDay.set(w.dayIndex, w);
+    }
+    return Array.from(firstByDay.values()).map((w) => ({
+        dayIndex: w.dayIndex,
+        date: w.date,
+        sport: w.sport as Sport,
+      }));
   }, [detail]);
 
-  const calendarWorkouts: Map<number, CalendarCellWorkout> = useMemo(() => {
-    const m = new Map<number, CalendarCellWorkout>();
+  const calendarWorkouts: Map<number, CalendarCellWorkout[]> = useMemo(() => {
+    const m = new Map<number, CalendarCellWorkout[]>();
     if (!detail) return m;
     for (const w of detail.workouts) {
-      m.set(w.dayIndex, toCalendarCell(w));
+      const list = m.get(w.dayIndex) ?? [];
+      list.push(toCalendarCell(w));
+      m.set(w.dayIndex, list);
+    }
+    for (const list of m.values()) {
+      list.sort((a, b) => (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
     }
     return m;
   }, [detail]);
@@ -214,12 +314,12 @@ export default function TrainingPlanDetailPage() {
   }
 
   const { plan, workouts } = detail;
-  const ordered = [...workouts].sort((a, b) => a.dayIndex - b.dayIndex);
+  const ordered = [...workouts].sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
   const completed = ordered.filter((w) => w.status === 'completed').length;
   const totalKm = ordered.reduce((s, w) => s + (Number(w.distanceKm) || 0), 0);
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
 
-  const selected = selectedDay != null ? ordered.find((w) => w.dayIndex === selectedDay) ?? null : null;
+  const selected = selectedDay != null ? ordered.filter((w) => w.dayIndex === selectedDay) : [];
 
   return (
     <>
@@ -236,6 +336,9 @@ export default function TrainingPlanDetailPage() {
         actions={
           <>
             <StatusBadge kind={STATUS_MAP[plan.status]} />
+            <Link href="/calendar" style={{ textDecoration: 'none' }}>
+              <Btn variant="ok" size="sm">去日历应用</Btn>
+            </Link>
             <Link href="/training/new" style={{ textDecoration: 'none' }}>
               <Btn variant="ghost" size="sm">+ 新计划</Btn>
             </Link>
@@ -248,6 +351,50 @@ export default function TrainingPlanDetailPage() {
           <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
+      <Card style={{ padding: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 4 }}>EXPORT</div>
+            <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>导出文档选项</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {EXPORT_FORMATS.map((f) => (
+              <Btn key={f.key} variant="ghost" size="sm" onClick={() => setPendingExport(f.key)}>
+                {f.label}
+              </Btn>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {pendingExport && (
+        <ConfirmExportDialog
+          format={pendingExport}
+          onCancel={() => setPendingExport(null)}
+          onConfirm={confirmExport}
+        />
+      )}
+
+      {confirmGarminDelete && (
+        <ConfirmGarminDeleteDialog
+          region={garminRegion}
+          status={garminStatus}
+          busy={garminBusy === 'delete'}
+          onCancel={() => setConfirmGarminDelete(false)}
+          onConfirm={deleteGarminPlan}
+        />
+      )}
+
+      <GarminPublishPanel
+        region={garminRegion}
+        status={garminStatus}
+        notice={garminNotice}
+        busy={garminBusy}
+        planReady={plan.status === 'ready'}
+        onRegionChange={setGarminRegion}
+        onPush={pushGarminPlan}
+        onDelete={() => setConfirmGarminDelete(true)}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
         <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
@@ -297,15 +444,20 @@ export default function TrainingPlanDetailPage() {
 
       <SectionLabel>当日详情</SectionLabel>
       <div style={{ marginBottom: 24 }}>
-        {selected ? (
-          <WorkoutCard
-            workout={selected}
-            highlighted={highlightedDay === selected.dayIndex}
-            busy={busyWorkoutId === selected.id}
-            onComplete={() => changeStatus(selected.id, 'completed')}
-            onSkip={() => changeStatus(selected.id, 'skipped')}
-            onRegenerate={() => regenerateDay(selected)}
-          />
+        {selected.length > 0 ? (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {selected.map((item) => (
+              <WorkoutCard
+                key={item.id}
+                workout={item}
+                highlighted={highlightedDay === item.dayIndex}
+                busy={busyWorkoutId === item.id}
+                onComplete={() => changeStatus(item.id, 'completed')}
+                onSkip={() => changeStatus(item.id, 'skipped')}
+                onRegenerate={() => regenerateDay(item)}
+              />
+            ))}
+          </div>
         ) : (
           <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
             点击上方日历选择一天查看详情。
@@ -349,5 +501,203 @@ export default function TrainingPlanDetailPage() {
         />
       </div>
     </>
+  );
+}
+
+function ConfirmExportDialog({
+  format,
+  onCancel,
+  onConfirm,
+}: {
+  format: ExportFormat;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const label = EXPORT_FORMATS.find((f) => f.key === format)?.label ?? format;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <Card style={{ width: 'min(460px, 100%)', padding: 22, boxShadow: '0 18px 60px rgba(0,0,0,0.45)' }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 6 }}>
+          EXPORT.CONFIRM
+        </div>
+        <h2 style={{ margin: '0 0 10px', color: T.ink, fontSize: 20, fontWeight: 700 }}>
+          确认导出 {label}
+        </h2>
+        <p style={{ margin: '0 0 18px', color: T.inkDim, fontSize: 13, lineHeight: 1.7 }}>
+          导出文档选项在这里。确认后浏览器会下载该格式文件；取消则不会产生下载。
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <Btn variant="ghost" size="sm" onClick={onCancel}>取消</Btn>
+          <Btn size="sm" onClick={onConfirm}>确认下载</Btn>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function GarminPublishPanel({
+  region,
+  status,
+  notice,
+  busy,
+  planReady,
+  onRegionChange,
+  onPush,
+  onDelete,
+}: {
+  region: GarminRegion;
+  status: GarminPlanPublishStatus | null;
+  notice: string | null;
+  busy: 'push' | 'delete' | null;
+  planReady: boolean;
+  onRegionChange: (region: GarminRegion) => void;
+  onPush: () => void;
+  onDelete: () => void;
+}) {
+  const uploaded = status?.uploaded ?? false;
+  const scheduled = status?.scheduled ?? 0;
+  const failed = status?.failed ?? 0;
+  const activeCount = status?.activeCount ?? 0;
+  const deleted = status?.deleted ?? 0;
+  const lastUpdated = status?.lastUpdatedAt
+    ? new Date(status.lastUpdatedAt).toLocaleString('zh-CN')
+    : null;
+  const regionMeta = GARMIN_REGIONS.find((item) => item.key === region) ?? GARMIN_REGIONS[0];
+
+  const statusText = status
+    ? uploaded
+      ? failed > 0
+        ? `${regionMeta.label}已上传 ${scheduled} 节，${failed} 节需要处理`
+        : `${regionMeta.label}已上传 ${scheduled} 节`
+      : deleted > 0
+        ? `${regionMeta.label}远端副本已删除`
+        : `${regionMeta.label}尚未上传`
+    : '读取 Garmin 状态中';
+
+  return (
+    <Card style={{ padding: 16, marginBottom: 20, borderColor: uploaded ? `${T.cyan}55` : T.border }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 260, flex: 1 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: uploaded ? T.cyan : T.lime, letterSpacing: 1.5, marginBottom: 4 }}>
+            GARMIN.PUBLISH · {regionMeta.code}
+          </div>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 700, marginBottom: 6 }}>
+            {statusText}
+          </div>
+          <div style={{ fontSize: 12, color: T.inkDim, lineHeight: 1.6 }}>
+            {uploaded
+              ? `这份计划在 ${regionMeta.host} 有 ${activeCount} 条可追踪远端记录。`
+              : `上传后会在 ${regionMeta.host} 日历生成未来 30 天训练安排，并同步到兼容设备。`}
+            {lastUpdated ? ` 最近更新：${lastUpdated}` : ''}
+          </div>
+          {notice && (
+            <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: 11, color: failed > 0 ? T.amber : T.green }}>
+              {notice}
+            </div>
+          )}
+          {failed > 0 && status?.workouts.some((w) => w.status === 'failed' && w.lastError) && (
+            <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: 10, color: T.red, lineHeight: 1.5 }}>
+              {status.workouts
+                .filter((w) => w.status === 'failed' && w.lastError)
+                .slice(0, 2)
+                .map((w) => `${w.workoutName}: ${w.lastError}`)
+                .join('\n')}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 6, width: '100%', justifyContent: 'flex-end' }}>
+            {GARMIN_REGIONS.map((item) => (
+              <Btn
+                key={item.key}
+                variant={region === item.key ? 'ok' : 'ghost'}
+                size="sm"
+                onClick={() => onRegionChange(item.key)}
+                disabled={busy !== null}
+              >
+                {item.label}
+              </Btn>
+            ))}
+          </div>
+          <Btn
+            size="sm"
+            onClick={onPush}
+            disabled={!planReady || busy !== null}
+          >
+            {busy === 'push' ? '上传中…' : uploaded ? '重新上传' : `上传到${regionMeta.label}`}
+          </Btn>
+          {uploaded && (
+            <Btn
+              variant="danger"
+              size="sm"
+              onClick={onDelete}
+              disabled={busy !== null}
+            >
+              {busy === 'delete' ? '删除中…' : `从${regionMeta.label}删除`}
+            </Btn>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ConfirmGarminDeleteDialog({
+  region,
+  status,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  region: GarminRegion;
+  status: GarminPlanPublishStatus | null;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const count = status?.activeCount ?? 0;
+  const regionLabel = garminRegionLabel(region);
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <Card style={{ width: 'min(500px, 100%)', padding: 22, boxShadow: '0 18px 60px rgba(0,0,0,0.45)' }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.red, letterSpacing: 1.5, marginBottom: 6 }}>
+          GARMIN.DELETE
+        </div>
+        <h2 style={{ margin: '0 0 10px', color: T.ink, fontSize: 20, fontWeight: 700 }}>
+          从{regionLabel} Garmin 删除这份计划？
+        </h2>
+        <p style={{ margin: '0 0 18px', color: T.inkDim, fontSize: 13, lineHeight: 1.7 }}>
+          将删除{regionLabel} Garmin 日历中由 Garmin Trainer 创建的 {count} 条训练安排，并删除对应 workout 模板。本地训练计划不会删除。
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <Btn variant="ghost" size="sm" onClick={onCancel} disabled={busy}>取消</Btn>
+          <Btn variant="danger" size="sm" onClick={onConfirm} disabled={busy}>
+            {busy ? '删除中…' : '确认删除'}
+          </Btn>
+        </div>
+      </Card>
+    </div>
   );
 }
