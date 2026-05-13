@@ -34,8 +34,8 @@ export const T = {
   cyan: '#5fd8ff',
   cyanSoft: 'rgba(95,216,255,0.14)',
   green: '#9eff5a',
-  sans: "'Geist','Noto Sans SC',system-ui,sans-serif",
-  mono: "'Geist Mono','JetBrains Mono',monospace",
+  sans: "'Noto Sans SC',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+  mono: "'SFMono-Regular','SF Mono',Consolas,'Liberation Mono',Menlo,monospace",
   pageMaxW: 1200,
 } as const;
 

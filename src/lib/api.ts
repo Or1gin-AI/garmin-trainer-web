@@ -201,6 +201,7 @@ export interface TrainingPlanSummary {
   status: PlanStatus;
   summary: string | null;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface TrainingWorkout {
@@ -370,9 +371,11 @@ export interface TrainingPlanRequest {
   availableTime?: string;
   preferredTrainingWindows?: string[];
   dailyPreferredMinutes?: number | null;
+  weeklyMaxMinutes?: number | null;
   expectedLoad?: number | null;
   allowAdvancedWorkouts?: boolean;
   allowDoubleDays?: boolean;
+  forceRequestedSchedule?: boolean;
   exportFormats?: Array<'intervals_icu' | 'word' | 'pdf' | 'excel'>;
   injuries?: string;
   notes?: string;
@@ -383,12 +386,56 @@ export interface TrainingPlanRequest {
   targetMetricPreference: 'auto' | 'heart_rate' | 'pace';
 }
 
+export interface TrainingCapacityView {
+  overall: {
+    level: 'novice' | 'developing' | 'trained' | 'advanced' | string;
+    readiness: 'green' | 'yellow' | 'red' | string;
+    readinessConfidence: 'low' | 'medium' | 'high' | string;
+    risk: 'low' | 'moderate' | 'high' | string;
+    reasons: string[];
+  };
+  load: {
+    acute7d: { minutes: number; load: number; sessions: number };
+    chronic28d: { minutes: number; load: number; sessions: number };
+    chronic56d?: { minutes: number; load: number; sessions: number };
+    acuteChronicRatio: number | null;
+    monotony: number | null;
+    strain: number | null;
+  };
+  recovery: {
+    sleepRisk: 'low' | 'moderate' | 'high' | 'unknown' | string;
+    hrvRisk: 'low' | 'moderate' | 'high' | 'unknown' | string;
+    trainingStatusRisk: 'low' | 'moderate' | 'high' | 'unknown' | string;
+    recoveryTimeRisk: 'low' | 'moderate' | 'high' | 'unknown' | string;
+    latestSleepScore: number | null;
+    latestHrvStatus: string | null;
+    latestTrainingStatus: string | null;
+    latestRecoveryTimeHours: number | null;
+  };
+  guardrails: {
+    maxHardSessionsPerWeek: number;
+    maxHighMinutesShare?: number;
+    minLowMinutesShare?: number;
+    allowHighIntensity: boolean;
+    allowDoubleDays: boolean;
+    maxSessionMinutes?: Record<string, number>;
+    maxLongSessionMinutes?: Record<string, number>;
+    notes: string[];
+  };
+}
+
 export async function listTrainingPlans(): Promise<{ plans: TrainingPlanSummary[] }> {
   return api.get<{ plans: TrainingPlanSummary[] }>('/api/training/plans');
 }
 
 export async function getTrainingPlan(id: string): Promise<TrainingPlanDetail> {
   return api.get<TrainingPlanDetail>(
+    `/api/training/plans/${encodeURIComponent(id)}`,
+  );
+}
+
+export async function deleteTrainingPlan(id: string): Promise<{ deletedPlanId: string }> {
+  return api.del<{ deletedPlanId: string }>(
     `/api/training/plans/${encodeURIComponent(id)}`,
   );
 }

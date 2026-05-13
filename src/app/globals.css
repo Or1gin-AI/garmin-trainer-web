@@ -8,13 +8,15 @@
   --track-lime: #c6ff3a;
   --track-ink: #f3f5ef;
   --track-ink-faint: rgba(243, 245, 239, 0.38);
+  --font-app-sans: 'Noto Sans SC', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-app-mono: 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
 }
 
 * { box-sizing: border-box; }
@@ -23,7 +25,7 @@ html, body { margin: 0; padding: 0; }
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--font-app-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -39,7 +41,7 @@ body {
 .track-input {
   background: rgba(255, 255, 255, 0.03);
   color: var(--track-ink);
-  font-family: var(--font-geist-sans), 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--font-app-sans);
   border: 1px solid var(--track-border);
   border-radius: 6px;
   padding: 9px 12px;
@@ -54,7 +56,7 @@ body {
   background: rgba(198, 255, 58, 0.04);
 }
 .track-input-mono {
-  font-family: var(--font-geist-mono), 'JetBrains Mono', monospace;
+  font-family: var(--font-app-mono);
   letter-spacing: 1px;
 }
 
@@ -92,7 +94,7 @@ body {
 .track-md ul, .track-md ol { margin: 0.4em 0; padding-left: 1.4em; }
 .track-md li { margin: 0.15em 0; }
 .track-md code {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-app-mono);
   font-size: 0.9em;
   background: rgba(255, 255, 255, 0.06);
   padding: 1px 5px;

@@ -6,11 +6,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   trainingPlanStreamUrl,
   type Sport,
+  type TrainingCapacityView,
   type TrainingPlanRequest,
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
 import {
-  T, Btn, Card, CardHeader, Field, PageHero, Banner, SectionLabel,
+  T, Btn, Card, CardHeader, Field, PageHero, Banner,
   TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
   type SportKind,
 } from '@/components/track';
@@ -20,6 +21,7 @@ import {
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
 import { CoachPanel } from '@/components/training/CoachPanel';
+import { TrainingEvidencePanel } from '@/components/training/TrainingEvidencePanel';
 import { applyToolEvent } from '@/components/training/ToolCallStack';
 import type { ToolEventUi } from '@/components/training/ToolCallCard';
 
@@ -74,8 +76,10 @@ interface FormState {
   targetMetricPreference: TargetMetricPref;
   maxHardSessionsPerWeek: number | '';
   dailyPreferredMinutes: number | '';
+  weeklyMaxMinutes: number | '';
   allowAdvancedWorkouts: boolean;
   allowDoubleDays: boolean;
+  forceRequestedSchedule: boolean;
   availableTime: string;
   preferredTrainingWindows: string;
   injuries: string;
@@ -96,8 +100,10 @@ const initialForm = (): FormState => ({
   targetMetricPreference: 'auto',
   maxHardSessionsPerWeek: 2,
   dailyPreferredMinutes: '',
+  weeklyMaxMinutes: 1200,
   allowAdvancedWorkouts: false,
   allowDoubleDays: false,
+  forceRequestedSchedule: true,
   availableTime: '',
   preferredTrainingWindows: '',
   injuries: '',
@@ -124,6 +130,12 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   if (d.getDay() !== 1) return { error: '周一日期必须是周一' };
   if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: '每周训练天数需为 1–7' };
   if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) return { error: '至少选择一项训练项目' };
+  if (f.weeklyMaxMinutes !== '' && (f.weeklyMaxMinutes < 15 || f.weeklyMaxMinutes > 1200)) {
+    return { error: '每周时长上限需为 15–1200 分钟' };
+  }
+  if (f.dailyPreferredMinutes !== '' && (f.dailyPreferredMinutes < 15 || f.dailyPreferredMinutes > 1200)) {
+    return { error: '每日偏好时长需为 15–1200 分钟' };
+  }
 
   const sportPriorities: Sport[] | undefined =
     f.sportPriority === 'auto' ? undefined : [f.sportPriority];
@@ -142,8 +154,11 @@ function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
       .filter(Boolean),
     dailyPreferredMinutes:
       f.dailyPreferredMinutes === '' ? null : Number(f.dailyPreferredMinutes),
+    weeklyMaxMinutes:
+      f.weeklyMaxMinutes === '' ? null : Number(f.weeklyMaxMinutes),
     allowAdvancedWorkouts: f.allowAdvancedWorkouts,
     allowDoubleDays: f.allowDoubleDays,
+    forceRequestedSchedule: f.forceRequestedSchedule,
     injuries: f.injuries.trim() || undefined,
     notes: f.notes.trim() || undefined,
     sports: {
@@ -196,6 +211,9 @@ export default function NewTrainingPlanPage() {
   const [days, setDays] = useState<CalendarDay[] | null>(null);
   const [workouts, setWorkouts] = useState<Map<number, CalendarCellWorkout[]>>(new Map());
   const [summary, setSummary] = useState<string>('');
+  const [trainingCapacity, setTrainingCapacity] = useState<TrainingCapacityView | null>(null);
+  const [scheduleNotes, setScheduleNotes] = useState<string[]>([]);
+  const [forceRequestedSchedule, setForceRequestedSchedule] = useState(false);
   const [toolEvents, setToolEvents] = useState<Map<string, ToolEventUi>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
   const orderCounterRef = useRef({ current: 0 });
@@ -222,6 +240,9 @@ export default function NewTrainingPlanPage() {
     setWorkouts(new Map());
     setToolEvents(new Map());
     setSummary('');
+    setTrainingCapacity(null);
+    setScheduleNotes([]);
+    setForceRequestedSchedule(false);
     setError(null);
   }
 
@@ -247,8 +268,20 @@ export default function NewTrainingPlanPage() {
         setToolEvents((prev) => applyToolEvent(prev, payload, orderCounterRef.current));
         return;
       }
+      case 'context': {
+        const capacity = data?.trainingCapacity;
+        if (capacity && typeof capacity === 'object') {
+          setTrainingCapacity(capacity as TrainingCapacityView);
+        }
+        setForceRequestedSchedule(data?.forceRequestedSchedule === true);
+        return;
+      }
       case 'schedule': {
         const rawDays = data && Array.isArray(data.days) ? data.days : [];
+        const notes = data && Array.isArray(data.notes)
+          ? data.notes.filter((n): n is string => typeof n === 'string')
+          : [];
+        setScheduleNotes(notes);
         const next: CalendarDay[] = rawDays.map((d: unknown) => {
           const r = d as Record<string, unknown>;
           return {
@@ -327,6 +360,7 @@ export default function NewTrainingPlanPage() {
       setError(built.error);
       return;
     }
+    setForceRequestedSchedule(built.forceRequestedSchedule === true);
 
     setView('staging');
     const ctrl = new AbortController();
@@ -343,6 +377,13 @@ export default function NewTrainingPlanPage() {
       const errObj = e as Error & { status?: number };
       if (errObj.status === 402) {
         fatalRef.current = '当前未开通 Pro 或本月计划生成额度已用完。';
+      } else if (
+        errObj.status === 409 &&
+        (errObj as Error & { detail?: { error?: string; limit?: number } }).detail?.error ===
+          'training_plan_limit_reached'
+      ) {
+        const limit = (errObj as Error & { detail?: { limit?: number } }).detail?.limit ?? 10;
+        fatalRef.current = `最多同时保留 ${limit} 份训练计划。请先删除旧计划后再新建。`;
       } else if (!ctrl.signal.aborted) {
         fatalRef.current = errObj.message || '生成失败';
       }
@@ -417,6 +458,12 @@ export default function NewTrainingPlanPage() {
               />
             </div>
           </Card>
+
+          <TrainingEvidencePanel
+            capacity={trainingCapacity}
+            scheduleNotes={scheduleNotes}
+            forceRequestedSchedule={forceRequestedSchedule}
+          />
 
           <CoachPanel
             events={eventsArray}
@@ -520,7 +567,7 @@ export default function NewTrainingPlanPage() {
 
             <Field label={`每周训练天数 · ${form.daysPerWeek} 天`} full>
               <div style={{ display: 'flex', gap: 6 }}>
-                {[3, 4, 5, 6, 7].map((d) => (
+                {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                   <button key={d} type="button" onClick={() => setField('daysPerWeek', d)} style={{
                     flex: 1, padding: '10px 0', borderRadius: 6, cursor: 'pointer',
                     background: d === form.daysPerWeek ? T.lime : 'transparent',
@@ -601,13 +648,27 @@ export default function NewTrainingPlanPage() {
               <TrackInput
                 type="number"
                 min={15}
-                max={600}
+                max={1200}
                 value={form.dailyPreferredMinutes}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setField('dailyPreferredMinutes', v === '' ? '' : Math.max(15, Math.min(600, Number(v))));
+                  setField('dailyPreferredMinutes', v === '' ? '' : Math.max(15, Math.min(1200, Number(v))));
                 }}
                 placeholder="例：75"
+              />
+            </Field>
+
+            <Field label="每周时长上限">
+              <TrackInput
+                type="number"
+                min={15}
+                max={1200}
+                value={form.weeklyMaxMinutes}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField('weeklyMaxMinutes', v === '' ? '' : Math.max(15, Math.min(1200, Number(v))));
+                }}
+                placeholder="默认 1200"
               />
             </Field>
 
@@ -655,6 +716,17 @@ export default function NewTrainingPlanPage() {
               </label>
             </Field>
 
+            <Field label="严格按要求生成" full>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={form.forceRequestedSchedule}
+                  onChange={(e) => setField('forceRequestedSchedule', e.target.checked)}
+                />
+                默认开启：按我填写的训练天数、时长和强度意图生成；容量/恢复问题只保留风险提示
+              </label>
+            </Field>
+
             <Field label="伤病禁忌" full>
               <TrackTextarea
                 value={form.injuries}
@@ -693,8 +765,10 @@ export default function NewTrainingPlanPage() {
             <Row k="主项目" v={form.sportPriority === 'auto' ? '自动' : SPORT_META[form.sportPriority as SportKind].label} />
             <Row k="主指标" v={form.targetMetricPreference === 'auto' ? '自动' : form.targetMetricPreference === 'heart_rate' ? '心率优先' : '配速优先'} />
             <Row k="高强度" v={form.maxHardSessionsPerWeek === '' ? '自动' : `${form.maxHardSessionsPerWeek} 次/周`} />
+            <Row k="周时长" v={form.weeklyMaxMinutes === '' ? '默认 1200 分钟' : `${form.weeklyMaxMinutes} 分钟`} />
             <Row k="高级课" v={form.allowAdvancedWorkouts ? '允许' : '关闭'} />
             <Row k="多练" v={form.allowDoubleDays ? '允许' : '关闭'} />
+            <Row k="严格模式" v={form.forceRequestedSchedule ? '开启' : '关闭'} c={form.forceRequestedSchedule ? T.amber : undefined} />
           </div>
           <div style={{
             marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,

@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ApiError,
+  deleteTrainingPlan,
   deleteTrainingPlanFromGarmin,
   getTrainingPlanGarminStatus,
   getTrainingPlan,
@@ -32,6 +34,10 @@ import {
   type CalendarDay,
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
+import {
+  TrainingEvidencePanel,
+  readTrainingEvidenceSnapshot,
+} from '@/components/training/TrainingEvidencePanel';
 
 const STATUS_MAP: Record<PlanStatus, StatusKind> = {
   generating: 'generating',
@@ -82,6 +88,7 @@ function todayDayIndex(weekStartDate: string): number | null {
 }
 
 export default function TrainingPlanDetailPage() {
+  const router = useRouter();
   const params = useParams<{ planId: string }>();
   const planId = params?.planId ?? '';
 
@@ -96,6 +103,8 @@ export default function TrainingPlanDetailPage() {
   const [garminBusy, setGarminBusy] = useState<'push' | 'delete' | null>(null);
   const [garminNotice, setGarminNotice] = useState<string | null>(null);
   const [confirmGarminDelete, setConfirmGarminDelete] = useState(false);
+  const [confirmLocalDelete, setConfirmLocalDelete] = useState(false);
+  const [localDeleteBusy, setLocalDeleteBusy] = useState(false);
   const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,6 +229,27 @@ export default function TrainingPlanDetailPage() {
     }
   }
 
+  async function deleteLocalPlan() {
+    if (!planId || localDeleteBusy) return;
+    setLocalDeleteBusy(true);
+    setError(null);
+    try {
+      await deleteTrainingPlan(planId);
+      router.push('/training');
+    } catch (e) {
+      const err = e as ApiError;
+      const detail = err.detail as { error?: string; activeCount?: number } | undefined;
+      setError(
+        detail?.error === 'garmin_plan_uploaded'
+          ? `这份计划还有 ${detail.activeCount ?? 0} 条 Garmin 远端副本。请先从国区/国际区 Garmin 删除远端副本，再删除本地计划。`
+          : err.message,
+      );
+      setConfirmLocalDelete(false);
+    } finally {
+      setLocalDeleteBusy(false);
+    }
+  }
+
   async function regenerateDay(workout: TrainingWorkout) {
     if (!planId) return;
     setBusyWorkoutId(workout.id);
@@ -318,6 +348,7 @@ export default function TrainingPlanDetailPage() {
   const completed = ordered.filter((w) => w.status === 'completed').length;
   const totalKm = ordered.reduce((s, w) => s + (Number(w.distanceKm) || 0), 0);
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
+  const trainingEvidence = readTrainingEvidenceSnapshot(plan.athleteProfileSnapshot);
 
   const selected = selectedDay != null ? ordered.filter((w) => w.dayIndex === selectedDay) : [];
 
@@ -342,6 +373,9 @@ export default function TrainingPlanDetailPage() {
             <Link href="/training/new" style={{ textDecoration: 'none' }}>
               <Btn variant="ghost" size="sm">+ 新计划</Btn>
             </Link>
+            <Btn variant="danger" size="sm" onClick={() => setConfirmLocalDelete(true)}>
+              删除计划
+            </Btn>
           </>
         }
       />
@@ -385,6 +419,14 @@ export default function TrainingPlanDetailPage() {
         />
       )}
 
+      {confirmLocalDelete && (
+        <ConfirmLocalPlanDeleteDialog
+          busy={localDeleteBusy}
+          onCancel={() => setConfirmLocalDelete(false)}
+          onConfirm={deleteLocalPlan}
+        />
+      )}
+
       <GarminPublishPanel
         region={garminRegion}
         status={garminStatus}
@@ -402,6 +444,16 @@ export default function TrainingPlanDetailPage() {
         <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
         <StatTile label="训练日" value={`${ordered.length}`} unit="次" accent={T.amber} />
       </div>
+
+      {(trainingEvidence.capacity || trainingEvidence.scheduleNotes.length > 0) && (
+        <div style={{ marginBottom: 24 }}>
+          <TrainingEvidencePanel
+            capacity={trainingEvidence.capacity}
+            scheduleNotes={trainingEvidence.scheduleNotes}
+            forceRequestedSchedule={trainingEvidence.forceRequestedSchedule}
+          />
+        </div>
+      )}
 
       {(plan.summary || plan.monitoring || plan.adjustmentRules) && (
         <Card style={{ padding: 22, marginBottom: 24 }}>
@@ -472,14 +524,15 @@ export default function TrainingPlanDetailPage() {
           initialMessages={detail.messages}
           onWorkoutUpdated={(w) => {
             setDetail((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    workouts: prev.workouts.map((row) =>
-                      row.id === w.id ? { ...row, ...w } : row,
-                    ),
-                  }
-                : prev,
+              {
+                if (!prev) return prev;
+                const exists = prev.workouts.some((row) => row.id === w.id);
+                const workouts = (exists
+                  ? prev.workouts.map((row) => (row.id === w.id ? { ...row, ...w } : row))
+                  : [...prev.workouts, w]
+                ).sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
+                return { ...prev, workouts };
+              }
             );
             highlight(w.dayIndex);
           }}
@@ -690,6 +743,49 @@ function ConfirmGarminDeleteDialog({
         </h2>
         <p style={{ margin: '0 0 18px', color: T.inkDim, fontSize: 13, lineHeight: 1.7 }}>
           将删除{regionLabel} Garmin 日历中由 Garmin Trainer 创建的 {count} 条训练安排，并删除对应 workout 模板。本地训练计划不会删除。
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <Btn variant="ghost" size="sm" onClick={onCancel} disabled={busy}>取消</Btn>
+          <Btn variant="danger" size="sm" onClick={onConfirm} disabled={busy}>
+            {busy ? '删除中…' : '确认删除'}
+          </Btn>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ConfirmLocalPlanDeleteDialog({
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <Card style={{ width: 'min(500px, 100%)', padding: 22, boxShadow: '0 18px 60px rgba(0,0,0,0.45)' }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.red, letterSpacing: 1.5, marginBottom: 6 }}>
+          PLAN.DELETE
+        </div>
+        <h2 style={{ margin: '0 0 10px', color: T.ink, fontSize: 20, fontWeight: 700 }}>
+          删除这份本地训练计划？
+        </h2>
+        <p style={{ margin: '0 0 18px', color: T.inkDim, fontSize: 13, lineHeight: 1.7 }}>
+          会删除本地计划、训练日程和对话记录。如果这份计划还有 Garmin 远端副本，系统会阻止删除，请先从国区/国际区 Garmin 删除。
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           <Btn variant="ghost" size="sm" onClick={onCancel} disabled={busy}>取消</Btn>
