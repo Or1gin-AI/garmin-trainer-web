@@ -115,6 +115,12 @@ export default function SubscriptionPage() {
     }
   }
 
+  function confirmExternalPurchase(planName: 'PRO' | 'MAX'): boolean {
+    return window.confirm(
+      `即将跳转到链动小铺购买 ${planName} 会员。支付完成后请复制卡密，回到本站订阅页兑换。是否继续？`,
+    );
+  }
+
   const activePlan = me?.plan.plan ?? 'free';
   const isPaid = activePlan !== 'free';
   const planDays = isPaid ? daysUntil(me?.plan.expiresAt ?? null) : null;
@@ -229,7 +235,15 @@ export default function SubscriptionPage() {
               ))}
             </ul>
             <div style={{ padding: '0 24px 24px' }}>
-              <a href={p.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
+              <a
+                href={p.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!confirmExternalPurchase(p.name)) e.preventDefault();
+                }}
+                style={{ textDecoration: 'none', display: 'block' }}
+              >
                 <Btn variant={p.hot ? 'primary' : 'ghost'} style={{ width: '100%' }}>
                   购买 {p.name} ↗
                 </Btn>

@@ -132,6 +132,17 @@ const REST_DAYS: { value: string; label: string }[] = [
   { value: 'sunday', label: '周日' },
 ];
 
+function parseOptionalNumberInput(value: string): number | '' {
+  if (value === '') return '';
+  const n = Number(value);
+  return Number.isFinite(n) ? n : '';
+}
+
+function clampOptionalNumber(value: number | '', min: number, max: number): number | '' {
+  if (value === '') return '';
+  return Math.max(min, Math.min(max, value));
+}
+
 function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.weekStartDate)) {
     return { error: '请选择周一日期' };
@@ -206,11 +217,72 @@ function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkoutRaw {
   };
 }
 
-const SPORT_OPTIONS: { k: SportKind; label: string; field: keyof FormState }[] = [
+type TrainingModeSport = 'running' | 'cycling' | 'swimming';
+
+const SPORT_OPTIONS: { k: TrainingModeSport; label: string; field: keyof FormState }[] = [
   { k: 'running', label: '跑步', field: 'sportRunning' },
   { k: 'cycling', label: '骑行', field: 'sportCycling' },
   { k: 'swimming', label: '游泳', field: 'sportSwimming' },
 ];
+
+type TrainingMode = {
+  name: string;
+  phrase: string;
+  kind: '基础' | '高级' | '专项';
+};
+
+const TRAINING_MODE_GROUPS: Record<TrainingModeSport, { title: string; modes: TrainingMode[] }> = {
+  running: {
+    title: '跑步训练模式',
+    modes: [
+      { name: '恢复跑', phrase: '安排一次恢复跑', kind: '基础' },
+      { name: '普通有氧跑', phrase: '安排一次有氧跑', kind: '基础' },
+      { name: 'LSD 长距离', phrase: '安排一次 LSD 长距离跑', kind: '基础' },
+      { name: 'Tempo 节奏跑', phrase: '安排一次节奏跑', kind: '专项' },
+      { name: '阈值跑', phrase: '安排一次阈值跑', kind: '专项' },
+      { name: '短间歇 400/800m', phrase: '安排一次 400/800 米间歇', kind: '高级' },
+      { name: '倒金字塔间歇', phrase: '安排一次倒金字塔', kind: '高级' },
+      { name: 'VO2max 间歇', phrase: '安排一次跑步 VO2max', kind: '高级' },
+      { name: '上坡冲刺', phrase: '安排一次上坡冲刺', kind: '高级' },
+      { name: 'Strides 大步跑', phrase: '安排一次大步跑', kind: '高级' },
+      { name: '渐进跑', phrase: '安排一次渐进跑', kind: '专项' },
+      { name: '比赛配速专项', phrase: '安排一次比赛配速专项', kind: '专项' },
+      { name: '双阈值 AM/PM', phrase: '安排一次双阈值', kind: '高级' },
+    ],
+  },
+  cycling: {
+    title: '骑行训练模式',
+    modes: [
+      { name: '恢复骑', phrase: '安排一次恢复骑', kind: '基础' },
+      { name: 'Z2 耐力骑', phrase: '安排一次 Z2 耐力骑', kind: '基础' },
+      { name: '长距离耐力骑', phrase: '安排一次长骑', kind: '基础' },
+      { name: 'Tempo 骑', phrase: '安排一次 Tempo 骑', kind: '专项' },
+      { name: '甜区骑', phrase: '安排一次甜区骑', kind: '专项' },
+      { name: '阈值骑', phrase: '安排一次阈值骑', kind: '专项' },
+      { name: 'VO2max 骑', phrase: '安排一次骑行 VO2max', kind: '高级' },
+      { name: '无氧容量 / 30-15', phrase: '安排一次 30/15', kind: '高级' },
+      { name: '冲刺骑', phrase: '安排一次冲刺骑', kind: '高级' },
+      { name: '踏频技术骑', phrase: '安排一次踏频技术骑', kind: '基础' },
+      { name: '爬坡专项骑', phrase: '安排一次爬坡骑', kind: '高级' },
+      { name: 'Over-under / Criss-cross', phrase: '安排一次 over-under', kind: '高级' },
+    ],
+  },
+  swimming: {
+    title: '游泳训练模式',
+    modes: [
+      { name: '恢复游', phrase: '安排一次恢复游', kind: '基础' },
+      { name: '技术游', phrase: '安排一次技术游', kind: '基础' },
+      { name: '有氧游', phrase: '安排一次有氧游', kind: '基础' },
+      { name: '长组耐力游', phrase: '安排一次长组耐力游', kind: '基础' },
+      { name: 'CSS / 阈值游', phrase: '安排一次 CSS 阈值游', kind: '专项' },
+      { name: 'VO2max 游', phrase: '安排一次游泳 VO2max', kind: '高级' },
+      { name: '短冲游', phrase: '安排一次 50 米冲刺游', kind: '高级' },
+      { name: '划手专项', phrase: '安排一次划手专项', kind: '专项' },
+      { name: '打腿专项', phrase: '安排一次打腿专项', kind: '专项' },
+      { name: '公开水域专项', phrase: '安排一次公开水域专项', kind: '高级' },
+    ],
+  },
+};
 
 type View = 'form' | 'staging' | 'finishing';
 
@@ -539,6 +611,7 @@ export default function NewTrainingPlanPage() {
                   );
                 })}
               </div>
+              <TrainingModeGuide selectedSports={selectedSports.map((s) => s.k)} />
             </Field>
 
             <Field label="目标">
@@ -663,8 +736,10 @@ export default function NewTrainingPlanPage() {
                 max={1200}
                 value={form.dailyPreferredMinutes}
                 onChange={(e) => {
-                  const v = e.target.value;
-                  setField('dailyPreferredMinutes', v === '' ? '' : Math.max(15, Math.min(1200, Number(v))));
+                  setField('dailyPreferredMinutes', parseOptionalNumberInput(e.target.value));
+                }}
+                onBlur={() => {
+                  setField('dailyPreferredMinutes', clampOptionalNumber(form.dailyPreferredMinutes, 15, 1200));
                 }}
                 placeholder="例：75"
               />
@@ -677,8 +752,10 @@ export default function NewTrainingPlanPage() {
                 max={1200}
                 value={form.weeklyMaxMinutes}
                 onChange={(e) => {
-                  const v = e.target.value;
-                  setField('weeklyMaxMinutes', v === '' ? '' : Math.max(15, Math.min(1200, Number(v))));
+                  setField('weeklyMaxMinutes', parseOptionalNumberInput(e.target.value));
+                }}
+                onBlur={() => {
+                  setField('weeklyMaxMinutes', clampOptionalNumber(form.weeklyMaxMinutes, 15, 1200));
                 }}
                 placeholder="默认 1200"
               />
@@ -801,6 +878,111 @@ function Row({ k, v, c }: { k: string; v: string; c?: string }) {
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '6px 0', borderBottom: `1px dashed ${T.border}` }}>
       <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, width: 100 }}>{k}</span>
       <span style={{ flex: 1, fontFamily: T.mono, fontSize: 13, color: c ?? T.ink }}>{v}</span>
+    </div>
+  );
+}
+
+function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSport[] }) {
+  if (selectedSports.length === 0) return null;
+  return (
+    <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+      <div style={{
+        padding: '10px 12px',
+        borderRadius: 6,
+        border: `1px solid ${T.border}`,
+        background: 'rgba(0,0,0,0.18)',
+        color: T.inkDim,
+        fontSize: 12,
+        lineHeight: 1.6,
+      }}>
+        如果想要某种训练，可以在备注里直接指定，例如「安排一次跑步 VO2max」或「本周要一次 over-under」。
+        高级课建议同时开启下方「高级训练」，高时长计划建议开启「一天多练」。
+      </div>
+
+      {selectedSports.map((sport) => {
+        const meta = SPORT_META[sport];
+        const group = TRAINING_MODE_GROUPS[sport];
+        return (
+          <details
+            key={sport}
+            style={{
+              border: `1px solid ${T.border}`,
+              borderRadius: 8,
+              background: 'rgba(0,0,0,0.16)',
+              overflow: 'hidden',
+            }}
+          >
+            <summary
+              style={{
+                cursor: 'pointer',
+                listStyle: 'none',
+                padding: '11px 12px',
+                color: meta.color,
+                fontFamily: T.sans,
+                fontSize: 13,
+                fontWeight: 650,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <span>{group.title}</span>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.1 }}>
+                {group.modes.length} 种 · 点击展开
+              </span>
+            </summary>
+            <div style={{
+              borderTop: `1px solid ${T.border}`,
+              padding: 12,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+              gap: 8,
+            }}>
+              {group.modes.map((mode) => (
+                <div
+                  key={mode.name}
+                  style={{
+                    border: `1px solid ${T.border}`,
+                    borderRadius: 6,
+                    padding: '9px 10px',
+                    background: 'rgba(255,255,255,0.025)',
+                    minWidth: 0,
+                  }}
+                  title={`备注示例：${mode.phrase}`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>
+                      {mode.name}
+                    </span>
+                    <span style={{
+                      flexShrink: 0,
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      color: mode.kind === '高级' ? T.amber : mode.kind === '专项' ? T.cyan : T.inkFaint,
+                      border: `1px solid ${mode.kind === '高级' ? T.amber : mode.kind === '专项' ? T.cyan : T.border}55`,
+                      borderRadius: 4,
+                      padding: '1px 5px',
+                    }}>
+                      {mode.kind}
+                    </span>
+                  </div>
+                  <div style={{
+                    marginTop: 5,
+                    color: T.inkFaint,
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    lineHeight: 1.45,
+                    overflowWrap: 'anywhere',
+                  }}>
+                    {mode.phrase}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        );
+      })}
     </div>
   );
 }
