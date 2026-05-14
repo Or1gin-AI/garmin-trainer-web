@@ -13,6 +13,7 @@ import {
   T, Btn, Card, SectionLabel, StatusBadge, PageHero, Banner,
   type StatusKind,
 } from '@/components/track';
+import { formatWeekStartShort, planShortId } from '@/lib/format';
 
 const PLAN_LIMIT = 10;
 
@@ -23,23 +24,10 @@ const STATUS_MAP: Record<PlanStatus, StatusKind> = {
   archived: 'archived',
 };
 
-const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
-function formatWeekStart(d: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (!m) return d;
-  const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return `${Number(m[2])}月${Number(m[3])}日 · ${WEEKDAY_LABELS[date.getDay()]}`;
-}
-
 function summaryPreview(s: string | null): string {
   if (!s) return '—';
   const trimmed = s.replace(/\s+/g, ' ').trim();
   return trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
-}
-
-function planShortId(id: string): string {
-  return `#${id.slice(0, 6).toUpperCase()}`;
 }
 
 export default function TrainingListPage() {
@@ -185,7 +173,7 @@ function PlanRow({
           </div>
           <Link href={`/training/${plan.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ fontSize: 18, fontWeight: 600, color: T.ink }}>
-              {formatWeekStart(plan.weekStartDate)}
+              {formatWeekStartShort(plan.weekStartDate)}
             </div>
           </Link>
           <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>

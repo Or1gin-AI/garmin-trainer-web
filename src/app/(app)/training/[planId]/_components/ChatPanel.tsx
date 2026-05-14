@@ -43,14 +43,12 @@ export interface ChatPanelProps {
   planId: string;
   initialMessages: TrainingChatMessage[];
   onWorkoutUpdated: (workout: TrainingWorkout) => void;
-  onWorkoutFieldUpdated: (workoutId: string, field: string, value: string) => void;
 }
 
 export function ChatPanel({
   planId,
   initialMessages,
   onWorkoutUpdated,
-  onWorkoutFieldUpdated,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<TrainingChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState<DraftAssistant | null>(null);
@@ -196,8 +194,6 @@ export function ChatPanel({
       abortRef.current = null;
     }
   }, [composerValue, planId, streaming, onWorkoutUpdated]);
-
-  void onWorkoutFieldUpdated;
 
   return (
     <Card style={{
