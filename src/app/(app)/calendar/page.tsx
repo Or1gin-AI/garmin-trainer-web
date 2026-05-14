@@ -225,7 +225,7 @@ export default function CalendarPage() {
   return (
     <>
       <PageHero
-        eyebrow="// 个人日历"
+        eyebrow="个人日历"
         title="训练日历"
         sub={`${range.from} 至 ${range.to} · 一次查看一个月`}
         actions={

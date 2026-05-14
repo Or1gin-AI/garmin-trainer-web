@@ -44,6 +44,17 @@ interface StreamedWorkoutRaw {
   adaptation: string;
 }
 
+function mapTrainingError(code: string): string {
+  switch (code) {
+    case 'max_required':
+      return '当前功能需要 Max 会员。Pro 只能使用 Garmin 自动同步，不能使用 AI。';
+    case 'quota_exceeded':
+      return '本月 AI 计划生成额度已用完。';
+    default:
+      return code || '生成失败';
+  }
+}
+
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
@@ -341,7 +352,7 @@ export default function NewTrainingPlanPage() {
       }
       case 'error': {
         const msg = data && typeof data.error === 'string' ? (data.error as string) : '生成失败';
-        fatalRef.current = msg;
+        fatalRef.current = mapTrainingError(msg);
         abortRef.current?.abort();
         return;
       }
@@ -376,7 +387,8 @@ export default function NewTrainingPlanPage() {
     } catch (e) {
       const errObj = e as Error & { status?: number };
       if (errObj.status === 402) {
-        fatalRef.current = '当前未开通 Pro 或本月计划生成额度已用完。';
+        const detail = (errObj as Error & { detail?: { error?: string } }).detail;
+        fatalRef.current = mapTrainingError(detail?.error ?? errObj.message);
       } else if (
         errObj.status === 409 &&
         (errObj as Error & { detail?: { error?: string; limit?: number } }).detail?.error ===
@@ -431,7 +443,7 @@ export default function NewTrainingPlanPage() {
         </div>
 
         <PageHero
-          eyebrow="// AI 正在工作"
+          eyebrow="AI 正在工作"
           title="生成本周计划"
           sub="AI 教练正在读取你的 Garmin 数据、编排日程并配置每一节课。整个过程透明可见 ↓"
         />
@@ -439,7 +451,7 @@ export default function NewTrainingPlanPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
           <Card style={{ padding: 22 }}>
             <CardHeader
-              eyebrow="// 本周日程"
+              eyebrow="本周日程"
               title="周一 → 周日"
               right={
                 <span
@@ -469,7 +481,7 @@ export default function NewTrainingPlanPage() {
             events={eventsArray}
             summaryText={summary}
             status={{ label: statusLabel, anim: view === 'staging' && !allDone, tone: statusTone }}
-            eyebrow="// AI 实时过程"
+            eyebrow="AI 实时过程"
             title="AI 教练"
             footer={
               view === 'staging' ? (
@@ -492,7 +504,7 @@ export default function NewTrainingPlanPage() {
       </div>
 
       <PageHero
-        eyebrow="// 新建计划"
+        eyebrow="新建计划"
         title="新建训练计划"
         sub="AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。"
       />
@@ -505,7 +517,7 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="// 基础设置" title="基础设置" />
+          <CardHeader eyebrow="基础设置" title="基础设置" />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <Field label="运动项目" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -757,7 +769,7 @@ export default function NewTrainingPlanPage() {
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="// AI 预览" title="AI 将基于以下输入" />
+          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
             <Row k="周一日期" v={form.weekStartDate} c={T.lime} />
             <Row k="每周天数" v={`${form.daysPerWeek} 天`} />

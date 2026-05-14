@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
         background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
         padding: '36px 32px',
       }}>
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// PWD.RESET</div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>PWD.RESET</div>
         <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>找回密码</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
           想起来了？

@@ -82,7 +82,7 @@ export default function SignUpPage() {
           boxShadow: `0 0 28px ${T.limeGlow}`, marginBottom: 18,
         }}>GT</div>
 
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// SIGN.UP</div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>SIGN.UP</div>
         <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
           已有账号？

@@ -31,6 +31,11 @@ function daysUntil(iso: string | null): number | null {
   return Math.ceil(diffMs / 86400000);
 }
 
+function planBadge(plan: MeResponse['plan'] | null) {
+  if (!plan || plan.plan === 'free') return 'FREE';
+  return plan.plan === 'max' ? 'MAX' : 'PRO';
+}
+
 export default function AppLayout({
   children,
 }: {
@@ -62,7 +67,7 @@ export default function AppLayout({
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: T.inkDim, fontFamily: T.mono, fontSize: 12, letterSpacing: 1.5,
       }}>
-        <span className="track-blink">// LOADING…</span>
+        <span className="track-blink">LOADING…</span>
       </main>
     );
   }
@@ -72,7 +77,7 @@ export default function AppLayout({
 
   const cnOk = accounts.find((a) => a.region === 'cn')?.hasSession ?? false;
   const intlOk = accounts.find((a) => a.region === 'global')?.hasSession ?? false;
-  const proDays = me?.plan.isProActive ? daysUntil(me?.plan.expiresAt ?? null) : null;
+  const paidDays = me?.plan.isPaidActive ? daysUntil(me?.plan.expiresAt ?? null) : null;
   const displayName =
     (session.user as { username?: string; name?: string; email: string }).username
     || session.user.name
@@ -130,11 +135,11 @@ export default function AppLayout({
           </nav>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12, color: T.inkFaint }}>
-            {me?.plan.isProActive ? (
+            {me?.plan.isPaidActive ? (
               <span style={{
                 padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.amber}40`,
                 color: T.amber, fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, fontWeight: 600,
-              }}>★ PRO{proDays != null ? ` · ${proDays}D` : ''}</span>
+              }}>★ {planBadge(me?.plan ?? null)}{paidDays != null ? ` · ${paidDays}D` : ''}</span>
             ) : (
               <Link href="/subscription" style={{
                 padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.border}`,

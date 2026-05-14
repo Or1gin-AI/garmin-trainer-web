@@ -183,9 +183,9 @@ export function ChatPanel({
         },
       });
     } catch (e) {
-      const errObj = e as Error & { status?: number };
+      const errObj = e as Error & { status?: number; detail?: { error?: string } };
       if (errObj.status === 402) {
-        setError('当前未开通 Pro 或本月对话额度已用完。');
+        setError(mapErrorCode(errObj.detail?.error ?? errObj.message));
       } else {
         setError(errObj.message || '对话失败，请稍后重试');
       }
@@ -198,14 +198,14 @@ export function ChatPanel({
   return (
     <Card style={{
       padding: 0, display: 'flex', flexDirection: 'column',
-      maxHeight: 'min(640px, calc(100vh - 120px))',
+      height: 'calc(100vh - 48px)', maxHeight: 'calc(100vh - 48px)',
     }}>
       <div style={{
         padding: '16px 18px', borderBottom: `1px solid ${T.border}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       }}>
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>// AI 教练</div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>AI 教练</div>
           <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>对话教练</div>
         </div>
         {streaming ? (
@@ -223,7 +223,7 @@ export function ChatPanel({
       >
         {items.length === 0 && (
           <p style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.6, margin: 0 }}>
-            // 可以问任何关于本周计划的问题，例如：「为什么周三是阈值跑」「腿酸，能换 LSD 吗」。
+            可以问任何关于本周计划的问题，例如：「为什么周三是阈值跑」「腿酸，能换 LSD 吗」。
           </p>
         )}
         {items.map((item) => (
@@ -384,6 +384,8 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
+    case 'max_required': return '当前功能需要 Max 会员。Pro 只能使用 Garmin 自动同步，不能使用 AI。';
+    case 'quota_exceeded': return '本月 AI 对话额度已用完。';
     case 'llm_not_configured': return 'AI 模型尚未配置，请联系管理员。';
     case 'persist_user_message_failed': return '保存用户消息失败，请重试。';
     case 'persist_assistant_message_failed': return '保存助手回复失败，请重试。';

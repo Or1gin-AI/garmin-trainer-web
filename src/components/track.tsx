@@ -272,7 +272,7 @@ export function StatTile({
 export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-      <div style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.5 }}>// {children}</div>
+      <div style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.5 }}>{children}</div>
       {right}
     </div>
   );

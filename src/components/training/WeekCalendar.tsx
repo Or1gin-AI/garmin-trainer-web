@@ -1,6 +1,6 @@
 'use client';
 
-import { T, SPORT, type SportKind } from '@/components/track';
+import { T, SPORT, INTENSITY, type SportKind, type IntensityKind } from '@/components/track';
 import type { Sport, TargetMetric, TrainingWorkout, WorkoutStatus } from '@/lib/api';
 
 export interface CalendarDay {
@@ -216,21 +216,40 @@ export function WeekCalendar({
               <div
                 style={{
                   display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 6,
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  minWidth: 0,
                   fontFamily: T.mono,
                   fontSize: 10,
                   color: T.inkDim,
+                  whiteSpace: 'nowrap',
                 }}
               >
+                {w.intensity && (() => {
+                  const ik = INTENSITY[w.intensity as IntensityKind] ?? INTENSITY.low;
+                  return (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 2,
+                      minWidth: 0, flexShrink: 1,
+                    }}>
+                      {[0, 1, 2].map((i) => (
+                        <span key={i} style={{
+                          width: 3, height: 10,
+                          background: i < ik.bars ? ik.color : T.borderStrong,
+                          opacity: i < ik.bars ? 1 : 0.3,
+                          borderRadius: 1,
+                        }} />
+                      ))}
+                      <span style={{ color: ik.color, marginLeft: 2, fontSize: 9 }}>{ik.code}</span>
+                    </span>
+                  );
+                })()}
                 {w.distanceKm != null && (
-                  <span>{Number(w.distanceKm).toFixed(1)}km</span>
+                  <span style={{ flexShrink: 0 }}>{Number(w.distanceKm).toFixed(1)}km</span>
                 )}
                 {w.distanceKm == null && w.durationMinutes != null && (
-                  <span>{w.durationMinutes}min</span>
-                )}
-                {primaryTarget(w) && (
-                  <span style={{ color: T.lime }}>{primaryTarget(w)}</span>
+                  <span style={{ flexShrink: 0 }}>{w.durationMinutes}min</span>
                 )}
               </div>
             )}

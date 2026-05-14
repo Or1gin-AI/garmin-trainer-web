@@ -60,7 +60,7 @@ export default function GarminPage() {
   return (
     <>
       <PageHero
-        eyebrow="// ACCT.LINK"
+        eyebrow="ACCT.LINK"
         title="Garmin 账号"
         sub="点击下方按钮，在 Garmin 官方页面（sso.garmin.cn / sso.garmin.com）完成登录，登录成功后会自动绑定到当前账号。"
       />
@@ -93,7 +93,7 @@ export default function GarminPage() {
 
       <SectionLabel>FLOW</SectionLabel>
       <Card style={{ padding: 22 }}>
-        <CardHeader eyebrow="// HOW.IT.WORKS" title="连接流程" />
+        <CardHeader eyebrow="HOW.IT.WORKS" title="连接流程" />
         <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
           {[
             { n: '01', t: 'CLICK', d: '点击「连接 Garmin」按钮' },
@@ -116,7 +116,7 @@ export default function GarminPage() {
           background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
           fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
         }}>
-          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」，再点一次按钮即可。Pro 用户可同时绑定 CN + INTL 双区。
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」，再点一次按钮即可。Pro/Max 用户可同时绑定 CN + INTL 双区。
         </div>
       </Card>
     </>
@@ -142,8 +142,8 @@ function RegionCard({
     <Card hot={connected} style={{ padding: 22 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: connected ? T.lime : T.inkFaint, letterSpacing: 1.5, marginBottom: 4 }}>
-            REGION.{code}
+          <div style={{ fontSize: 13, fontWeight: 600, color: connected ? T.lime : T.inkFaint, marginBottom: 4 }}>
+            {label}
           </div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>{label}</h2>
           <div style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, marginTop: 4 }}>{host}</div>

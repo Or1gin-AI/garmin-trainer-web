@@ -9,6 +9,7 @@ import {
   getTrainingPlan,
   patchTrainingWorkout,
   trainingDayRegenerateUrl,
+  trainingPlanExportUrl,
   type PlanStatus,
   type Sport,
   type TrainingPlanDetail,
@@ -17,7 +18,7 @@ import {
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
 import {
-  T, Btn, Card, CardHeader, StatTile, SectionLabel, StatusBadge, PageHero, Banner,
+  T, Btn, Card, StatTile, StatusBadge, PageHero, Banner,
   type StatusKind,
 } from '@/components/track';
 import { WorkoutCard } from './_components/WorkoutCard';
@@ -28,13 +29,8 @@ import {
   type CalendarDay,
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
-import {
-  TrainingEvidencePanel,
-  readTrainingEvidenceSnapshot,
-} from '@/components/training/TrainingEvidencePanel';
-import { formatWeekStart, planShortId } from '@/lib/format';
-import { useGarminPublish, garminRegionLabel } from './_components/useGarminPublish';
-import { ActionsMenu } from './_components/ActionsMenu';
+import { formatWeekStart } from '@/lib/format';
+import { useGarminPublish, garminRegionLabel, GARMIN_REGIONS } from './_components/useGarminPublish';
 import { ConfirmDialog } from './_components/ConfirmDialog';
 
 const STATUS_MAP: Record<PlanStatus, StatusKind> = {
@@ -70,8 +66,10 @@ export default function TrainingPlanDetailPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [confirmLocalDelete, setConfirmLocalDelete] = useState(false);
   const [localDeleteBusy, setLocalDeleteBusy] = useState(false);
+  const [openActionPanel, setOpenActionPanel] = useState<'export' | 'garmin' | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regenAbortRef = useRef<AbortController | null>(null);
+  const actionPanelRef = useRef<HTMLDivElement | null>(null);
 
   const garmin = useGarminPublish(planId);
 
@@ -91,6 +89,16 @@ export default function TrainingPlanDetailPage() {
   }, [planId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!openActionPanel) return;
+    function handleClick(e: MouseEvent) {
+      if (actionPanelRef.current?.contains(e.target as Node)) return;
+      setOpenActionPanel(null);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openActionPanel]);
 
   useEffect(
     () => () => {
@@ -222,14 +230,14 @@ export default function TrainingPlanDetailPage() {
   if (loading) {
     return (
       <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-        // 加载中…
+        加载中…
       </div>
     );
   }
   if (notFound) {
     return (
       <Card style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>// 404 · 未找到</div>
+        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>404 · 未找到</div>
         <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>计划不存在</h2>
         <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>这份计划可能已被删除，或不属于当前账号。</p>
         <Link href="/training" style={{ textDecoration: 'none' }}>
@@ -249,8 +257,17 @@ export default function TrainingPlanDetailPage() {
   const completed = ordered.filter((w) => w.status === 'completed').length;
   const totalKm = ordered.reduce((s, w) => s + (Number(w.distanceKm) || 0), 0);
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
-  const trainingEvidence = readTrainingEvidenceSnapshot(plan.athleteProfileSnapshot);
   const selected = selectedDay != null ? ordered.filter((w) => w.dayIndex === selectedDay) : [];
+
+  const uploaded = garmin.status?.uploaded ?? false;
+  const garminRegion = GARMIN_REGIONS.find((r) => r.key === garmin.region) ?? GARMIN_REGIONS[0];
+
+  const EXPORT_FORMATS = [
+    { key: 'intervals_icu', label: 'Intervals.icu 日历' },
+    { key: 'word', label: 'Word 文档' },
+    { key: 'pdf', label: 'PDF' },
+    { key: 'excel', label: 'Excel 表格' },
+  ] as const;
 
   return (
     <>
@@ -261,7 +278,6 @@ export default function TrainingPlanDetailPage() {
       </div>
 
       <PageHero
-        eyebrow={`// 计划 ${planShortId(plan.id)} · 本周`}
         title={formatWeekStart(plan.weekStartDate)}
         sub={`创建于 ${new Date(plan.createdAt).toLocaleString('zh-CN')}`}
         actions={
@@ -270,15 +286,122 @@ export default function TrainingPlanDetailPage() {
             <Link href="/calendar" style={{ textDecoration: 'none' }}>
               <Btn variant="ok" size="sm">去日历应用</Btn>
             </Link>
-            <Link href="/training/new" style={{ textDecoration: 'none' }}>
-              <Btn variant="ghost" size="sm">+ 新计划</Btn>
-            </Link>
-            <ActionsMenu
-              planId={planId}
-              planReady={plan.status === 'ready'}
-              garmin={garmin}
-              onDeletePlan={() => setConfirmLocalDelete(true)}
-            />
+            <div ref={actionPanelRef} style={{ position: 'relative', display: 'flex', gap: 8 }}>
+              <Btn
+                variant={openActionPanel === 'export' ? 'ok' : 'ghost'}
+                size="sm"
+                onClick={() => setOpenActionPanel((v) => (v === 'export' ? null : 'export'))}
+              >
+                导出
+              </Btn>
+              <Btn
+                variant={openActionPanel === 'garmin' ? 'ok' : 'ghost'}
+                size="sm"
+                onClick={() => setOpenActionPanel((v) => (v === 'garmin' ? null : 'garmin'))}
+              >
+                上传 Garmin
+              </Btn>
+
+              {openActionPanel === 'export' && (
+                <Card style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 110,
+                  width: 280,
+                  padding: 16,
+                  zIndex: 50,
+                  background: '#101410',
+                  border: `1px solid ${T.borderHot}`,
+                  boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
+                }}>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
+                    选择导出格式
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                    {EXPORT_FORMATS.map((f) => (
+                      <Btn
+                        key={f.key}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          window.location.href = trainingPlanExportUrl(planId, f.key);
+                          setOpenActionPanel(null);
+                        }}
+                        style={{ justifyContent: 'center' }}
+                      >
+                        {f.label}
+                      </Btn>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {openActionPanel === 'garmin' && (
+                <Card style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: 310,
+                  padding: 16,
+                  zIndex: 50,
+                  background: '#101410',
+                  border: `1px solid ${T.borderHot}`,
+                  boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
+                }}>
+                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
+                    选择上传区域
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
+                    {GARMIN_REGIONS.map((r) => (
+                      <Btn
+                        key={r.key}
+                        variant={garmin.region === r.key ? 'ok' : 'ghost'}
+                        size="sm"
+                        onClick={() => garmin.setRegion(r.key)}
+                        disabled={garmin.busy !== null}
+                      >
+                        {r.label}
+                      </Btn>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkDim, lineHeight: 1.55, marginBottom: 12 }}>
+                    当前目标：<span style={{ color: T.ink }}>{garminRegion.label}</span>
+                    {garmin.status && (
+                      <>
+                        {' '}· {uploaded ? `已上传 ${garmin.status.scheduled} 节` : '尚未上传'}
+                        {garmin.status.failed > 0 ? ` · 失败 ${garmin.status.failed} 节` : ''}
+                      </>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Btn
+                      size="sm"
+                      onClick={() => {
+                        void garmin.push();
+                        setOpenActionPanel(null);
+                      }}
+                      disabled={plan.status !== 'ready' || garmin.busy !== null}
+                      style={{ flex: 1 }}
+                    >
+                      {garmin.busy === 'push' ? '上传中…' : uploaded ? '重新上传' : '上传'}
+                    </Btn>
+                    {uploaded && (
+                      <Btn
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          garmin.setConfirmDelete(true);
+                          setOpenActionPanel(null);
+                        }}
+                        disabled={garmin.busy !== null}
+                      >
+                        删除远端
+                      </Btn>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
           </>
         }
       />
@@ -321,104 +444,72 @@ export default function TrainingPlanDetailPage() {
         />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
-        <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
-        <StatTile label="本周公里" value={totalKm.toFixed(1)} unit="公里" accent={T.cyan} />
-        <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
-        <StatTile label="训练日" value={`${ordered.length}`} unit="次" accent={T.amber} />
-      </div>
+      {/* Two-column layout: main content + AI coach sidebar */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+        {/* Left: main content */}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
+            <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
+            <StatTile label="本周公里" value={totalKm.toFixed(1)} unit="公里" accent={T.cyan} />
+            <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
+            <StatTile label="训练日" value={`${ordered.length}`} unit="次" accent={T.amber} />
+          </div>
 
-      {(trainingEvidence.capacity || trainingEvidence.scheduleNotes.length > 0) && (
-        <div style={{ marginBottom: 24 }}>
-          <TrainingEvidencePanel
-            capacity={trainingEvidence.capacity}
-            scheduleNotes={trainingEvidence.scheduleNotes}
-            forceRequestedSchedule={trainingEvidence.forceRequestedSchedule}
+          <Card style={{ padding: 18, marginBottom: 18 }}>
+            <WeekCalendar
+              days={calendarDays}
+              workouts={calendarWorkouts}
+              mode="detail"
+              selectedDayIndex={selectedDay ?? undefined}
+              highlightedDayIndex={highlightedDay ?? undefined}
+              onSelectDay={(idx) => setSelectedDay(idx)}
+            />
+          </Card>
+
+          <div style={{ marginBottom: 24 }}>
+            {selected.length > 0 ? (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {selected.map((item) => (
+                  <WorkoutCard
+                    key={item.id}
+                    workout={item}
+                    highlighted={highlightedDay === item.dayIndex}
+                    busy={busyWorkoutId === item.id}
+                    onComplete={() => changeStatus(item.id, 'completed')}
+                    onSkip={() => changeStatus(item.id, 'skipped')}
+                    onRegenerate={() => regenerateDay(item)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
+                点击上方日历选择一天查看详情。
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Right: AI coach sidebar */}
+        <div style={{ position: 'sticky', top: 24, maxHeight: 'calc(100vh - 48px)' }}>
+          <ChatPanel
+            planId={planId}
+            initialMessages={detail.messages}
+            onWorkoutUpdated={(w) => {
+              setDetail((prev) => {
+                if (!prev) return prev;
+                const exists = prev.workouts.some((row) => row.id === w.id);
+                const wk = (exists
+                  ? prev.workouts.map((row) => (row.id === w.id ? { ...row, ...w } : row))
+                  : [...prev.workouts, w]
+                ).sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
+                return { ...prev, workouts: wk };
+              });
+              highlight(w.dayIndex);
+            }}
           />
         </div>
-      )}
-
-      {(plan.summary || plan.monitoring || plan.adjustmentRules) && (
-        <Card style={{ padding: 22, marginBottom: 24 }}>
-          <CardHeader eyebrow="// 本周概要" title="本周概要" />
-          {plan.summary && (
-            <p style={{ marginTop: 14, fontSize: 13, color: T.ink, lineHeight: 1.75, whiteSpace: 'pre-line' }}>
-              {plan.summary}
-            </p>
-          )}
-          {(plan.monitoring || plan.adjustmentRules) && (
-            <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: plan.monitoring && plan.adjustmentRules ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)', gap: 12 }}>
-              {plan.monitoring && (
-                <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginBottom: 6 }}>监测重点</div>
-                  <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.monitoring}</p>
-                </div>
-              )}
-              {plan.adjustmentRules && (
-                <div style={{ padding: 14, background: 'rgba(0,0,0,0.25)', border: `1px solid ${T.border}`, borderRadius: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.5, marginBottom: 6 }}>调整规则</div>
-                  <p style={{ margin: 0, fontSize: 13, color: T.ink, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{plan.adjustmentRules}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-      )}
-
-      <SectionLabel>本周日历</SectionLabel>
-      <Card style={{ padding: 18, marginBottom: 18 }}>
-        <WeekCalendar
-          days={calendarDays}
-          workouts={calendarWorkouts}
-          mode="detail"
-          selectedDayIndex={selectedDay ?? undefined}
-          highlightedDayIndex={highlightedDay ?? undefined}
-          onSelectDay={(idx) => setSelectedDay(idx)}
-        />
-      </Card>
-
-      <SectionLabel>当日详情</SectionLabel>
-      <div style={{ marginBottom: 24 }}>
-        {selected.length > 0 ? (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {selected.map((item) => (
-              <WorkoutCard
-                key={item.id}
-                workout={item}
-                highlighted={highlightedDay === item.dayIndex}
-                busy={busyWorkoutId === item.id}
-                onComplete={() => changeStatus(item.id, 'completed')}
-                onSkip={() => changeStatus(item.id, 'skipped')}
-                onRegenerate={() => regenerateDay(item)}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
-            点击上方日历选择一天查看详情。
-          </Card>
-        )}
       </div>
 
-      <SectionLabel>AI 教练</SectionLabel>
-      <div style={{ maxWidth: 880 }}>
-        <ChatPanel
-          planId={planId}
-          initialMessages={detail.messages}
-          onWorkoutUpdated={(w) => {
-            setDetail((prev) => {
-              if (!prev) return prev;
-              const exists = prev.workouts.some((row) => row.id === w.id);
-              const wk = (exists
-                ? prev.workouts.map((row) => (row.id === w.id ? { ...row, ...w } : row))
-                : [...prev.workouts, w]
-              ).sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
-              return { ...prev, workouts: wk };
-            });
-            highlight(w.dayIndex);
-          }}
-        />
-      </div>
     </>
   );
 }

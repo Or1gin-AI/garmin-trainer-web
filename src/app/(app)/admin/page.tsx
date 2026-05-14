@@ -23,11 +23,13 @@ import {
   PageHero,
   Banner,
   TrackInput,
+  TrackSelect,
   SectionLabel,
 } from '@/components/track';
 
 interface CodeRow {
   code: string;
+  plan: 'pro' | 'max';
   planDays: number;
   batchId: string | null;
   note: string | null;
@@ -51,6 +53,7 @@ export default function AdminPage() {
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [count, setCount] = useState(10);
+  const [plan, setPlan] = useState<'pro' | 'max'>('max');
   const [planDays, setPlanDays] = useState(30);
   const [prefix, setPrefix] = useState('');
   const [note, setNote] = useState('');
@@ -78,6 +81,7 @@ export default function AdminPage() {
     try {
       const r = await api.post<{ codes: string[] }>('/api/admin/codes', {
         count,
+        plan,
         planDays,
         prefix: prefix || undefined,
         note: note || undefined,
@@ -91,11 +95,11 @@ export default function AdminPage() {
     }
   }
 
-  async function grantPro(userId: string) {
-    const days = Number(prompt('授予多少天 Pro？', '30'));
+  async function grantMax(userId: string) {
+    const days = Number(prompt('授予多少天 Max？', '30'));
     if (!days) return;
     try {
-      await api.post('/api/admin/grant', { userId, planDays: days });
+      await api.post('/api/admin/grant', { userId, plan: 'max', planDays: days });
       alert('已授予');
     } catch (e) {
       alert((e as Error).message);
@@ -106,7 +110,7 @@ export default function AdminPage() {
     <div className="track-page" style={{ minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: T.pageMaxW, margin: '0 auto' }}>
         <PageHero
-          eyebrow="// ADMIN.CONSOLE"
+          eyebrow="ADMIN.CONSOLE"
           title="管理后台"
           sub="生成卡密 · 管理用户 · 配置 AI 模型 · 查看用量"
         />
@@ -135,13 +139,13 @@ export default function AdminPage() {
         {tab === 'codes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Card style={{ padding: 24 }}>
-              <CardHeader eyebrow="// CODES.GENERATE" title="生成卡密" />
+              <CardHeader eyebrow="CODES.GENERATE" title="生成卡密" />
               <form
                 onSubmit={generate}
                 style={{
                   marginTop: 18,
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
                   gap: 14,
                 }}
               >
@@ -153,6 +157,15 @@ export default function AdminPage() {
                     value={count}
                     onChange={(e) => setCount(Number(e.target.value))}
                   />
+                </Field>
+                <Field label="PLAN">
+                  <TrackSelect
+                    value={plan}
+                    onChange={(e) => setPlan(e.target.value as 'pro' | 'max')}
+                  >
+                    <option value="max">MAX · AI + SYNC</option>
+                    <option value="pro">PRO · SYNC ONLY</option>
+                  </TrackSelect>
                 </Field>
                 <Field label="PLAN.DAYS">
                   <TrackInput
@@ -170,7 +183,7 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
                     }
-                    placeholder="PRO"
+                    placeholder={plan.toUpperCase()}
                     maxLength={8}
                   />
                 </Field>
@@ -218,7 +231,7 @@ export default function AdminPage() {
 
             <Card style={{ padding: 24 }}>
               <CardHeader
-                eyebrow="// USERS"
+                eyebrow="USERS"
                 title="用户"
                 right={
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
@@ -256,7 +269,7 @@ export default function AdminPage() {
                         </Td>
                         <Td>
                           <button
-                            onClick={() => grantPro(u.id)}
+                            onClick={() => grantMax(u.id)}
                             style={{
                               fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
                               color: T.lime,
@@ -267,7 +280,7 @@ export default function AdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            + GRANT.PRO
+                            + GRANT.MAX
                           </button>
                         </Td>
                       </tr>
@@ -279,7 +292,7 @@ export default function AdminPage() {
 
             <Card style={{ padding: 24 }}>
               <CardHeader
-                eyebrow="// CODES.RECENT"
+                eyebrow="CODES.RECENT"
                 title="最近卡密"
                 right={
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
@@ -292,6 +305,7 @@ export default function AdminPage() {
                   <thead>
                     <tr style={{ textAlign: 'left' }}>
                       <Th>CODE</Th>
+                      <Th>PLAN</Th>
                       <Th>DAYS</Th>
                       <Th>NOTE</Th>
                       <Th>STATUS</Th>
@@ -301,6 +315,7 @@ export default function AdminPage() {
                     {codes.map((c) => (
                       <tr key={c.code} style={{ borderTop: `1px dashed ${T.border}` }}>
                         <Td mono>{c.code}</Td>
+                        <Td mono>{c.plan.toUpperCase()}</Td>
                         <Td>{c.planDays}</Td>
                         <Td dim>{c.note ?? '—'}</Td>
                         <Td>
@@ -559,7 +574,7 @@ function AiConfigSection() {
 
       <Card style={{ padding: 24 }}>
         <CardHeader
-          eyebrow="// LLM.CONFIGS"
+          eyebrow="LLM.CONFIGS"
           title="AI 模型配置"
           right={
             <Btn
@@ -844,7 +859,7 @@ function AiUsageSection() {
 
       <Card style={{ padding: 24 }}>
         <CardHeader
-          eyebrow="// AI.USAGE"
+          eyebrow="AI.USAGE"
           title={`AI 用量 · ${period.slice(0, 7)}`}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -53,7 +53,7 @@ function VerifyEmailInner() {
 
         {verified ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>// EMAIL.VERIFIED</div>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>EMAIL.VERIFIED</div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>邮箱已验证</h1>
             <Banner kind="ok" code="OK">
               {session ? '正在为你跳转到主页…' : '现在可以登录使用 Garmin Trainer。'}
@@ -66,7 +66,7 @@ function VerifyEmailInner() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>// VERIFY.PENDING</div>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>VERIFY.PENDING</div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>查收验证邮件</h1>
             <p style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.65, margin: 0 }}>
               我们已经向 {email

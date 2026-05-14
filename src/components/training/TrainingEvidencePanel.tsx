@@ -46,7 +46,7 @@ export function TrainingEvidencePanel({
   return (
     <Card style={{ padding: 22 }}>
       <CardHeader
-        eyebrow="// 专业生成依据"
+        eyebrow="专业生成依据"
         title="这次课表为什么这样排"
         right={
           <span style={{ fontFamily: T.mono, fontSize: 10, color: readinessColor, letterSpacing: 1.2 }}>

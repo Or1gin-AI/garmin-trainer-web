@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   ApiError,
@@ -34,6 +35,7 @@ export default function TrainingListPage() {
   const [plans, setPlans] = useState<TrainingPlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const [openingPlanId, setOpeningPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     listTrainingPlans()
@@ -72,7 +74,7 @@ export default function TrainingListPage() {
   return (
     <>
       <PageHero
-        eyebrow="// 训练计划"
+        eyebrow="训练计划"
         title="训练计划"
         sub={`AI 根据你的目标 + Garmin 历史数据生成的周计划。当前 ${planCount}/${PLAN_LIMIT} 份。`}
         actions={
@@ -106,7 +108,7 @@ export default function TrainingListPage() {
 
       {plans && plans.length === 0 && (
         <Card style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>// 暂无计划</div>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>暂无计划</div>
           <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>你还没有训练计划。</p>
           <Link href="/training/new" style={{ textDecoration: 'none' }}>
             <Btn>新建第一个计划</Btn>
@@ -123,6 +125,8 @@ export default function TrainingListPage() {
                 key={p.id}
                 plan={p}
                 deleting={deletingPlanId === p.id}
+                opening={openingPlanId === p.id}
+                onOpen={() => setOpeningPlanId(p.id)}
                 onDelete={() => handleDelete(p)}
               />
             ))}
@@ -140,6 +144,8 @@ export default function TrainingListPage() {
                 plan={p}
                 archived
                 deleting={deletingPlanId === p.id}
+                opening={openingPlanId === p.id}
+                onOpen={() => setOpeningPlanId(p.id)}
                 onDelete={() => handleDelete(p)}
               />
             ))}
@@ -154,30 +160,50 @@ function PlanRow({
   plan,
   archived,
   deleting,
+  opening,
+  onOpen,
   onDelete,
 }: {
   plan: TrainingPlanSummary;
   archived?: boolean;
   deleting: boolean;
+  opening: boolean;
+  onOpen: () => void;
   onDelete: () => void;
 }) {
+  const router = useRouter();
+
+  function openPlan() {
+    if (opening || deleting) return;
+    onOpen();
+    router.push(`/training/${plan.id}`);
+  }
+
   return (
-    <Card hover style={{ padding: 20, opacity: archived ? 0.55 : 1 }}>
+    <Card
+      hover
+      onClick={openPlan}
+      style={{
+        padding: 20,
+        opacity: archived ? 0.55 : 1,
+        cursor: opening || deleting ? 'wait' : 'pointer',
+        borderColor: opening ? T.lime : undefined,
+        boxShadow: opening ? `0 0 22px ${T.limeGlow}` : undefined,
+      }}
+    >
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) auto', gap: 18, alignItems: 'center' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, fontWeight: 600 }}>
               {planShortId(plan.id)}
             </span>
-            <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />
+            {opening ? <StatusBadge kind="running" size="sm" /> : <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />}
           </div>
-          <Link href={`/training/${plan.id}`} style={{ textDecoration: 'none' }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: T.ink }}>
-              {formatWeekStartShort(plan.weekStartDate)}
-            </div>
-          </Link>
+          <div style={{ fontSize: 18, fontWeight: 600, color: T.ink }}>
+            {formatWeekStartShort(plan.weekStartDate)}
+          </div>
           <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {summaryPreview(plan.summary)}
+            {opening ? '正在进入计划…' : summaryPreview(plan.summary)}
           </div>
         </div>
 
@@ -189,10 +215,26 @@ function PlanRow({
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Link href={`/training/${plan.id}`} style={{ textDecoration: 'none' }}>
-            <Btn variant="ghost" size="sm">详情</Btn>
-          </Link>
-          <Btn variant="danger" size="sm" onClick={onDelete} disabled={deleting}>
+          <Btn
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPlan();
+            }}
+            disabled={opening || deleting}
+          >
+            {opening ? '进入中…' : '详情'}
+          </Btn>
+          <Btn
+            variant="danger"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            disabled={deleting || opening}
+          >
             {deleting ? '删除中…' : '删除'}
           </Btn>
         </div>

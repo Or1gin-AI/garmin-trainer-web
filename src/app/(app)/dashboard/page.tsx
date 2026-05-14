@@ -38,6 +38,11 @@ const STATUS_MAP: Record<SyncJob['status'], StatusKind> = {
   aborted: 'aborted',
 };
 
+function planStatus(plan: MeResponse['plan'] | null) {
+  if (!plan || plan.plan === 'free') return 'FREE · MANUAL';
+  return `${plan.plan.toUpperCase()} · ${plan.canAutoSync ? 'AUTO ON' : 'MANUAL'}`;
+}
+
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [accounts, setAccounts] = useState<GarminAccountSummary[]>([]);
@@ -105,12 +110,12 @@ export default function DashboardPage() {
   return (
     <>
       <PageHero
-        eyebrow="// SYNC.CONSOLE"
+        eyebrow="SYNC.CONSOLE"
         title="同步控制台"
         sub={
-          me?.plan.isProActive
-            ? 'Pro 用户每 2 小时增量同步一次；触发手动同步以立即拉取国区与国际区的最新活动。'
-            : '免费用户支持手动同步。升级 Pro 后开启每 2 小时自动同步、历史回填、失败优先重试。'
+          me?.plan.canAutoSync
+            ? `${me.plan.plan.toUpperCase()} 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。`
+            : '免费用户支持手动同步。升级 Pro 后开启自动同步；升级 Max 后再解锁 AI。'
         }
         actions={
           <>
@@ -170,8 +175,8 @@ export default function DashboardPage() {
             ? new Date(me.plan.lastAutoSyncAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
             : '—'}
           unit={me?.plan.lastAutoSyncAt ? 'TIME' : ''}
-          delta={me?.plan.isProActive ? 'AUTO' : 'OFF'}
-          tone={me?.plan.isProActive ? 'ok' : 'warn'}
+          delta={me?.plan.canAutoSync ? 'AUTO' : 'OFF'}
+          tone={me?.plan.canAutoSync ? 'ok' : 'warn'}
           accent={T.cyan}
         />
       </div>
@@ -180,7 +185,7 @@ export default function DashboardPage() {
         {current && (current.status === 'queued' || current.status === 'running') ? (
           <Card hot glow style={{ padding: 22 }}>
             <CardHeader
-              eyebrow="// ACTIVE.JOB"
+              eyebrow="ACTIVE.JOB"
               title={`JOB.${current.id.slice(0, 8).toUpperCase()} · ${current.status === 'queued' ? '排队中' : '同步中'}`}
               right={<StatusBadge kind={STATUS_MAP[current.status]} />}
             />
@@ -237,7 +242,7 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <Card style={{ padding: 22 }}>
-            <CardHeader eyebrow="// IDLE" title="没有正在进行的同步" />
+            <CardHeader eyebrow="IDLE" title="没有正在进行的同步" />
             <p style={{ marginTop: 12, color: T.inkDim, fontSize: 13, lineHeight: 1.65 }}>
               {ready ? (
                 <>点击右上角「触发增量同步」立刻拉取国区 + 国际区最新活动。</>
@@ -248,13 +253,13 @@ export default function DashboardPage() {
             <div style={{ marginTop: 18, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, lineHeight: 1.8 }}>
               <div>LAST.JOB &nbsp;&nbsp;<span style={{ color: T.ink }}>{jobs[0] ? jobs[0].id.slice(0, 8).toUpperCase() : '—'}</span></div>
               <div>LAST.AT &nbsp;&nbsp;&nbsp;<span style={{ color: T.ink }}>{jobs[0] ? fmtDate(jobs[0].finishedAt ?? jobs[0].queuedAt) : '—'}</span></div>
-              <div>PLAN &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style={{ color: me?.plan.isProActive ? T.lime : T.inkFaint }}>{me?.plan.isProActive ? 'PRO · AUTO ON' : 'FREE · MANUAL'}</span></div>
+              <div>PLAN &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style={{ color: me?.plan.canAutoSync ? T.lime : T.inkFaint }}>{planStatus(me?.plan ?? null)}</span></div>
             </div>
           </Card>
         )}
 
         <Card style={{ padding: 22 }}>
-          <CardHeader eyebrow="// REGIONS" title="区域会话" />
+          <CardHeader eyebrow="GARMIN.ACCOUNTS" title="Garmin 账号" />
           <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { code: 'CN', label: '国区', host: 'sso.garmin.cn', acc: cnAcc },
@@ -264,8 +269,8 @@ export default function DashboardPage() {
               return (
                 <div key={r.code} style={{ padding: 14, border: `1px solid ${T.border}`, borderRadius: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 600, color: ok ? T.lime : T.inkFaint, letterSpacing: 1 }}>
-                      REGION.{r.code}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: ok ? T.lime : T.inkFaint }}>
+                      {r.label}
                     </span>
                     <StatusBadge kind={ok ? 'success' : 'planned'} size="sm" />
                   </div>

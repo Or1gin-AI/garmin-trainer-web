@@ -50,9 +50,13 @@ export const api = {
 // ===== Typed endpoints =====
 
 export interface UserPlanInfo {
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro' | 'max';
   expiresAt: string | null;
+  isPaidActive: boolean;
   isProActive: boolean;
+  isMaxActive: boolean;
+  canAutoSync: boolean;
+  canUseAi: boolean;
   autoSyncEnabled: boolean;
   lastAutoSyncAt: string | null;
 }

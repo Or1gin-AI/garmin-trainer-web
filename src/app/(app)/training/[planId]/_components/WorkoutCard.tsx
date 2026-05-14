@@ -157,7 +157,7 @@ export function WorkoutCard({
           )}
           {!w.workoutStructure && (w.targets ?? []).length === 0 && !w.adaptation && (
             <div style={{ marginTop: 14, fontFamily: T.mono, fontSize: 11, color: T.inkFaint }}>
-              // 无更多细节
+              无更多细节
             </div>
           )}
         </div>
@@ -184,7 +184,7 @@ export function WorkoutCard({
 
       {isRest && (
         <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
-          // 休息日 · 主动恢复 / 拉伸即可
+          休息日 · 主动恢复 / 拉伸即可
         </div>
       )}
     </Card>
