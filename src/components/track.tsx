@@ -3,6 +3,7 @@
 // Track theme — dark precision-instrument style with cyber readouts.
 // Ported from the Prototype.html handoff. Used across all pages.
 
+import Image from 'next/image';
 import {
   type CSSProperties,
   type ReactNode,
@@ -49,6 +50,27 @@ export const SPORT: Record<SportKind, { code: string; label: string; color: stri
   strength: { code: 'STR', label: '力量', color: T.amber },
   mobility: { code: 'MOB', label: '恢复', color: T.green },
 };
+
+export function BrandIcon({ size = 44, style }: { size?: number; style?: CSSProperties }) {
+  return (
+    <Image
+      src="/brand-icon.png"
+      alt=""
+      aria-hidden="true"
+      unoptimized
+      width={size}
+      height={size}
+      style={{
+        width: size,
+        height: size,
+        display: 'block',
+        objectFit: 'contain',
+        filter: `drop-shadow(0 0 ${Math.max(10, Math.round(size * 0.45))}px ${T.limeGlow})`,
+        ...style,
+      }}
+    />
+  );
+}
 
 export type IntensityKind = 'low' | 'medium' | 'high' | 'rest';
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, authClient } from '@/lib/auth-client';
-import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
+import { T, Btn, Field, Banner, TrackInput, BrandIcon } from '@/components/track';
 
 type SignInError = { message?: string; status?: number; code?: string } | null | undefined;
 
@@ -87,39 +87,38 @@ export default function SignInPage() {
         <div style={{
           padding: '40px 36px', borderRight: `1px solid ${T.border}`,
           background: `radial-gradient(circle at 20% 0%, ${T.limeGlow}, transparent 60%)`,
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 480,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 32, minHeight: 480,
         }}>
           <div>
-            <div style={{
-              width: 44, height: 44, borderRadius: 8, background: T.lime,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
-              boxShadow: `0 0 28px ${T.limeGlow}`,
-            }}>GT</div>
-            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginTop: 28 }}>
-              GARMIN_TRAINER
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <BrandIcon size={76} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Garmin Trainer</span>
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.1, margin: '8px 0 14px', color: T.ink }}>
+            <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.1, margin: '24px 0 14px', color: T.ink }}>
               你的 AI 教练已就位
             </h1>
-            <p style={{ color: T.inkDim, fontSize: 14, lineHeight: 1.65, margin: 0, maxWidth: 320 }}>
-              连接 Garmin · 自动同步活动 · 让 AI 根据你的真实状态生成下一周训练。
-            </p>
           </div>
-          <div style={{
-            fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2, lineHeight: 1.8,
-            borderTop: `1px solid ${T.border}`, paddingTop: 16,
-          }}>
-            <div>SYS.STAT &nbsp; <span style={{ color: T.green }}>● ALL.GREEN</span></div>
-            <div>REGIONS &nbsp; <span style={{ color: T.ink }}>CN + INTL</span></div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { icon: '⌚', title: 'Garmin 数据自动同步', desc: '自动拉取你的运动记录，支持国区和国际区' },
+              { icon: '🧠', title: 'AI 个性化训练计划', desc: '基于你的 Garmin 数据，AI 量身定制每周课表' },
+              { icon: '💬', title: 'AI 私人教练', desc: '了解你的真实体能状态，随时对话、答疑、调课' },
+              { icon: '📊', title: '一键导出 & 推送', desc: '导出 PDF / Excel，或直接推送到 Garmin 日历' },
+            ].map((f) => (
+              <div key={f.title} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>{f.icon}</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{f.title}</div>
+                  <div style={{ fontSize: 12, color: T.inkDim, marginTop: 3, lineHeight: 1.5 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
         <form onSubmit={onSubmit} style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
-          <div>
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>AUTH</div>
-            <h2 style={{ margin: '6px 0 0', fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>登录</h2>
-          </div>
+          <h2 style={{ margin: '0', fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>登录</h2>
 
           <Field label="USERNAME / EMAIL">
             <TrackInput

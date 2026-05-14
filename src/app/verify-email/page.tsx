@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { authClient, useSession } from '@/lib/auth-client';
-import { T, Btn, Banner } from '@/components/track';
+import { T, Btn, Banner, BrandIcon } from '@/components/track';
 
 function VerifyEmailInner() {
   const params = useSearchParams();
@@ -44,12 +44,7 @@ function VerifyEmailInner() {
         background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
         padding: '36px 32px',
       }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 8, background: T.lime,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
-          boxShadow: `0 0 28px ${T.limeGlow}`, marginBottom: 18,
-        }}>GT</div>
+        <BrandIcon size={52} style={{ marginBottom: 18 }} />
 
         {verified ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -74,7 +69,7 @@ function VerifyEmailInner() {
                 : '你的邮箱'} 发送了验证邮件。点击邮件中的「验证邮箱」按钮即可完成注册。链接 1 小时内有效。
             </p>
             <p style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 0.5, margin: 0 }}>
-              // 没收到？检查垃圾邮件文件夹，或点击下方按钮重新发送。
+              {'// 没收到？检查垃圾邮件文件夹，或点击下方按钮重新发送。'}
             </p>
             {email && (
               <Btn

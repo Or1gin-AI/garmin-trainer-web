@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { T, Btn } from '@/components/track';
+import { T, Btn, BrandIcon } from '@/components/track';
 
 export default function Home() {
   return (
@@ -13,12 +13,7 @@ export default function Home() {
         padding: '56px 40px',
         boxShadow: `0 0 48px ${T.limeGlow}`,
       }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 10, background: T.lime,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: T.mono, fontWeight: 700, fontSize: 20, color: T.bg,
-          boxShadow: `0 0 36px ${T.limeGlow}`, margin: '0 auto 28px',
-        }}>GT</div>
+        <BrandIcon size={64} style={{ margin: '0 auto 28px' }} />
 
         <div style={{
           display: 'inline-block', padding: '4px 10px',

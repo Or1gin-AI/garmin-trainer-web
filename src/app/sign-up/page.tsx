@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signUp } from '@/lib/auth-client';
-import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
+import { T, Btn, Field, Banner, TrackInput, BrandIcon } from '@/components/track';
 
 const NAME_RE = /^[\p{L}\p{N}_-]{2,30}$/u;
 
@@ -75,15 +75,12 @@ export default function SignUpPage() {
         background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
         padding: '36px 32px',
       }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 8, background: T.lime,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: T.mono, fontWeight: 700, fontSize: 16, color: T.bg,
-          boxShadow: `0 0 28px ${T.limeGlow}`, marginBottom: 18,
-        }}>GT</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+          <BrandIcon size={52} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Garmin Trainer</span>
+        </div>
 
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>SIGN.UP</div>
-        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
+        <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
           已有账号？
           <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>直接登录</Link>

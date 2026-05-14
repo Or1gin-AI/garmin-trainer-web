@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
 import { api, type MeResponse, type GarminAccountSummary } from '@/lib/api';
-import { T } from '@/components/track';
+import { BrandIcon, T } from '@/components/track';
 
 interface NavItem {
   href: string;
@@ -97,12 +97,7 @@ export default function AppLayout({
           <Link href="/dashboard" style={{
             display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: T.ink,
           }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 6, background: T.lime,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: T.mono, fontWeight: 700, fontSize: 13, color: T.bg,
-              boxShadow: `0 0 16px ${T.limeGlow}`,
-            }}>GT</div>
+            <BrandIcon size={34} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3, lineHeight: 1 }}>GARMIN TRAINER</div>
               <div style={{ fontSize: 10, color: T.inkFaint, fontFamily: T.mono, marginTop: 2, letterSpacing: 1 }}>
