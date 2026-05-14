@@ -33,7 +33,7 @@ function daysUntil(iso: string | null): number | null {
 
 function planBadge(plan: MeResponse['plan'] | null) {
   if (!plan || plan.plan === 'free') return 'FREE';
-  return plan.plan === 'max' ? 'MAX' : 'PRO';
+  return plan.plan === 'max' ? 'MAX' : 'PLUS';
 }
 
 export default function AppLayout({

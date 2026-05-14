@@ -8,6 +8,11 @@ export class ApiError extends Error {
   }
 }
 
+type ErrorBody = {
+  error?: string;
+  message?: string;
+};
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -21,13 +26,13 @@ async function request<T>(
     },
   });
   if (!res.ok) {
-    let body: { error?: string } | null = null;
+    let body: ErrorBody | null = null;
     try {
-      body = (await res.json()) as { error?: string };
+      body = (await res.json()) as ErrorBody;
     } catch {}
     throw new ApiError(
       res.status,
-      body?.error || `HTTP ${res.status}`,
+      body?.message || body?.error || `HTTP ${res.status}`,
       body,
     );
   }
@@ -80,6 +85,9 @@ export interface GarminAccountSummary {
   hasSession: boolean;
   profile: { fullName?: string; userName?: string; location?: string } | null;
   lastValidatedAt: string | null;
+  lastBoundAt?: string | null;
+  nextBindAllowedAt?: string | null;
+  canBind?: boolean;
 }
 
 export type GarminRegion = 'cn' | 'global';

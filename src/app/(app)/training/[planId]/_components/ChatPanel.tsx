@@ -176,16 +176,21 @@ export function ChatPanel({
             return;
           }
           if (ev.event === 'error') {
-            const msg = typeof data.error === 'string' ? mapErrorCode(data.error) : '对话失败，请稍后重试';
+            const msg =
+              typeof data.message === 'string'
+                ? mapErrorCode(data.message)
+                : typeof data.error === 'string'
+                  ? mapErrorCode(data.error)
+                  : '对话失败，请稍后重试';
             setError(msg);
             return;
           }
         },
       });
     } catch (e) {
-      const errObj = e as Error & { status?: number; detail?: { error?: string } };
+      const errObj = e as Error & { status?: number; detail?: { error?: string; message?: string } };
       if (errObj.status === 402) {
-        setError(mapErrorCode(errObj.detail?.error ?? errObj.message));
+        setError(mapErrorCode(errObj.detail?.message ?? errObj.detail?.error ?? errObj.message));
       } else {
         setError(errObj.message || '对话失败，请稍后重试');
       }
@@ -384,7 +389,8 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
-    case 'max_required': return '当前功能需要 Max 会员。Pro 只能使用 Garmin 自动同步，不能使用 AI。';
+    case 'pro_required': return 'AI 教练对话是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
+    case 'max_required': return 'AI 教练对话是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
     case 'quota_exceeded': return '本月 AI 对话额度已用完。';
     case 'llm_not_configured': return 'AI 模型尚未配置，请联系管理员。';
     case 'persist_user_message_failed': return '保存用户消息失败，请重试。';
@@ -392,6 +398,6 @@ function mapErrorCode(code: string): string {
     case 'plan_request_corrupt': return '该计划记录已损坏，无法继续对话。';
     case 'not_found': return '计划不存在或不属于当前账号。';
     case 'chat_failed':
-    default: return '对话失败，请稍后重试。';
+    default: return code || '对话失败，请稍后重试。';
   }
 }

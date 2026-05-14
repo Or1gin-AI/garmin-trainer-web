@@ -125,6 +125,31 @@ export function StatusBadge({ kind, size }: { kind: StatusKind; size?: 'sm' }) {
   );
 }
 
+export function PlusBadge({ size = 'sm', style }: { size?: 'sm' | 'md'; style?: CSSProperties }) {
+  const small = size === 'sm';
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      flexShrink: 0,
+      padding: small ? '2px 7px' : '3px 9px',
+      borderRadius: 4,
+      border: `1px solid ${T.amber}66`,
+      background: T.amberSoft,
+      color: T.amber,
+      fontFamily: T.mono,
+      fontSize: small ? 9 : 10,
+      fontWeight: 700,
+      letterSpacing: 1.2,
+      lineHeight: 1.2,
+      whiteSpace: 'nowrap',
+      ...style,
+    }}>
+      PLUS
+    </span>
+  );
+}
+
 export function IntensityMeter({ kind, label }: { kind: IntensityKind; label?: boolean }) {
   const k = INTENSITY[kind] ?? INTENSITY.low;
   return (

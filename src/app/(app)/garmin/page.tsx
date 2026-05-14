@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api, type GarminAccountSummary } from '@/lib/api';
 import {
-  T, Btn, Card, CardHeader, SectionLabel, StatusBadge, PageHero, Banner, Readout,
+  T, Btn, Card, CardHeader, SectionLabel, StatusBadge, PageHero, Banner, Readout, PlusBadge,
 } from '@/components/track';
 
 type Region = 'cn' | 'global';
@@ -116,7 +116,7 @@ export default function GarminPage() {
           background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
           fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
         }}>
-          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」，再点一次按钮即可。Pro/Max 用户可同时绑定 CN + INTL 双区。
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。为防止账号代同步，同一区域 7 天内只能成功绑定一次；Plus/Max 用户可同时绑定 CN + INTL 双区。 <PlusBadge />
         </div>
       </Card>
     </>
@@ -137,6 +137,8 @@ function RegionCard({
   const host = region === 'cn' ? 'sso.garmin.cn' : 'sso.garmin.com';
   const loginHref = `/garmin/connect/${region}`;
   const connected = !!account?.hasSession;
+  const canBind = account?.canBind !== false;
+  const nextBindText = fmtDate(account?.nextBindAllowedAt ?? null);
 
   return (
     <Card hot={connected} style={{ padding: 22 }}>
@@ -156,6 +158,7 @@ function RegionCard({
           <Readout k="USER" v={account.profile.fullName || account.profile.userName || '—'} />
           {account.profile.location && <Readout k="LOCATION" v={account.profile.location} />}
           <Readout k="LAST.AUTH" v={fmtDate(account.lastValidatedAt)} vColor={T.lime} />
+          <Readout k="LAST.BIND" v={fmtDate(account.lastBoundAt ?? null)} />
         </div>
       ) : (
         <div style={{
@@ -166,12 +169,35 @@ function RegionCard({
         </div>
       )}
 
+      {!canBind && (
+        <div style={{
+          marginTop: 12,
+          padding: '9px 10px',
+          borderRadius: 6,
+          border: `1px solid ${T.amber}35`,
+          background: T.amberSoft,
+          color: T.amber,
+          fontFamily: T.mono,
+          fontSize: 10,
+          letterSpacing: 0.8,
+          lineHeight: 1.6,
+        }}>
+          7 天绑定冷却中 · {nextBindText} 后可再次绑定
+        </div>
+      )}
+
       <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-        <Link href={loginHref} style={{ textDecoration: 'none' }}>
-          <Btn variant={connected ? 'ghost' : 'primary'}>
+        {canBind ? (
+          <Link href={loginHref} style={{ textDecoration: 'none' }}>
+            <Btn variant={connected ? 'ghost' : 'primary'}>
+              {connected ? '重新连接' : '连接 Garmin →'}
+            </Btn>
+          </Link>
+        ) : (
+          <Btn variant="ghost" disabled>
             {connected ? '重新连接' : '连接 Garmin →'}
           </Btn>
-        </Link>
+        )}
         {connected && (
           <Btn variant="danger" style={{ marginLeft: 'auto' }} onClick={onDisconnect}>
             断开连接

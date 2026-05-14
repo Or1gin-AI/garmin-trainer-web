@@ -53,6 +53,9 @@ export async function streamSse(args: SseStreamArgs): Promise<void> {
       // ignore — body wasn't JSON
     }
     const message =
+      (detail && typeof detail === 'object' && 'message' in detail
+        ? String((detail as { message: unknown }).message)
+        : null) ??
       (detail && typeof detail === 'object' && 'error' in detail
         ? String((detail as { error: unknown }).error)
         : null) ?? `HTTP ${res.status}`;

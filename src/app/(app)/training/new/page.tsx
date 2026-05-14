@@ -13,7 +13,7 @@ import { streamSse, type SseEvent } from '@/lib/sse';
 import {
   T, Btn, Card, CardHeader, Field, PageHero, Banner,
   TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
-  type SportKind,
+  PlusBadge, type SportKind,
 } from '@/components/track';
 import {
   WeekCalendar,
@@ -46,12 +46,14 @@ interface StreamedWorkoutRaw {
 
 function mapTrainingError(code: string): string {
   switch (code) {
+    case 'pro_required':
+      return 'AI 训练计划生成（包含高级训练计划）是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
     case 'max_required':
-      return '当前功能需要 Max 会员。Pro 只能使用 Garmin 自动同步，不能使用 AI。';
+      return 'AI 训练计划生成（包含高级训练计划）是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
     case 'quota_exceeded':
       return '本月 AI 计划生成额度已用完。';
     default:
-      return code || '生成失败';
+      return code || '生成失败，请稍后重试。';
   }
 }
 
@@ -423,7 +425,12 @@ export default function NewTrainingPlanPage() {
         return;
       }
       case 'error': {
-        const msg = data && typeof data.error === 'string' ? (data.error as string) : '生成失败';
+        const msg =
+          data && typeof data.message === 'string'
+            ? (data.message as string)
+            : data && typeof data.error === 'string'
+              ? (data.error as string)
+              : '生成失败';
         fatalRef.current = mapTrainingError(msg);
         abortRef.current?.abort();
         return;
@@ -459,8 +466,8 @@ export default function NewTrainingPlanPage() {
     } catch (e) {
       const errObj = e as Error & { status?: number };
       if (errObj.status === 402) {
-        const detail = (errObj as Error & { detail?: { error?: string } }).detail;
-        fatalRef.current = mapTrainingError(detail?.error ?? errObj.message);
+        const detail = (errObj as Error & { detail?: { error?: string; message?: string } }).detail;
+        fatalRef.current = mapTrainingError(detail?.message ?? detail?.error ?? errObj.message);
       } else if (
         errObj.status === 409 &&
         (errObj as Error & { detail?: { error?: string; limit?: number } }).detail?.error ===
@@ -578,7 +585,7 @@ export default function NewTrainingPlanPage() {
       <PageHero
         eyebrow="新建计划"
         title="新建训练计划"
-        sub="AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。"
+        sub={<>AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。 <PlusBadge /></>}
       />
 
       {error && (
@@ -589,7 +596,7 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="基础设置" title="基础设置" />
+          <CardHeader eyebrow="基础设置" title="基础设置" right={<PlusBadge size="md" />} />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <Field label="运动项目" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -779,7 +786,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="高级训练" full>
+            <Field label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>高级训练 <PlusBadge /></span>} full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -793,7 +800,7 @@ export default function NewTrainingPlanPage() {
               </label>
             </Field>
 
-            <Field label="多时段/一天多练" full>
+            <Field label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>多时段/一天多练 <PlusBadge /></span>} full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -840,13 +847,17 @@ export default function NewTrainingPlanPage() {
               <Link href="/training" style={{ textDecoration: 'none' }}>
                 <Btn variant="ghost" type="button">返回</Btn>
               </Link>
-              <Btn type="submit">生成计划 →</Btn>
+              <Btn type="submit">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  生成计划 <PlusBadge style={{ color: T.bg, borderColor: 'rgba(11,14,12,0.35)', background: 'rgba(11,14,12,0.14)' }} /> →
+                </span>
+              </Btn>
             </div>
           </form>
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" />
+          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" right={<PlusBadge />} />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
             <Row k="周一日期" v={form.weekStartDate} c={T.lime} />
             <Row k="每周天数" v={`${form.daysPerWeek} 天`} />
@@ -883,6 +894,11 @@ function Row({ k, v, c }: { k: string; v: string; c?: string }) {
 }
 
 function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSport[] }) {
+  const [openGroups, setOpenGroups] = useState<Record<TrainingModeSport, boolean>>({
+    running: false,
+    cycling: false,
+    swimming: false,
+  });
   if (selectedSports.length === 0) return null;
   return (
     <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
@@ -902,9 +918,15 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
       {selectedSports.map((sport) => {
         const meta = SPORT_META[sport];
         const group = TRAINING_MODE_GROUPS[sport];
+        const isOpen = openGroups[sport];
         return (
           <details
             key={sport}
+            open={isOpen}
+            onToggle={(e) => {
+              const next = e.currentTarget.open;
+              setOpenGroups((prev) => (prev[sport] === next ? prev : { ...prev, [sport]: next }));
+            }}
             style={{
               border: `1px solid ${T.border}`,
               borderRadius: 8,
@@ -929,7 +951,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
             >
               <span>{group.title}</span>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.1 }}>
-                {group.modes.length} 种 · 点击展开
+                {group.modes.length} 种 · {isOpen ? '点击收起' : '点击展开'}
               </span>
             </summary>
             <div style={{
@@ -952,8 +974,9 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                   title={`备注示例：${mode.phrase}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>
+                    <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {mode.name}
+                      {mode.kind === '高级' && <PlusBadge />}
                     </span>
                     <span style={{
                       flexShrink: 0,
@@ -964,7 +987,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                       borderRadius: 4,
                       padding: '1px 5px',
                     }}>
-                      {mode.kind}
+                      {mode.kind === '高级' ? '高级 · PLUS' : mode.kind}
                     </span>
                   </div>
                   <div style={{

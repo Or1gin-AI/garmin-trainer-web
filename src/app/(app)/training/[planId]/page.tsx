@@ -19,7 +19,7 @@ import {
 import { streamSse, type SseEvent } from '@/lib/sse';
 import {
   T, Btn, Card, StatTile, StatusBadge, PageHero, Banner,
-  type StatusKind,
+  PlusBadge, type StatusKind,
 } from '@/components/track';
 import { WorkoutCard } from './_components/WorkoutCard';
 import { ChatPanel } from './_components/ChatPanel';
@@ -292,14 +292,14 @@ export default function TrainingPlanDetailPage() {
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'export' ? null : 'export'))}
               >
-                导出
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>导出 <PlusBadge /></span>
               </Btn>
               <Btn
                 variant={openActionPanel === 'garmin' ? 'ok' : 'ghost'}
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'garmin' ? null : 'garmin'))}
               >
-                上传 Garmin
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>上传 Garmin <PlusBadge /></span>
               </Btn>
 
               {openActionPanel === 'export' && (

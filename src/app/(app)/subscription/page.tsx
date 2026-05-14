@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api, type MeResponse, type ReferralStats } from '@/lib/api';
 import {
-  T, Btn, Card, CardHeader, PageHero, Banner, TrackInput,
+  T, Btn, Card, CardHeader, PageHero, Banner, TrackInput, PlusBadge,
 } from '@/components/track';
 
 function fmtDate(d: string | null) {
@@ -26,7 +26,7 @@ const PAY_URLS = {
 } as const;
 
 const PLANS: {
-  name: 'PRO' | 'MAX';
+  name: 'PLUS' | 'MAX';
   price: string;
   period: string;
   desc: string;
@@ -35,7 +35,7 @@ const PLANS: {
   hot?: boolean;
 }[] = [
   {
-    name: 'PRO',
+    name: 'PLUS',
     price: '¥5',
     period: '/月',
     desc: 'Garmin 数据自动同步',
@@ -53,7 +53,7 @@ const PLANS: {
     period: '/月',
     desc: 'AI 训练计划 + 全部同步能力',
     features: [
-      '包含 Pro 全部同步功能',
+      '包含 Plus 全部同步功能',
       'AI 生成个性化周训练计划',
       'AI 教练对话、改课、答疑',
       '训练计划导出（PDF / Word / Excel）',
@@ -66,8 +66,12 @@ const PLANS: {
 
 function planLabel(plan: MeResponse['plan']['plan'] | undefined) {
   if (plan === 'max') return 'MAX';
-  if (plan === 'pro') return 'PRO';
+  if (plan === 'pro') return 'PLUS';
   return 'FREE';
+}
+
+function redeemedPlanLabel(plan: 'pro' | 'max') {
+  return plan === 'pro' ? 'PLUS' : 'MAX';
 }
 
 export default function SubscriptionPage() {
@@ -99,7 +103,7 @@ export default function SubscriptionPage() {
         '/api/redemption/redeem',
         { code: code.trim() },
       );
-      setSuccess(`兑换成功，已激活 ${r.subscriptionPlan.toUpperCase()}，到期时间 ${fmtDate(r.expiresAt)}`);
+      setSuccess(`兑换成功，已激活 ${redeemedPlanLabel(r.subscriptionPlan)}，到期时间 ${fmtDate(r.expiresAt)}`);
       setCode('');
       await refresh();
     } catch (e) {
@@ -118,7 +122,7 @@ export default function SubscriptionPage() {
     }
   }
 
-  function confirmExternalPurchase(planName: 'PRO' | 'MAX'): boolean {
+  function confirmExternalPurchase(planName: 'PLUS' | 'MAX'): boolean {
     return window.confirm(
       `即将跳转到链动小铺购买 ${planName} 会员。支付完成后请复制卡密，回到本站订阅页兑换。是否继续？`,
     );
@@ -166,7 +170,7 @@ export default function SubscriptionPage() {
               </span>
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              <Mini k="自动同步" v={canAutoSync && autoSync ? '已开启' : '未开启'} c={canAutoSync && autoSync ? T.lime : T.inkFaint} />
+              <Mini k="自动同步" v={canAutoSync && autoSync ? '已开启' : 'Plus'} c={canAutoSync && autoSync ? T.lime : T.amber} />
               <Mini k="AI 教练" v={canUseAi ? '已解锁' : '仅 Max'} c={canUseAi ? T.lime : T.inkFaint} />
               <Mini k="区域" v="国区 + 国际区" c={T.ink} />
             </div>
@@ -213,6 +217,7 @@ export default function SubscriptionPage() {
             <div style={{ padding: '24px 24px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, letterSpacing: 2, color: p.hot ? T.lime : T.ink }}>{p.name}</span>
+                {p.name === 'PLUS' && <PlusBadge />}
                 {p.hot && (
                   <span style={{
                     fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,
@@ -233,7 +238,10 @@ export default function SubscriptionPage() {
               {p.features.map((f) => (
                 <li key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: T.ink, lineHeight: 1.5 }}>
                   <span style={{ color: p.hot ? T.lime : T.cyan, fontFamily: T.mono, flexShrink: 0 }}>+</span>
-                  <span>{f}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {f}
+                    {(p.name === 'PLUS' || f.includes('Plus')) && <PlusBadge />}
+                  </span>
                 </li>
               ))}
             </ul>

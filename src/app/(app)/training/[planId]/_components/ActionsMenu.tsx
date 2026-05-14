@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { trainingPlanExportUrl } from '@/lib/api';
-import { T, Btn, Card } from '@/components/track';
+import { T, Btn, Card, PlusBadge } from '@/components/track';
 import { GARMIN_REGIONS, type useGarminPublish } from './useGarminPublish';
 
 const EXPORT_FORMATS = [
@@ -61,7 +61,7 @@ export function ActionsMenu({
         }}>
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
-              EXPORT
+              EXPORT <PlusBadge />
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {EXPORT_FORMATS.map((f) => (
@@ -80,7 +80,7 @@ export function ActionsMenu({
               fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, marginBottom: 8,
               color: uploaded ? T.cyan : T.lime,
             }}>
-              GARMIN · {regionMeta.code}
+              GARMIN · {regionMeta.code} <PlusBadge />
             </div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
               {GARMIN_REGIONS.map((r) => (
