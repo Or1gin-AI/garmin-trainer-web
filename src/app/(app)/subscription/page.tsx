@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, type MeResponse } from '@/lib/api';
+import { api, type MeResponse, type ReferralStats } from '@/lib/api';
 import {
   T, Btn, Card, CardHeader, PageHero, Banner, TrackInput,
 } from '@/components/track';
@@ -72,6 +72,8 @@ function planLabel(plan: MeResponse['plan']['plan'] | undefined) {
 
 export default function SubscriptionPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [refStats, setRefStats] = useState<ReferralStats | null>(null);
+  const [copied, setCopied] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     refresh().catch((e) => setError((e as Error).message));
+    api.get<ReferralStats>('/api/referral/stats').then(setRefStats).catch(() => {});
   }, []);
 
   async function redeem(e: React.FormEvent) {
@@ -300,6 +303,56 @@ export default function SubscriptionPage() {
           </div>
         </div>
       </Card>
+
+      {/* Referral */}
+      {refStats && refStats.referralCode && (
+        <Card style={{ padding: 24, marginBottom: 28 }}>
+          <CardHeader eyebrow="REFERRAL" title="邀请好友" />
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 13, color: T.inkDim, marginBottom: 8 }}>你的专属邀请链接</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{
+                  flex: 1, fontFamily: T.mono, fontSize: 13, color: T.ink,
+                  padding: '10px 14px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  userSelect: 'all',
+                }}>
+                  {`${typeof window !== 'undefined' ? window.location.origin : 'https://garmin-trainer.uk'}/sign-up?ref=${refStats.referralCode}`}
+                </div>
+                <Btn
+                  variant="ghost"
+                  size="sm"
+                  style={{ flexShrink: 0 }}
+                  onClick={() => {
+                    const link = `${window.location.origin}/sign-up?ref=${refStats.referralCode}`;
+                    navigator.clipboard.writeText(link).then(() => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    });
+                  }}
+                >
+                  {copied ? '已复制' : '复制链接'}
+                </Btn>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+              <Mini k="已邀请" v={`${refStats.completedCount} / ${refStats.maxDays / 15} 人`} c={refStats.completedCount > 0 ? T.lime : T.inkFaint} />
+              <Mini k="已获得" v={`${refStats.daysEarned} / ${refStats.maxDays} 天 Max`} c={refStats.daysEarned > 0 ? T.lime : T.inkFaint} />
+            </div>
+
+            <div style={{
+              padding: '10px 14px', borderRadius: 8,
+              background: 'rgba(198,255,58,0.06)', border: `1px solid ${T.lime}20`,
+              fontSize: 12, color: T.inkDim, lineHeight: 1.6,
+            }}>
+              每成功推荐一位好友注册并验证邮箱，你将获得 <span style={{ color: T.lime, fontFamily: T.mono }}>15 天 Max</span> 会员，最多累计 {refStats.maxDays} 天。
+            </div>
+          </div>
+        </Card>
+      )}
     </>
   );
 }

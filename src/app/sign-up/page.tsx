@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signUp } from '@/lib/auth-client';
+import { api } from '@/lib/api';
 import { T, Btn, Field, Banner, TrackInput, BrandIcon } from '@/components/track';
 
 const NAME_RE = /^[\p{L}\p{N}_-]{2,30}$/u;
@@ -24,7 +25,17 @@ function humanizeError(message: string): string {
 }
 
 export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
+  );
+}
+
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const ref = searchParams.get('ref');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +73,11 @@ export default function SignUpPage() {
       setError(humanizeError(err.message ?? '注册失败'));
       return;
     }
+    if (ref) {
+      await api
+        .post('/api/referral/register-intent', { email, referralCode: ref })
+        .catch(() => {});
+    }
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
@@ -79,6 +95,16 @@ export default function SignUpPage() {
           <BrandIcon size={52} style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Garmin Trainer</span>
         </div>
+
+        {ref && (
+          <div style={{
+            marginBottom: 14, padding: '10px 14px', borderRadius: 8,
+            background: 'rgba(198,255,58,0.08)', border: `1px solid ${T.lime}30`,
+            fontSize: 12, color: T.lime, fontFamily: T.mono, letterSpacing: 0.5,
+          }}>
+            你被好友邀请加入 Garmin Trainer
+          </div>
+        )}
 
         <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>

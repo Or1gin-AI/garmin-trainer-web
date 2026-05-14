@@ -59,6 +59,14 @@ export interface UserPlanInfo {
   canUseAi: boolean;
   autoSyncEnabled: boolean;
   lastAutoSyncAt: string | null;
+  referralCode: string;
+}
+
+export interface ReferralStats {
+  referralCode: string;
+  completedCount: number;
+  daysEarned: number;
+  maxDays: number;
 }
 
 export interface MeResponse {
