@@ -338,6 +338,21 @@ export interface EvaluationPairing {
   notes: string[];
 }
 
+export interface PhysiologyMetrics {
+  edwardsTRIMP: number | null;
+  garminLoad: number | null;
+  aerobicTE: number | null;
+  anaerobicTE: number | null;
+  hrZone: number | null;
+  plannedZone: string | null;
+  zoneMatch: boolean | null;
+  intensityFactor: number | null;
+  tss: number | null;
+  recoveryHoursRemaining: number | null;
+  hrvStatus: string | null;
+  sleepScore: number | null;
+}
+
 export interface TrainingEvaluationResult {
   title: string;
   summary: string;
@@ -357,6 +372,7 @@ export interface TrainingEvaluationResult {
   risks?: string[];
   suggestions?: string[];
   pairings?: EvaluationPairing[];
+  physiology?: PhysiologyMetrics | null;
 }
 
 export interface TrainingEvaluationSummary {

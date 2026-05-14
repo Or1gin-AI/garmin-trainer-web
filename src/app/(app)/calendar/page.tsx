@@ -582,6 +582,33 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
         </div>
       )}
 
+      {/* Physiology metrics */}
+      {r.physiology && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 0' }}>
+          {r.physiology.edwardsTRIMP != null && (
+            <MiniBadge color={T.cyan}>TRIMP {r.physiology.edwardsTRIMP}</MiniBadge>
+          )}
+          {r.physiology.garminLoad != null && (
+            <MiniBadge color={T.cyan}>Load {r.physiology.garminLoad}</MiniBadge>
+          )}
+          {r.physiology.hrZone != null && (
+            <MiniBadge color={r.physiology.zoneMatch ? T.lime : T.amber}>Zone {r.physiology.hrZone}</MiniBadge>
+          )}
+          {r.physiology.aerobicTE != null && (
+            <MiniBadge color={T.cyan}>AerTE {r.physiology.aerobicTE.toFixed(1)}</MiniBadge>
+          )}
+          {r.physiology.anaerobicTE != null && r.physiology.anaerobicTE > 0 && (
+            <MiniBadge color={T.amber}>AnaTE {r.physiology.anaerobicTE.toFixed(1)}</MiniBadge>
+          )}
+          {r.physiology.tss != null && (
+            <MiniBadge color={T.cyan}>TSS {r.physiology.tss}</MiniBadge>
+          )}
+          {r.physiology.intensityFactor != null && (
+            <MiniBadge color={T.cyan}>IF {r.physiology.intensityFactor.toFixed(2)}</MiniBadge>
+          )}
+        </div>
+      )}
+
       {/* Highlights / Risks / Suggestions */}
       {r.highlights && r.highlights.length > 0 && (
         <BulletList items={r.highlights} color={T.lime} />
