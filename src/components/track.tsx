@@ -43,8 +43,8 @@ export const T = {
 export type SportKind = 'running' | 'cycling' | 'swimming' | 'rest' | 'strength' | 'mobility';
 
 export const SPORT: Record<SportKind, { code: string; label: string; color: string }> = {
-  running: { code: 'RUN', label: '跑步', color: T.lime },
-  cycling: { code: 'BIKE', label: '骑行', color: T.cyan },
+  running: { code: 'RUN', label: '跑步', color: T.amber },
+  cycling: { code: 'BIKE', label: '骑行', color: T.green },
   swimming: { code: 'SWIM', label: '游泳', color: T.cyan },
   rest: { code: '---', label: '休息', color: T.inkFaint },
   strength: { code: 'STR', label: '力量', color: T.amber },

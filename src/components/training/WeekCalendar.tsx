@@ -106,13 +106,7 @@ export function WeekCalendar({
         ) as Sport[];
         const sportKind = (itemSports[0] as SportKind | undefined) ?? (day?.sport as SportKind | undefined) ?? null;
         const sport = sportKind ? SPORT[sportKind] : null;
-        const sportLabel = itemSports.length > 1
-          ? itemSports
-              .map((s) => SPORT[s as SportKind]?.code ?? String(s).toUpperCase())
-              .join(' + ')
-          : sport
-            ? `${sport.code} · ${sport.label}`
-            : null;
+        const sportLabel = sport ? `${sport.code} · ${sport.label}` : null;
         const selected = selectedDayIndex === idx;
         const highlighted = highlightedDayIndex === idx;
         const isRest = sportKind === 'rest' || sportKind === 'mobility';
@@ -193,12 +187,37 @@ export function WeekCalendar({
             </div>
 
             <div style={{ minHeight: 14 }}>
-              {sportLabel ? (
+              {itemSports.length > 1 ? (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontFamily: T.mono,
+                    fontSize: 10.5,
+                    letterSpacing: 0.5,
+                    fontWeight: 600,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {itemSports.map((s, sportIdx) => {
+                    const meta = SPORT[s as SportKind];
+                    return (
+                      <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        {sportIdx > 0 ? <span style={{ color: T.inkFaint }}>+</span> : null}
+                        <span style={{ color: meta?.color ?? T.inkDim }}>
+                          {meta?.code ?? String(s).toUpperCase()}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </span>
+              ) : sportLabel ? (
                 <span
                   style={{
                     fontFamily: T.mono,
                     fontSize: 10.5,
-                    color: itemSports.length > 1 ? T.inkDim : sport?.color ?? T.inkDim,
+                    color: sport?.color ?? T.inkDim,
                     letterSpacing: 0.5,
                     fontWeight: 600,
                   }}
