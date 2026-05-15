@@ -192,6 +192,62 @@ export interface SyncJob {
   finishedAt: string | null;
 }
 
+// ===== Athletic profile =====
+
+export type AthleticSport = 'running' | 'swimming' | 'cycling';
+export type ActivitySport = AthleticSport | 'other';
+export type ProfileConfidence = 'low' | 'medium' | 'high';
+
+export interface AthleticProfileSport {
+  sport: AthleticSport;
+  available: boolean;
+  confidence: ProfileConfidence;
+  primaryMetric: number | null;
+  primaryMetricUnit: string | null;
+  primaryMetricSource: string;
+  snapshot: Record<string, unknown> | null;
+  activityCountUsed: number;
+  lastActivityAt: string | null;
+  updatedAt: string;
+}
+
+export interface PerformanceRecord {
+  sport: AthleticSport;
+  anchor: string;
+  bestValue: number;
+  bestUnit: 'seconds' | 'watts';
+  achievedAt: string;
+  sourceActivityId: string | null;
+  sourceRegion: GarminRegion | string | null;
+  confidence: ProfileConfidence;
+  isUserEntered: boolean;
+}
+
+export interface ProfileActivity {
+  activityId: string;
+  region: GarminRegion | string;
+  sport: ActivitySport;
+  startTime: string;
+  distanceKm: number | null;
+  durationMin: number | null;
+  avgPaceSecPerKm: number | null;
+  avgPaceSecPer100m: number | null;
+  avgHr: number | null;
+  avgPower: number | null;
+  qualityConfidence: ProfileConfidence;
+  excluded: boolean;
+}
+
+export interface AthleticProfileResponse {
+  sports: AthleticProfileSport[];
+  performanceRecords: PerformanceRecord[];
+  activities: ProfileActivity[];
+}
+
+export async function getAthleticProfile(): Promise<AthleticProfileResponse> {
+  return api.get<AthleticProfileResponse>('/api/profile');
+}
+
 // ===== Training plans =====
 
 export type Sport =

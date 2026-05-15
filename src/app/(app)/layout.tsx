@@ -5,19 +5,19 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
 import { api, type MeResponse, type GarminAccountSummary } from '@/lib/api';
-import { BrandIcon, MaxBadge, PlusBadge, T } from '@/components/track';
+import { BrandIcon, T } from '@/components/track';
 
 interface NavItem {
   href: string;
   label: string;
   matchPrefix?: string;
-  tier?: 'plus' | 'max';
 }
 
 const NAV: NavItem[] = [
   { href: '/garmin', label: '账号连接' },
-  { href: '/dashboard', label: '同步', tier: 'plus' },
-  { href: '/training', label: '训练', tier: 'max' },
+  { href: '/dashboard', label: '同步' },
+  { href: '/training', label: '训练' },
+  { href: '/profile', label: '运动能力' },
   { href: '/calendar', label: '日历' },
   { href: '/subscription', label: '订阅' },
 ];
@@ -101,9 +101,9 @@ export default function AppLayout({
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3, lineHeight: 1 }}>GARMIN TRAINER</div>
               <div style={{ fontSize: 10, color: T.inkFaint, fontFamily: T.mono, marginTop: 2, letterSpacing: 1 }}>
-                CN.SES <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? 'OK' : '—'}</span>
+                国区账号 <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? '已连接' : '未连接'}</span>
                 {' '}·{' '}
-                INTL.SES <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? 'OK' : '—'}</span>
+                国际区账号 <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? '已连接' : '未连接'}</span>
               </div>
             </div>
           </Link>
@@ -112,41 +112,29 @@ export default function AppLayout({
             aria-label="主菜单"
             style={{
               display: 'flex',
-              gap: 6,
+              gap: 2,
               alignItems: 'center',
-              padding: 4,
-              border: `1px solid ${T.border}`,
-              borderRadius: 10,
-              background: 'rgba(255,255,255,0.025)',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              minWidth: 0,
             }}
           >
             {nav.map((n) => {
               const active = pathname === n.href || pathname?.startsWith(n.href + '/');
-              const TierBadge = n.tier === 'plus' ? PlusBadge : n.tier === 'max' ? MaxBadge : null;
-              const activeBadgeStyle = active
-                ? {
-                    color: T.bg,
-                    border: '1px solid rgba(11,14,12,0.28)',
-                    background: 'rgba(11,14,12,0.12)',
-                  }
-                : undefined;
               return (
                 <Link key={n.href} href={n.href} style={{
-                  minHeight: 34,
-                  padding: '0 12px',
-                  borderRadius: 7,
-                  border: `1px solid ${active ? T.lime : T.border}`,
+                  padding: '7px 14px',
+                  borderRadius: 6,
                   fontSize: 13,
-                  fontWeight: active ? 700 : 600,
+                  fontWeight: active ? 700 : 500,
                   background: active ? T.lime : 'transparent',
                   color: active ? T.bg : T.inkDim,
                   textDecoration: 'none', fontFamily: T.sans,
-                  display: 'flex', alignItems: 'center', gap: 7,
+                  display: 'flex', alignItems: 'center',
                   whiteSpace: 'nowrap',
                   boxShadow: active ? `0 0 16px ${T.limeGlow}` : 'none',
                 }}>
                   <span>{n.label}</span>
-                  {TierBadge && <TierBadge style={activeBadgeStyle} />}
                 </Link>
               );
             })}
