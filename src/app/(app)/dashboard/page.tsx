@@ -115,14 +115,14 @@ export default function DashboardPage() {
         sub={
           me?.plan.canAutoSync
             ? <>Plus 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。</>
-            : <>免费用户支持手动同步。升级 Plus 后开启自动同步；升级 Max 后再解锁 AI。</>
+            : <>Garmin 同步是 Plus 功能。升级 Plus 后可手动触发并开启自动同步；升级 Max 后再解锁 AI。</>
         }
         actions={
           <>
             <Btn variant="ghost" onClick={() => refresh().catch(() => {})}>
               <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>刷新
             </Btn>
-            <Btn onClick={triggerSync} disabled={busy || !ready}>
+            <Btn onClick={triggerSync} disabled={busy || !ready || !me?.plan.canAutoSync}>
               {busy ? '触发中…' : '触发增量同步 →'}
             </Btn>
           </>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
             <CardHeader eyebrow="IDLE" title="没有正在进行的同步" />
             <p style={{ marginTop: 12, color: T.inkDim, fontSize: 13, lineHeight: 1.65 }}>
               {ready ? (
-                <>点击右上角「触发增量同步」立刻拉取国区 + 国际区最新活动。</>
+                <>点击右上角「触发增量同步」立刻执行一次 Garmin 双向同步。</>
               ) : (
                 <>完成两区 Garmin 登录后即可开始同步。</>
               )}

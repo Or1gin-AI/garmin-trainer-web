@@ -100,7 +100,7 @@ export function TrainingEvidencePanel({
         <div style={boxStyle}>
           <div style={boxTitleStyle}>专业规则来源</div>
           <ul style={listStyle}>
-            <li>用最近 7/28/56 天 Garmin 训练负荷判断近期压力，而不是只看用户填写的目标。</li>
+            <li>用最近 7/28/56 天国区 Garmin 训练负荷判断近期压力，而不是只看用户填写的目标。</li>
             <li>用 Foster monotony/strain 检查训练是否过于单调或压力集中。</li>
             <li>用 Garmin 睡眠、HRV、训练状态、恢复时间作为恢复风险信号；缺失时降低置信度。</li>
             <li>参考 Seiler 强度分布原则，限制阈值、VO2、无氧课数量，避免把长可用时间堆成高强度。</li>
