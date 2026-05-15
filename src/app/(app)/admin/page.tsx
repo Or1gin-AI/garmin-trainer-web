@@ -42,11 +42,33 @@ interface UserRow {
   id: string;
   email: string;
   name: string;
+  displayUsername: string | null;
+  emailVerified: boolean;
   role: string;
+  createdAt: string;
+  plan: 'free' | 'pro' | 'max' | null;
+  expiresAt: string | null;
+  autoSyncEnabled: boolean | null;
+}
+
+interface AdminChatMessageRow {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string | null;
+  planId: string;
+  weekStartDate: string;
+  planStatus: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  toolCalls: { name: string; arguments: unknown }[] | null;
+  toolResultRefs: unknown[] | null;
   createdAt: string;
 }
 
-type TabKey = 'codes' | 'ai' | 'usage';
+type ChatRoleFilter = 'all' | AdminChatMessageRow['role'];
+
+type TabKey = 'codes' | 'users' | 'ai' | 'usage';
 
 export default function AdminPage() {
   const [tab, setTab] = useState<TabKey>('codes');
@@ -100,6 +122,7 @@ export default function AdminPage() {
     if (!days) return;
     try {
       await api.post('/api/admin/grant', { userId, plan: 'max', planDays: days });
+      await refresh();
       alert('已授予');
     } catch (e) {
       alert((e as Error).message);
@@ -112,7 +135,7 @@ export default function AdminPage() {
         <PageHero
           eyebrow="ADMIN.CONSOLE"
           title="管理后台"
-          sub="生成卡密 · 管理用户 · 配置 AI 模型 · 查看用量"
+          sub="生成卡密 · 管理用户 · 查看 AI 聊天记录 · 配置 AI 模型 · 查看用量"
         />
 
         <div style={{
@@ -120,7 +143,10 @@ export default function AdminPage() {
           borderBottom: `1px solid ${T.border}`,
         }}>
           <TabButton active={tab === 'codes'} onClick={() => setTab('codes')} code="CODES">
-            卡密 / 用户
+            卡密
+          </TabButton>
+          <TabButton active={tab === 'users'} onClick={() => setTab('users')} code="USERS">
+            用户 / 聊天
           </TabButton>
           <TabButton active={tab === 'ai'} onClick={() => setTab('ai')} code="AI.CFG">
             AI 配置
@@ -231,67 +257,6 @@ export default function AdminPage() {
 
             <Card style={{ padding: 24 }}>
               <CardHeader
-                eyebrow="USERS"
-                title="用户"
-                right={
-                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-                    {users.length} TOTAL
-                  </span>
-                }
-              />
-              <div style={{ marginTop: 18, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left' }}>
-                      <Th>EMAIL</Th>
-                      <Th>NAME</Th>
-                      <Th>ROLE</Th>
-                      <Th>JOINED</Th>
-                      <Th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <tr key={u.id} style={{ borderTop: `1px dashed ${T.border}` }}>
-                        <Td>{u.email}</Td>
-                        <Td>{u.name}</Td>
-                        <Td>
-                          <span style={{
-                            fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
-                            color: u.role === 'admin' ? T.lime : T.inkDim,
-                            padding: '2px 6px',
-                            border: `1px solid ${u.role === 'admin' ? T.lime + '60' : T.border}`,
-                            borderRadius: 4,
-                          }}>{u.role.toUpperCase()}</span>
-                        </Td>
-                        <Td mono dim>
-                          {new Date(u.createdAt).toLocaleDateString('zh-CN')}
-                        </Td>
-                        <Td>
-                          <button
-                            onClick={() => grantMax(u.id)}
-                            style={{
-                              fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
-                              color: T.lime,
-                              background: 'transparent',
-                              border: `1px solid ${T.lime}40`,
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            + GRANT.MAX
-                          </button>
-                        </Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-            <Card style={{ padding: 24 }}>
-              <CardHeader
                 eyebrow="CODES.RECENT"
                 title="最近卡密"
                 right={
@@ -336,6 +301,13 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === 'users' && (
+          <UsersAndChatsSection
+            users={users}
+            onRefreshUsers={refresh}
+            onGrantMax={grantMax}
+          />
+        )}
         {tab === 'ai' && <AiConfigSection />}
         {tab === 'usage' && <AiUsageSection />}
       </div>
@@ -403,6 +375,325 @@ function Td({
       color: dim ? T.inkDim : T.ink,
       verticalAlign: 'middle',
     }}>{children}</td>
+  );
+}
+
+function fmtDateTime(value: string): string {
+  return new Date(value).toLocaleString('zh-CN');
+}
+
+function planText(plan: UserRow['plan']): string {
+  if (plan === 'max') return 'MAX';
+  if (plan === 'pro') return 'PLUS';
+  return 'FREE';
+}
+
+function PlanPill({ plan }: { plan: UserRow['plan'] }) {
+  const color = plan === 'max' ? T.lime : plan === 'pro' ? T.amber : T.inkFaint;
+  return (
+    <span style={{
+      fontFamily: T.mono,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      color,
+      padding: '2px 7px',
+      border: `1px solid ${color}55`,
+      borderRadius: 4,
+      whiteSpace: 'nowrap',
+    }}>
+      {planText(plan)}
+    </span>
+  );
+}
+
+function RolePill({ role }: { role: string }) {
+  const color = role === 'assistant' ? T.lime : role === 'user' ? T.cyan : T.amber;
+  return (
+    <span style={{
+      fontFamily: T.mono,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      color,
+      padding: '2px 7px',
+      border: `1px solid ${color}55`,
+      borderRadius: 4,
+      whiteSpace: 'nowrap',
+    }}>
+      {role.toUpperCase()}
+    </span>
+  );
+}
+
+function UsersAndChatsSection({
+  users,
+  onRefreshUsers,
+  onGrantMax,
+}: {
+  users: UserRow[];
+  onRefreshUsers: () => Promise<void>;
+  onGrantMax: (userId: string) => Promise<void>;
+}) {
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [role, setRole] = useState<ChatRoleFilter>('all');
+  const [query, setQuery] = useState('');
+  const [messages, setMessages] = useState<AdminChatMessageRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refreshChats(nextUserId = selectedUserId) {
+    setLoading(true);
+    setError(null);
+    try {
+      const qs = new URLSearchParams({ limit: '200' });
+      if (nextUserId) qs.set('userId', nextUserId);
+      if (role !== 'all') qs.set('role', role);
+      if (query.trim()) qs.set('q', query.trim());
+      const r = await api.get<{ messages: AdminChatMessageRow[] }>(
+        `/api/admin/chat-messages?${qs.toString()}`,
+      );
+      setMessages(r.messages);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshChats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    await refreshChats();
+  }
+
+  async function inspectUser(userId: string) {
+    setSelectedUserId(userId);
+    await refreshChats(userId);
+  }
+
+  const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {error && <Banner kind="error" code="ERR">{error}</Banner>}
+
+      <Card style={{ padding: 24 }}>
+        <CardHeader
+          eyebrow="USERS"
+          title="所有用户"
+          right={
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+                {users.length} TOTAL
+              </span>
+              <RowBtn color={T.lime} onClick={() => onRefreshUsers()}>
+                刷新
+              </RowBtn>
+            </div>
+          }
+        />
+        <div style={{ marginTop: 18, overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <Th>邮箱</Th>
+                <Th>昵称</Th>
+                <Th>会员</Th>
+                <Th>角色</Th>
+                <Th>注册时间</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} style={{ borderTop: `1px dashed ${T.border}` }}>
+                  <Td>
+                    <div style={{ color: T.ink, fontWeight: 500 }}>{u.email}</div>
+                    <div style={{ fontFamily: T.mono, fontSize: 10, color: u.emailVerified ? T.lime : T.amber, marginTop: 3 }}>
+                      {u.emailVerified ? '邮箱已验证' : '邮箱未验证'}
+                    </div>
+                  </Td>
+                  <Td>{u.displayUsername || u.name || '—'}</Td>
+                  <Td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <PlanPill plan={u.plan} />
+                      {u.expiresAt && (
+                        <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+                          到期 {new Date(u.expiresAt).toLocaleDateString('zh-CN')}
+                        </span>
+                      )}
+                    </div>
+                  </Td>
+                  <Td>
+                    <span style={{
+                      fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2,
+                      color: u.role === 'admin' ? T.lime : T.inkDim,
+                      padding: '2px 6px',
+                      border: `1px solid ${u.role === 'admin' ? T.lime + '60' : T.border}`,
+                      borderRadius: 4,
+                    }}>{u.role.toUpperCase()}</span>
+                  </Td>
+                  <Td mono dim>
+                    {new Date(u.createdAt).toLocaleDateString('zh-CN')}
+                  </Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                      <RowBtn color={T.cyan} onClick={() => inspectUser(u.id)}>
+                        看聊天
+                      </RowBtn>
+                      <RowBtn color={T.lime} onClick={() => onGrantMax(u.id)}>
+                        + Max
+                      </RowBtn>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card style={{ padding: 24 }}>
+        <CardHeader
+          eyebrow="CHAT.LOGS"
+          title={selectedUser ? `聊天记录 · ${selectedUser.email}` : '所有 AI 聊天记录'}
+          right={
+            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+              {messages.length} ROWS
+            </span>
+          }
+        />
+
+        <form
+          onSubmit={submitSearch}
+          style={{
+            marginTop: 18,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(220px, 1fr) 140px minmax(220px, 1fr) auto',
+            gap: 12,
+            alignItems: 'end',
+          }}
+        >
+          <Field label="用户">
+            <TrackSelect
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+            >
+              <option value="">全部用户</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.email}
+                </option>
+              ))}
+            </TrackSelect>
+          </Field>
+          <Field label="角色">
+            <TrackSelect
+              value={role}
+              onChange={(e) => setRole(e.target.value as ChatRoleFilter)}
+            >
+              <option value="all">全部</option>
+              <option value="user">用户</option>
+              <option value="assistant">AI</option>
+              <option value="tool">工具</option>
+            </TrackSelect>
+          </Field>
+          <Field label="关键词">
+            <TrackInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜索邮箱、昵称或消息内容"
+            />
+          </Field>
+          <Btn type="submit" disabled={loading}>
+            {loading ? '查询中…' : '查询'}
+          </Btn>
+        </form>
+
+        <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
+          {loading ? (
+            <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+              // LOADING…
+            </div>
+          ) : messages.length === 0 ? (
+            <div style={{
+              padding: '28px 20px',
+              border: `1px dashed ${T.border}`,
+              borderRadius: 8,
+              color: T.inkDim,
+              textAlign: 'center',
+              fontSize: 13,
+            }}>
+              没有匹配的聊天记录。
+            </div>
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.02)',
+                  padding: 14,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <RolePill role={m.role} />
+                  <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{m.email}</span>
+                  {m.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{m.displayName}</span>}
+                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
+                    周计划 {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+                    {fmtDateTime(m.createdAt)}
+                  </span>
+                </div>
+                <div style={{
+                  marginTop: 10,
+                  padding: 12,
+                  borderRadius: 6,
+                  background: 'rgba(0,0,0,0.22)',
+                  color: T.ink,
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  whiteSpace: 'pre-wrap',
+                  overflowWrap: 'anywhere',
+                  maxHeight: 260,
+                  overflow: 'auto',
+                }}>
+                  {m.content}
+                </div>
+                {(m.toolCalls || m.toolResultRefs) && (
+                  <details style={{ marginTop: 10 }}>
+                    <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
+                      工具调用 / 修改记录
+                    </summary>
+                    <pre style={{
+                      margin: '10px 0 0',
+                      padding: 12,
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      color: T.inkDim,
+                      whiteSpace: 'pre-wrap',
+                      overflowWrap: 'anywhere',
+                      fontFamily: T.mono,
+                      fontSize: 11,
+                      maxHeight: 220,
+                      overflow: 'auto',
+                    }}>
+                      {JSON.stringify({ toolCalls: m.toolCalls, toolResultRefs: m.toolResultRefs }, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 
