@@ -126,7 +126,7 @@ export default function AppLayout({
               const activeBadgeStyle = active
                 ? {
                     color: T.bg,
-                    borderColor: 'rgba(11,14,12,0.28)',
+                    border: '1px solid rgba(11,14,12,0.28)',
                     background: 'rgba(11,14,12,0.12)',
                   }
                 : undefined;

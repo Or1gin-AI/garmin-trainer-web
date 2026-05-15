@@ -66,12 +66,66 @@ interface AdminChatMessageRow {
   createdAt: string;
 }
 
+interface AdminTrainingPlanRow {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string | null;
+  weekStartDate: string;
+  status: 'generating' | 'ready' | 'failed' | 'archived';
+  request: {
+    goal?: string;
+    goalDistance?: string | null;
+    daysPerWeek?: number;
+    sports?: {
+      running?: boolean;
+      cycling?: boolean;
+      swimming?: boolean;
+    };
+  };
+  summary: string | null;
+  monitoring: string | null;
+  adjustmentRules: string | null;
+  modelMeta: unknown | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AdminWorkoutRow {
+  id: string;
+  dayIndex: number;
+  slotIndex: number;
+  date: string;
+  sport: string;
+  title: string;
+  intensity: string;
+  durationMinutes: number | null;
+  distanceKm: string | number | null;
+  targetMetric: string;
+  targetHeartRate: string | null;
+  targetPace: string | null;
+  targetPower: string | null;
+  workoutStructure: string | null;
+  adaptation: string | null;
+  status: string;
+}
+
+interface AdminPageMeta {
+  limit: number;
+  offset: number;
+  total: number;
+  hasMore: boolean;
+}
+
+const ADMIN_LIST_PAGE_SIZE = 25;
+
 type ChatRoleFilter = 'all' | AdminChatMessageRow['role'];
+type PlanStatusFilter = 'all' | AdminTrainingPlanRow['status'];
 
 type TabKey = 'codes' | 'users' | 'ai' | 'usage';
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<TabKey>('codes');
+  const [tab, setTab] = useState<TabKey>('users');
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [count, setCount] = useState(10);
@@ -142,11 +196,11 @@ export default function AdminPage() {
           display: 'flex', gap: 4, marginBottom: 24,
           borderBottom: `1px solid ${T.border}`,
         }}>
+          <TabButton active={tab === 'users'} onClick={() => setTab('users')} code="USERS">
+            用户与聊天记录
+          </TabButton>
           <TabButton active={tab === 'codes'} onClick={() => setTab('codes')} code="CODES">
             卡密
-          </TabButton>
-          <TabButton active={tab === 'users'} onClick={() => setTab('users')} code="USERS">
-            用户 / 聊天
           </TabButton>
           <TabButton active={tab === 'ai'} onClick={() => setTab('ai')} code="AI.CFG">
             AI 配置
@@ -382,6 +436,12 @@ function fmtDateTime(value: string): string {
   return new Date(value).toLocaleString('zh-CN');
 }
 
+function pageRangeText(page: AdminPageMeta | null, count: number): string {
+  if (!page) return `${count} 条`;
+  if (page.total === 0) return '0 / 0';
+  return `${page.offset + 1}-${page.offset + count} / ${page.total}`;
+}
+
 function planText(plan: UserRow['plan']): string {
   if (plan === 'max') return 'MAX';
   if (plan === 'pro') return 'PLUS';
@@ -424,6 +484,181 @@ function RolePill({ role }: { role: string }) {
   );
 }
 
+function StatusPill({ status }: { status: AdminTrainingPlanRow['status'] }) {
+  const color = status === 'ready' ? T.lime : status === 'failed' ? T.red : status === 'generating' ? T.cyan : T.inkFaint;
+  const label =
+    status === 'ready'
+      ? '已生成'
+      : status === 'failed'
+        ? '失败'
+        : status === 'generating'
+          ? '生成中'
+          : '已归档';
+  return (
+    <span style={{
+      fontFamily: T.mono,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      color,
+      padding: '2px 7px',
+      border: `1px solid ${color}55`,
+      borderRadius: 4,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function formatSports(sports: AdminTrainingPlanRow['request']['sports'] | undefined): string {
+  if (!sports) return '—';
+  const enabled = [
+    sports.running ? '跑步' : null,
+    sports.cycling ? '骑行' : null,
+    sports.swimming ? '游泳' : null,
+  ].filter(Boolean);
+  return enabled.length ? enabled.join(' · ') : '—';
+}
+
+function MiniLine({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{
+      border: `1px solid ${T.border}`,
+      borderRadius: 6,
+      padding: '8px 10px',
+      minWidth: 0,
+      background: 'rgba(0,0,0,0.14)',
+    }}>
+      <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.2 }}>{label}</div>
+      <div style={{
+        marginTop: 4,
+        color: T.ink,
+        fontSize: 12,
+        lineHeight: 1.45,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}>{value}</div>
+    </div>
+  );
+}
+
+function previewText(value: string | null | undefined, max = 120): string {
+  const oneLine = (value || '').replace(/\s+/g, ' ').trim();
+  if (!oneLine) return '—';
+  return oneLine.length > max ? `${oneLine.slice(0, max)}…` : oneLine;
+}
+
+function sportLabel(sport: string): string {
+  switch (sport) {
+    case 'running':
+      return '跑步';
+    case 'cycling':
+      return '骑行';
+    case 'swimming':
+      return '游泳';
+    case 'strength':
+      return '力量';
+    case 'mobility':
+      return '灵活性';
+    case 'rest':
+      return '休息';
+    default:
+      return sport;
+  }
+}
+
+function PlanWorkoutList({
+  workouts,
+  loading,
+}: {
+  workouts: AdminWorkoutRow[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div style={{ marginTop: 12, fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+        // LOADING.WORKOUTS…
+      </div>
+    );
+  }
+  if (workouts.length === 0) {
+    return (
+      <div style={{
+        marginTop: 12,
+        padding: 14,
+        borderRadius: 6,
+        border: `1px dashed ${T.border}`,
+        color: T.inkDim,
+        fontSize: 13,
+      }}>
+        这份计划没有训练课表记录。
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+      {workouts.map((w) => (
+        <div
+          key={w.id}
+          style={{
+            border: `1px solid ${T.border}`,
+            borderRadius: 6,
+            background: 'rgba(0,0,0,0.16)',
+            padding: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}>
+              D{w.dayIndex}.{w.slotIndex}
+            </span>
+            <span style={{ color: T.ink, fontSize: 13, fontWeight: 600 }}>{w.title}</span>
+            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+              {w.date} · {sportLabel(w.sport)} · {w.intensity}
+            </span>
+            <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+              {w.durationMinutes ?? '—'} 分钟{w.distanceKm ? ` · ${w.distanceKm} km` : ''}
+            </span>
+          </div>
+          <div style={{
+            marginTop: 8,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            gap: 8,
+          }}>
+            <MiniLine label="指标" value={w.targetMetric || '—'} />
+            <MiniLine label="心率" value={w.targetHeartRate || '—'} />
+            <MiniLine label="配速" value={w.targetPace || '—'} />
+            <MiniLine label="功率" value={w.targetPower || '—'} />
+          </div>
+          {w.workoutStructure && (
+            <div style={{
+              marginTop: 8,
+              color: T.inkDim,
+              fontSize: 12,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+            }}>
+              {w.workoutStructure}
+            </div>
+          )}
+          {w.adaptation && (
+            <div style={{
+              marginTop: 6,
+              fontSize: 12,
+              color: T.amber,
+              lineHeight: 1.6,
+            }}>
+              {w.adaptation}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function UsersAndChatsSection({
   users,
   onRefreshUsers,
@@ -437,21 +672,40 @@ function UsersAndChatsSection({
   const [role, setRole] = useState<ChatRoleFilter>('all');
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<AdminChatMessageRow[]>([]);
+  const [chatPage, setChatPage] = useState<AdminPageMeta | null>(null);
+  const [chatOffset, setChatOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [planStatus, setPlanStatus] = useState<PlanStatusFilter>('all');
+  const [planQuery, setPlanQuery] = useState('');
+  const [plans, setPlans] = useState<AdminTrainingPlanRow[]>([]);
+  const [planPage, setPlanPage] = useState<AdminPageMeta | null>(null);
+  const [planOffset, setPlanOffset] = useState(0);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [expandedPlanInfoId, setExpandedPlanInfoId] = useState<string | null>(null);
+  const [expandedWorkoutPlanId, setExpandedWorkoutPlanId] = useState<string | null>(null);
+  const [planWorkouts, setPlanWorkouts] = useState<Record<string, AdminWorkoutRow[]>>({});
+  const [planDetailLoading, setPlanDetailLoading] = useState<string | null>(null);
+  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function refreshChats(nextUserId = selectedUserId) {
+  async function refreshChats(nextUserId = selectedUserId, nextOffset = chatOffset) {
     setLoading(true);
     setError(null);
     try {
-      const qs = new URLSearchParams({ limit: '200' });
+      const qs = new URLSearchParams({
+        limit: String(ADMIN_LIST_PAGE_SIZE),
+        offset: String(nextOffset),
+      });
       if (nextUserId) qs.set('userId', nextUserId);
       if (role !== 'all') qs.set('role', role);
       if (query.trim()) qs.set('q', query.trim());
-      const r = await api.get<{ messages: AdminChatMessageRow[] }>(
+      const r = await api.get<{ messages: AdminChatMessageRow[]; pagination: AdminPageMeta }>(
         `/api/admin/chat-messages?${qs.toString()}`,
       );
       setMessages(r.messages);
+      setChatPage(r.pagination);
+      setChatOffset(nextOffset);
+      setExpandedMessageId(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -459,19 +713,84 @@ function UsersAndChatsSection({
     }
   }
 
+  async function refreshPlans(nextUserId = selectedUserId, nextOffset = planOffset) {
+    setPlansLoading(true);
+    setError(null);
+    try {
+      const qs = new URLSearchParams({
+        limit: String(ADMIN_LIST_PAGE_SIZE),
+        offset: String(nextOffset),
+      });
+      if (nextUserId) qs.set('userId', nextUserId);
+      if (planStatus !== 'all') qs.set('status', planStatus);
+      if (planQuery.trim()) qs.set('q', planQuery.trim());
+      const r = await api.get<{ plans: AdminTrainingPlanRow[]; pagination: AdminPageMeta }>(
+        `/api/admin/training-plans?${qs.toString()}`,
+      );
+      setPlans(r.plans);
+      setPlanPage(r.pagination);
+      setPlanOffset(nextOffset);
+      setExpandedPlanInfoId(null);
+      setExpandedWorkoutPlanId(null);
+      setPlanWorkouts({});
+      setPlanDetailLoading(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPlansLoading(false);
+    }
+  }
+
   useEffect(() => {
     refreshChats();
+    refreshPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function submitSearch(e: React.FormEvent) {
     e.preventDefault();
-    await refreshChats();
+    await refreshChats(selectedUserId, 0);
+  }
+
+  async function submitPlanSearch(e: React.FormEvent) {
+    e.preventDefault();
+    await refreshPlans(selectedUserId, 0);
+  }
+
+  async function togglePlanDetails(planId: string) {
+    if (expandedWorkoutPlanId === planId) {
+      setExpandedWorkoutPlanId(null);
+      return;
+    }
+    setExpandedWorkoutPlanId(planId);
+    if (planWorkouts[planId]) return;
+    setPlanDetailLoading(planId);
+    setError(null);
+    try {
+      const r = await api.get<{ workouts: AdminWorkoutRow[] }>(
+        `/api/admin/training-plans/${encodeURIComponent(planId)}`,
+      );
+      setPlanWorkouts((prev) => ({ ...prev, [planId]: r.workouts }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPlanDetailLoading(null);
+    }
   }
 
   async function inspectUser(userId: string) {
     setSelectedUserId(userId);
-    await refreshChats(userId);
+    await Promise.all([refreshChats(userId, 0), refreshPlans(userId, 0)]);
+  }
+
+  function turnPlanPage(direction: -1 | 1) {
+    const nextOffset = Math.max(0, planOffset + direction * ADMIN_LIST_PAGE_SIZE);
+    void refreshPlans(selectedUserId, nextOffset);
+  }
+
+  function turnChatPage(direction: -1 | 1) {
+    const nextOffset = Math.max(0, chatOffset + direction * ADMIN_LIST_PAGE_SIZE);
+    void refreshChats(selectedUserId, nextOffset);
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
@@ -542,7 +861,7 @@ function UsersAndChatsSection({
                   <Td>
                     <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
                       <RowBtn color={T.cyan} onClick={() => inspectUser(u.id)}>
-                        看聊天
+                        看记录
                       </RowBtn>
                       <RowBtn color={T.lime} onClick={() => onGrantMax(u.id)}>
                         + Max
@@ -558,12 +877,215 @@ function UsersAndChatsSection({
 
       <Card style={{ padding: 24 }}>
         <CardHeader
+          eyebrow="TRAINING.PLANS"
+          title={selectedUser ? `训练计划 · ${selectedUser.email}` : '所有用户训练计划'}
+          right={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+                每页 {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(planPage, plans.length)}
+              </span>
+              <RowBtn color={T.cyan} onClick={() => turnPlanPage(-1)} disabled={plansLoading || planOffset <= 0}>
+                上一页
+              </RowBtn>
+              <RowBtn color={T.cyan} onClick={() => turnPlanPage(1)} disabled={plansLoading || !planPage?.hasMore}>
+                下一页
+              </RowBtn>
+            </div>
+          }
+        />
+
+        <form
+          onSubmit={submitPlanSearch}
+          style={{
+            marginTop: 18,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(220px, 1fr) 150px minmax(220px, 1fr) auto',
+            gap: 12,
+            alignItems: 'end',
+          }}
+        >
+          <Field label="用户">
+            <TrackSelect
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+            >
+              <option value="">全部用户</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.email}
+                </option>
+              ))}
+            </TrackSelect>
+          </Field>
+          <Field label="状态">
+            <TrackSelect
+              value={planStatus}
+              onChange={(e) => setPlanStatus(e.target.value as PlanStatusFilter)}
+            >
+              <option value="all">全部</option>
+              <option value="ready">已生成</option>
+              <option value="generating">生成中</option>
+              <option value="failed">失败</option>
+              <option value="archived">已归档</option>
+            </TrackSelect>
+          </Field>
+          <Field label="关键词">
+            <TrackInput
+              value={planQuery}
+              onChange={(e) => setPlanQuery(e.target.value)}
+              placeholder="搜索邮箱、昵称、总结或监控建议"
+            />
+          </Field>
+          <Btn type="submit" disabled={plansLoading}>
+            {plansLoading ? '查询中…' : '查询'}
+          </Btn>
+        </form>
+
+        <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
+          {plansLoading ? (
+            <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
+              // LOADING…
+            </div>
+          ) : plans.length === 0 ? (
+            <div style={{
+              padding: '28px 20px',
+              border: `1px dashed ${T.border}`,
+              borderRadius: 8,
+              color: T.inkDim,
+              textAlign: 'center',
+              fontSize: 13,
+            }}>
+              没有匹配的训练计划。
+            </div>
+          ) : (
+            plans.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.02)',
+                  padding: 14,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <StatusPill status={p.status} />
+                  <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{p.email}</span>
+                  {p.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{p.displayName}</span>}
+                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
+                    周计划 {String(p.weekStartDate).slice(0, 10)}
+                  </span>
+                  <span style={{ color: T.inkFaint, fontSize: 12 }}>
+                    {previewText(p.request?.goal || p.summary, 72)}
+                  </span>
+                  <RowBtn
+                    color={T.cyan}
+                    onClick={() =>
+                      setExpandedPlanInfoId((current) => (current === p.id ? null : p.id))
+                    }
+                  >
+                    {expandedPlanInfoId === p.id ? '收起计划' : '展开计划'}
+                  </RowBtn>
+                  <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
+                    创建 {fmtDateTime(p.createdAt)}
+                  </span>
+                </div>
+
+                {expandedPlanInfoId === p.id && (
+                  <>
+                    <div style={{
+                      marginTop: 10,
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                      gap: 10,
+                    }}>
+                      <MiniLine label="目标" value={p.request?.goal || '—'} />
+                      <MiniLine label="距离" value={p.request?.goalDistance || '—'} />
+                      <MiniLine label="天数" value={p.request?.daysPerWeek ? `${p.request.daysPerWeek} 天/周` : '—'} />
+                      <MiniLine label="项目" value={formatSports(p.request?.sports)} />
+                    </div>
+
+                    {p.summary && (
+                      <div style={{
+                        marginTop: 10,
+                        padding: 12,
+                        borderRadius: 6,
+                        background: 'rgba(0,0,0,0.22)',
+                        color: T.ink,
+                        fontSize: 13,
+                        lineHeight: 1.7,
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere',
+                        maxHeight: 180,
+                        overflow: 'auto',
+                      }}>
+                        {p.summary}
+                      </div>
+                    )}
+
+                    {Boolean(p.monitoring || p.adjustmentRules || p.modelMeta) && (
+                      <details style={{ marginTop: 10 }}>
+                        <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
+                          监控建议 / 调整规则 / 模型信息
+                        </summary>
+                        <pre style={{
+                          margin: '10px 0 0',
+                          padding: 12,
+                          borderRadius: 6,
+                          border: `1px solid ${T.border}`,
+                          color: T.inkDim,
+                          whiteSpace: 'pre-wrap',
+                          overflowWrap: 'anywhere',
+                          fontFamily: T.mono,
+                          fontSize: 11,
+                          maxHeight: 220,
+                          overflow: 'auto',
+                        }}>
+                          {JSON.stringify({
+                            monitoring: p.monitoring,
+                            adjustmentRules: p.adjustmentRules,
+                            modelMeta: p.modelMeta,
+                          }, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+
+                    <div style={{ marginTop: 10 }}>
+                      <RowBtn color={T.lime} onClick={() => togglePlanDetails(p.id)}>
+                        {expandedWorkoutPlanId === p.id ? '收起课表' : '查看课表'}
+                      </RowBtn>
+                    </div>
+
+                    {expandedWorkoutPlanId === p.id && (
+                      <PlanWorkoutList
+                        workouts={planWorkouts[p.id] ?? []}
+                        loading={planDetailLoading === p.id}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card style={{ padding: 24 }}>
+        <CardHeader
           eyebrow="CHAT.LOGS"
           title={selectedUser ? `聊天记录 · ${selectedUser.email}` : '所有 AI 聊天记录'}
           right={
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-              {messages.length} ROWS
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
+                每页 {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(chatPage, messages.length)}
+              </span>
+              <RowBtn color={T.cyan} onClick={() => turnChatPage(-1)} disabled={loading || chatOffset <= 0}>
+                上一页
+              </RowBtn>
+              <RowBtn color={T.cyan} onClick={() => turnChatPage(1)} disabled={loading || !chatPage?.hasMore}>
+                下一页
+              </RowBtn>
+            </div>
           }
         />
 
@@ -647,46 +1169,62 @@ function UsersAndChatsSection({
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
                     周计划 {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
                   </span>
+                  <span style={{ color: T.inkFaint, fontSize: 12 }}>
+                    {previewText(m.content, 96)}
+                  </span>
+                  <RowBtn
+                    color={T.cyan}
+                    onClick={() =>
+                      setExpandedMessageId((current) => (current === m.id ? null : m.id))
+                    }
+                  >
+                    {expandedMessageId === m.id ? '收起' : '展开'}
+                  </RowBtn>
                   <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
                     {fmtDateTime(m.createdAt)}
                   </span>
                 </div>
-                <div style={{
-                  marginTop: 10,
-                  padding: 12,
-                  borderRadius: 6,
-                  background: 'rgba(0,0,0,0.22)',
-                  color: T.ink,
-                  fontSize: 13,
-                  lineHeight: 1.7,
-                  whiteSpace: 'pre-wrap',
-                  overflowWrap: 'anywhere',
-                  maxHeight: 260,
-                  overflow: 'auto',
-                }}>
-                  {m.content}
-                </div>
-                {(m.toolCalls || m.toolResultRefs) && (
-                  <details style={{ marginTop: 10 }}>
-                    <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
-                      工具调用 / 修改记录
-                    </summary>
-                    <pre style={{
-                      margin: '10px 0 0',
+
+                {expandedMessageId === m.id && (
+                  <>
+                    <div style={{
+                      marginTop: 10,
                       padding: 12,
                       borderRadius: 6,
-                      border: `1px solid ${T.border}`,
-                      color: T.inkDim,
+                      background: 'rgba(0,0,0,0.22)',
+                      color: T.ink,
+                      fontSize: 13,
+                      lineHeight: 1.7,
                       whiteSpace: 'pre-wrap',
                       overflowWrap: 'anywhere',
-                      fontFamily: T.mono,
-                      fontSize: 11,
-                      maxHeight: 220,
+                      maxHeight: 260,
                       overflow: 'auto',
                     }}>
-                      {JSON.stringify({ toolCalls: m.toolCalls, toolResultRefs: m.toolResultRefs }, null, 2)}
-                    </pre>
-                  </details>
+                      {m.content}
+                    </div>
+                    {(m.toolCalls || m.toolResultRefs) && (
+                      <details style={{ marginTop: 10 }}>
+                        <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
+                          工具调用 / 修改记录
+                        </summary>
+                        <pre style={{
+                          margin: '10px 0 0',
+                          padding: 12,
+                          borderRadius: 6,
+                          border: `1px solid ${T.border}`,
+                          color: T.inkDim,
+                          whiteSpace: 'pre-wrap',
+                          overflowWrap: 'anywhere',
+                          fontFamily: T.mono,
+                          fontSize: 11,
+                          maxHeight: 220,
+                          overflow: 'auto',
+                        }}>
+                          {JSON.stringify({ toolCalls: m.toolCalls, toolResultRefs: m.toolResultRefs }, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </>
                 )}
               </div>
             ))
