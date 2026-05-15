@@ -400,6 +400,7 @@ export default function NewTrainingPlanPage() {
           const list = m.get(dayIndex) ?? [];
           const cell: CalendarCellWorkout = {
             title: mapped.title,
+            sport: mapped.sport,
             slotIndex,
             durationMinutes: mapped.durationMinutes,
             distanceKm: mapped.distanceKm,

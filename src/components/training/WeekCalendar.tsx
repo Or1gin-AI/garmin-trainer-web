@@ -12,6 +12,7 @@ export interface CalendarDay {
 
 export interface CalendarCellWorkout {
   title: string;
+  sport?: Sport;
   slotIndex?: number | null;
   sessionLabel?: string | null;
   durationMinutes?: number | null;
@@ -59,6 +60,24 @@ function primaryTarget(w: CalendarCellWorkout): string | null {
   return hr ?? pace;
 }
 
+function intensityRank(value: CalendarCellWorkout['intensity']): number {
+  if (value === 'high') return 3;
+  if (value === 'medium') return 2;
+  if (value === 'low') return 1;
+  return 0;
+}
+
+function formatWorkoutLine(item: CalendarCellWorkout, index: number, total: number): string {
+  const prefix = total > 1 ? `训练 ${index + 1} · ` : '';
+  const minutes =
+    item.durationMinutes !== null &&
+    item.durationMinutes !== undefined &&
+    item.durationMinutes > 0
+      ? ` · ${item.durationMinutes}min`
+      : '';
+  return `${prefix}${item.title || '—'}${minutes}`;
+}
+
 export function WeekCalendar({
   days,
   workouts,
@@ -82,12 +101,31 @@ export function WeekCalendar({
         const raw = workouts.get(idx) ?? null;
         const items = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
         const w = items[0] ?? null;
-        const sportKind = (day?.sport as SportKind | undefined) ?? null;
+        const itemSports = Array.from(
+          new Set(items.map((item) => item.sport).filter(Boolean)),
+        ) as Sport[];
+        const sportKind = (itemSports[0] as SportKind | undefined) ?? (day?.sport as SportKind | undefined) ?? null;
         const sport = sportKind ? SPORT[sportKind] : null;
+        const sportLabel = itemSports.length > 1
+          ? itemSports
+              .map((s) => SPORT[s as SportKind]?.code ?? String(s).toUpperCase())
+              .join(' + ')
+          : sport
+            ? `${sport.code} · ${sport.label}`
+            : null;
         const selected = selectedDayIndex === idx;
         const highlighted = highlightedDayIndex === idx;
         const isRest = sportKind === 'rest' || sportKind === 'mobility';
-        const statusDot = w?.status ? STATUS_DOT[w.status] : null;
+        const statusDot = items.find((item) => item.status && item.status !== 'planned')?.status
+          ? STATUS_DOT[items.find((item) => item.status && item.status !== 'planned')!.status!]
+          : w?.status
+            ? STATUS_DOT[w.status]
+            : null;
+        const totalDuration = items.reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0);
+        const totalDistance = items.reduce((sum, item) => sum + (item.distanceKm ?? 0), 0);
+        const dayIntensity = items
+          .map((item) => item.intensity)
+          .sort((a, b) => intensityRank(b) - intensityRank(a))[0] ?? null;
 
         const clickable = !isGeneration && day != null && onSelectDay;
 
@@ -155,17 +193,17 @@ export function WeekCalendar({
             </div>
 
             <div style={{ minHeight: 14 }}>
-              {sport ? (
+              {sportLabel ? (
                 <span
                   style={{
                     fontFamily: T.mono,
                     fontSize: 10.5,
-                    color: sport.color,
+                    color: itemSports.length > 1 ? T.inkDim : sport?.color ?? T.inkDim,
                     letterSpacing: 0.5,
                     fontWeight: 600,
                   }}
                 >
-                  {sport.code} · {sport.label}
+                  {sportLabel}
                 </span>
               ) : (
                 <span
@@ -196,8 +234,7 @@ export function WeekCalendar({
               {items.length > 0 ? (
                 items.map((item, itemIdx) => (
                   <div key={`${item.title}-${itemIdx}`} style={{ marginBottom: itemIdx < items.length - 1 ? 4 : 0 }}>
-                    {items.length > 1 && item.sessionLabel ? `${item.sessionLabel} · ` : ''}
-                    {item.title || '—'}
+                    {formatWorkoutLine(item, itemIdx, items.length)}
                   </div>
                 ))
               ) : day ? (
@@ -226,8 +263,8 @@ export function WeekCalendar({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {w.intensity && (() => {
-                  const ik = INTENSITY[w.intensity as IntensityKind] ?? INTENSITY.low;
+                {dayIntensity && (() => {
+                  const ik = INTENSITY[dayIntensity as IntensityKind] ?? INTENSITY.low;
                   return (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 2,
@@ -245,11 +282,11 @@ export function WeekCalendar({
                     </span>
                   );
                 })()}
-                {w.distanceKm != null && (
-                  <span style={{ flexShrink: 0 }}>{Number(w.distanceKm).toFixed(1)}km</span>
+                {totalDistance > 0 && (
+                  <span style={{ flexShrink: 0 }}>{Number(totalDistance).toFixed(1)}km</span>
                 )}
-                {w.distanceKm == null && w.durationMinutes != null && (
-                  <span style={{ flexShrink: 0 }}>{w.durationMinutes}min</span>
+                {totalDuration > 0 && (
+                  <span style={{ flexShrink: 0 }}>{totalDuration}min</span>
                 )}
               </div>
             )}
@@ -277,6 +314,7 @@ export function WeekCalendar({
 export function toCalendarCell(w: TrainingWorkout): CalendarCellWorkout {
   return {
     title: w.title,
+    sport: w.sport,
     slotIndex: w.slotIndex,
     sessionLabel: w.sessionLabel,
     durationMinutes: w.durationMinutes ?? null,
