@@ -114,7 +114,7 @@ export default function DashboardPage() {
         title="同步控制台"
         sub={
           me?.plan.canAutoSync
-            ? <>{me.plan.plan === 'pro' ? 'PLUS' : me.plan.plan.toUpperCase()} 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。 <PlusBadge /></>
+            ? <>Plus 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。 <PlusBadge /></>
             : <>免费用户支持手动同步。升级 Plus 后开启自动同步；升级 Max 后再解锁 AI。 <PlusBadge /></>
         }
         actions={
