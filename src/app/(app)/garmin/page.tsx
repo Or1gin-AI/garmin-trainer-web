@@ -10,6 +10,8 @@ import {
 
 type Region = 'cn' | 'global';
 
+const BIND_LIMIT_NOTICE = '为防止账号代同步，同一区域 7 天内只能成功绑定一次 Garmin 账号。请确认这是你自己的账号后再继续。';
+
 function fmtDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleString('zh-CN');
@@ -75,6 +77,11 @@ export default function GarminPage() {
           <Banner kind="ok" code="OK">{success}</Banner>
         </div>
       )}
+      <div style={{ marginBottom: 20 }}>
+        <Banner kind="warn" code="BIND.LIMIT">
+          {BIND_LIMIT_NOTICE}
+        </Banner>
+      </div>
 
       <SectionLabel>REGIONS</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 28 }}>
@@ -116,7 +123,7 @@ export default function GarminPage() {
           background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
           fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
         }}>
-          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。为防止账号代同步，同一区域 7 天内只能成功绑定一次；Plus/Max 用户可同时绑定 CN + INTL 双区。
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。Plus/Max 用户可同时绑定 CN + INTL 双区，但每个区域仍遵守 7 天绑定限制。
         </div>
       </Card>
     </>
@@ -139,6 +146,7 @@ function RegionCard({
   const connected = !!account?.hasSession;
   const canBind = account?.canBind !== false;
   const nextBindText = fmtDate(account?.nextBindAllowedAt ?? null);
+  const bindConfirmText = `${label} Garmin 账号绑定成功后，同一区域 7 天内不能再次绑定。请确认这是你自己的 Garmin 账号。是否继续？`;
 
   return (
     <Card hot={connected} style={{ padding: 22 }}>
@@ -188,7 +196,13 @@ function RegionCard({
 
       <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
         {canBind ? (
-          <Link href={loginHref} style={{ textDecoration: 'none' }}>
+          <Link
+            href={loginHref}
+            style={{ textDecoration: 'none' }}
+            onClick={(e) => {
+              if (!window.confirm(bindConfirmText)) e.preventDefault();
+            }}
+          >
             <Btn variant={connected ? 'ghost' : 'primary'}>
               {connected ? '重新连接' : '连接 Garmin →'}
             </Btn>

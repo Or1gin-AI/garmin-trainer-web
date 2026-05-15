@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const BIND_LIMIT_NOTICE = '绑定成功后，同一区域 7 天内只能绑定一次 Garmin 账号。请确认这是你自己的账号后再登录。';
 
 type Tone = 'info' | 'warning' | 'danger' | 'success';
 type SsoMessage = {
@@ -220,6 +221,10 @@ export default function GarminConnectPage() {
             你的 Garmin 密码直接提交到 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>，不经过我们的服务器。我们只收到 Garmin 返回的一次性登录票据用于换取 OAuth 令牌。
           </p>
         </header>
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium leading-relaxed text-amber-800">
+          {BIND_LIMIT_NOTICE}
+        </div>
 
         {displayError ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
