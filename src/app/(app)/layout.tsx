@@ -5,21 +5,21 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
 import { api, type MeResponse, type GarminAccountSummary } from '@/lib/api';
-import { BrandIcon, T } from '@/components/track';
+import { BrandIcon, MaxBadge, PlusBadge, T } from '@/components/track';
 
 interface NavItem {
   href: string;
   label: string;
-  sub: string;
   matchPrefix?: string;
+  tier?: 'plus' | 'max';
 }
 
 const NAV: NavItem[] = [
-  { href: '/dashboard', label: '同步', sub: 'SYNC' },
-  { href: '/training', label: '训练', sub: 'TRAIN' },
-  { href: '/calendar', label: '日历', sub: 'CAL' },
-  { href: '/garmin', label: 'Garmin', sub: 'ACCT' },
-  { href: '/subscription', label: '订阅', sub: 'SUB' },
+  { href: '/garmin', label: '账号连接' },
+  { href: '/dashboard', label: '同步', tier: 'plus' },
+  { href: '/training', label: '训练', tier: 'max' },
+  { href: '/calendar', label: '日历' },
+  { href: '/subscription', label: '订阅' },
 ];
 
 function daysUntil(iso: string | null): number | null {
@@ -73,7 +73,7 @@ export default function AppLayout({
   }
 
   const role = (session.user as { role?: string }).role;
-  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: '管理后台', sub: 'ADMIN' }] : NAV;
+  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: '管理后台' }] : NAV;
 
   const cnOk = accounts.find((a) => a.region === 'cn')?.hasSession ?? false;
   const intlOk = accounts.find((a) => a.region === 'global')?.hasSession ?? false;
@@ -94,7 +94,7 @@ export default function AppLayout({
           maxWidth: T.pageMaxW, margin: '0 auto', padding: '0 28px',
           height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
         }}>
-          <Link href="/dashboard" style={{
+          <Link href="/garmin" style={{
             display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: T.ink,
           }}>
             <BrandIcon size={34} />
@@ -108,22 +108,45 @@ export default function AppLayout({
             </div>
           </Link>
 
-          <nav style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <nav
+            aria-label="主菜单"
+            style={{
+              display: 'flex',
+              gap: 6,
+              alignItems: 'center',
+              padding: 4,
+              border: `1px solid ${T.border}`,
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.025)',
+            }}
+          >
             {nav.map((n) => {
               const active = pathname === n.href || pathname?.startsWith(n.href + '/');
+              const TierBadge = n.tier === 'plus' ? PlusBadge : n.tier === 'max' ? MaxBadge : null;
+              const activeBadgeStyle = active
+                ? {
+                    color: T.bg,
+                    borderColor: 'rgba(11,14,12,0.28)',
+                    background: 'rgba(11,14,12,0.12)',
+                  }
+                : undefined;
               return (
                 <Link key={n.href} href={n.href} style={{
-                  padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                  minHeight: 34,
+                  padding: '0 12px',
+                  borderRadius: 7,
+                  border: `1px solid ${active ? T.lime : T.border}`,
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 600,
                   background: active ? T.lime : 'transparent',
                   color: active ? T.bg : T.inkDim,
                   textDecoration: 'none', fontFamily: T.sans,
-                  display: 'flex', alignItems: 'baseline', gap: 8,
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  whiteSpace: 'nowrap',
+                  boxShadow: active ? `0 0 16px ${T.limeGlow}` : 'none',
                 }}>
                   <span>{n.label}</span>
-                  <span style={{
-                    fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,
-                    color: active ? 'rgba(11,14,12,0.5)' : T.inkFaint,
-                  }}>{n.sub}</span>
+                  {TierBadge && <TierBadge style={activeBadgeStyle} />}
                 </Link>
               );
             })}

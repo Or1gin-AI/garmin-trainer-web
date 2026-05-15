@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api, type SyncJob, type MeResponse, type GarminAccountSummary } from '@/lib/api';
 import {
   T, Btn, Card, CardHeader, StatTile, SectionLabel, StatusBadge, PageHero, Banner,
-  PlusBadge, type StatusKind,
+  type StatusKind,
 } from '@/components/track';
 
 function fmtDate(d: string | null) {
@@ -114,8 +114,8 @@ export default function DashboardPage() {
         title="同步控制台"
         sub={
           me?.plan.canAutoSync
-            ? <>Plus 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。 <PlusBadge /></>
-            : <>免费用户支持手动同步。升级 Plus 后开启自动同步；升级 Max 后再解锁 AI。 <PlusBadge /></>
+            ? <>Plus 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。</>
+            : <>免费用户支持手动同步。升级 Plus 后开启自动同步；升级 Max 后再解锁 AI。</>
         }
         actions={
           <>

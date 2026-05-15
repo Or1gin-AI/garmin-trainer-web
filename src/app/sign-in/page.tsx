@@ -60,7 +60,7 @@ export default function SignInPage() {
       setError(humanizeError(err.message ?? '登录失败'));
       return;
     }
-    router.push('/dashboard');
+    router.push('/garmin');
   }
 
   async function resendVerification() {

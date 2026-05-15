@@ -13,7 +13,7 @@ import { streamSse, type SseEvent } from '@/lib/sse';
 import {
   T, Btn, Card, CardHeader, Field, PageHero, Banner,
   TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
-  MaxBadge, type SportKind,
+  type SportKind,
 } from '@/components/track';
 import {
   WeekCalendar,
@@ -585,7 +585,7 @@ export default function NewTrainingPlanPage() {
       <PageHero
         eyebrow="新建计划"
         title="新建训练计划"
-        sub={<>AI 训练计划生成是 Max 功能；未开通 Max 也可以浏览和填写，点击生成时会提示升级。 <MaxBadge /></>}
+        sub="AI 训练计划生成是 Max 功能；未开通 Max 也可以浏览和填写，点击生成时会提示升级。"
       />
 
       {error && (

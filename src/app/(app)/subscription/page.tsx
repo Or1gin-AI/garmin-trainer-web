@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api, type MeResponse, type ReferralStats } from '@/lib/api';
 import {
-  T, Btn, Card, CardHeader, PageHero, Banner, TrackInput, PlusBadge,
+  T, Btn, Card, CardHeader, PageHero, Banner, TrackInput,
 } from '@/components/track';
 
 function fmtDate(d: string | null) {
@@ -217,7 +217,6 @@ export default function SubscriptionPage() {
             <div style={{ padding: '24px 24px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, letterSpacing: 2, color: p.hot ? T.lime : T.ink }}>{p.name}</span>
-                {p.name === 'PLUS' && <PlusBadge />}
                 {p.hot && (
                   <span style={{
                     fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,

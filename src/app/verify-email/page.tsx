@@ -17,7 +17,7 @@ function VerifyEmailInner() {
 
   useEffect(() => {
     if (verified && session) {
-      const t = setTimeout(() => router.push('/dashboard'), 1500);
+      const t = setTimeout(() => router.push('/garmin'), 1500);
       return () => clearTimeout(t);
     }
   }, [verified, session, router]);
