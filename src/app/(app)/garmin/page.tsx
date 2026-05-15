@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api, type GarminAccountSummary } from '@/lib/api';
 import {
-  T, Btn, Card, CardHeader, SectionLabel, StatusBadge, PageHero, Banner, Readout, PlusBadge,
+  T, Btn, Card, CardHeader, SectionLabel, StatusBadge, PageHero, Banner, Readout,
 } from '@/components/track';
 
 type Region = 'cn' | 'global';
@@ -116,7 +116,7 @@ export default function GarminPage() {
           background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
           fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
         }}>
-          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。为防止账号代同步，同一区域 7 天内只能成功绑定一次；Plus/Max 用户可同时绑定 CN + INTL 双区。 <PlusBadge />
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。为防止账号代同步，同一区域 7 天内只能成功绑定一次；Plus/Max 用户可同时绑定 CN + INTL 双区。
         </div>
       </Card>
     </>

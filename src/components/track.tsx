@@ -125,8 +125,18 @@ export function StatusBadge({ kind, size }: { kind: StatusKind; size?: 'sm' }) {
   );
 }
 
-export function PlusBadge({ size = 'sm', style }: { size?: 'sm' | 'md'; style?: CSSProperties }) {
+export function TierBadge({
+  tier,
+  size = 'sm',
+  style,
+}: {
+  tier: 'plus' | 'max';
+  size?: 'sm' | 'md';
+  style?: CSSProperties;
+}) {
   const small = size === 'sm';
+  const color = tier === 'max' ? T.lime : T.amber;
+  const background = tier === 'max' ? T.limeGlow : T.amberSoft;
   return (
     <span style={{
       display: 'inline-flex',
@@ -134,9 +144,9 @@ export function PlusBadge({ size = 'sm', style }: { size?: 'sm' | 'md'; style?: 
       flexShrink: 0,
       padding: small ? '2px 7px' : '3px 9px',
       borderRadius: 4,
-      border: `1px solid ${T.amber}66`,
-      background: T.amberSoft,
-      color: T.amber,
+      border: `1px solid ${color}66`,
+      background,
+      color,
       fontFamily: T.mono,
       fontSize: small ? 9 : 10,
       fontWeight: 700,
@@ -145,9 +155,17 @@ export function PlusBadge({ size = 'sm', style }: { size?: 'sm' | 'md'; style?: 
       whiteSpace: 'nowrap',
       ...style,
     }}>
-      PLUS
+      {tier.toUpperCase()}
     </span>
   );
+}
+
+export function PlusBadge(props: { size?: 'sm' | 'md'; style?: CSSProperties }) {
+  return <TierBadge tier="plus" {...props} />;
+}
+
+export function MaxBadge(props: { size?: 'sm' | 'md'; style?: CSSProperties }) {
+  return <TierBadge tier="max" {...props} />;
 }
 
 export function IntensityMeter({ kind, label }: { kind: IntensityKind; label?: boolean }) {

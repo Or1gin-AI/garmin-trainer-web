@@ -13,7 +13,7 @@ import { streamSse, type SseEvent } from '@/lib/sse';
 import {
   T, Btn, Card, CardHeader, Field, PageHero, Banner,
   TrackInput, TrackTextarea, TrackSelect, SPORT as SPORT_META,
-  PlusBadge, type SportKind,
+  MaxBadge, type SportKind,
 } from '@/components/track';
 import {
   WeekCalendar,
@@ -585,7 +585,7 @@ export default function NewTrainingPlanPage() {
       <PageHero
         eyebrow="新建计划"
         title="新建训练计划"
-        sub={<>AI 会读取你 Garmin 上最近的活动数据，结合目标生成第 1 周计划。后续每周根据完成情况自动调整。 <PlusBadge /></>}
+        sub={<>AI 训练计划生成是 Max 功能；未开通 Max 也可以浏览和填写，点击生成时会提示升级。 <MaxBadge /></>}
       />
 
       {error && (
@@ -596,7 +596,7 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="基础设置" title="基础设置" right={<PlusBadge size="md" />} />
+          <CardHeader eyebrow="基础设置" title="基础设置" />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <Field label="运动项目" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -786,7 +786,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>高级训练 <PlusBadge /></span>} full>
+            <Field label="高级训练" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -800,7 +800,7 @@ export default function NewTrainingPlanPage() {
               </label>
             </Field>
 
-            <Field label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>多时段/一天多练 <PlusBadge /></span>} full>
+            <Field label="多时段/一天多练" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -848,16 +848,14 @@ export default function NewTrainingPlanPage() {
                 <Btn variant="ghost" type="button">返回</Btn>
               </Link>
               <Btn type="submit">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  生成计划 <PlusBadge style={{ color: T.bg, borderColor: 'rgba(11,14,12,0.35)', background: 'rgba(11,14,12,0.14)' }} /> →
-                </span>
+                生成计划 →
               </Btn>
             </div>
           </form>
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" right={<PlusBadge />} />
+          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
             <Row k="周一日期" v={form.weekStartDate} c={T.lime} />
             <Row k="每周天数" v={`${form.daysPerWeek} 天`} />
@@ -974,9 +972,8 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                   title={`备注示例：${mode.phrase}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>
                       {mode.name}
-                      {mode.kind === '高级' && <PlusBadge />}
                     </span>
                     <span style={{
                       flexShrink: 0,
@@ -987,7 +984,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                       borderRadius: 4,
                       padding: '1px 5px',
                     }}>
-                      {mode.kind === '高级' ? '高级 · PLUS' : mode.kind}
+                      {mode.kind}
                     </span>
                   </div>
                   <div style={{

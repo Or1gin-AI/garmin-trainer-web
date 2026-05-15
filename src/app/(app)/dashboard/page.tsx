@@ -259,7 +259,7 @@ export default function DashboardPage() {
         )}
 
         <Card style={{ padding: 22 }}>
-          <CardHeader eyebrow="GARMIN.ACCOUNTS" title="Garmin 账号" right={<PlusBadge />} />
+          <CardHeader eyebrow="GARMIN.ACCOUNTS" title="Garmin 账号" />
           <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { code: 'CN', label: '国区', host: 'sso.garmin.cn', acc: cnAcc },

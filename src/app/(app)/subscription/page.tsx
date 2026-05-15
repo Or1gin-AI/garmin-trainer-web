@@ -238,10 +238,7 @@ export default function SubscriptionPage() {
               {p.features.map((f) => (
                 <li key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: T.ink, lineHeight: 1.5 }}>
                   <span style={{ color: p.hot ? T.lime : T.cyan, fontFamily: T.mono, flexShrink: 0 }}>+</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    {f}
-                    {(p.name === 'PLUS' || f.includes('Plus')) && <PlusBadge />}
-                  </span>
+                  <span>{f}</span>
                 </li>
               ))}
             </ul>
