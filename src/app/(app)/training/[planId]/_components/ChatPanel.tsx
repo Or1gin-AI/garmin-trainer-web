@@ -182,18 +182,24 @@ export function ChatPanel({
                 : typeof data.error === 'string'
                   ? mapErrorCode(data.error)
                   : '对话失败，请稍后重试';
-            setError(msg);
+            ensureDraft();
+            setDraft((prev) => (prev ? { ...prev, content: msg } : prev));
+            setError(null);
             return;
           }
         },
       });
     } catch (e) {
       const errObj = e as Error & { status?: number; detail?: { error?: string; message?: string } };
+      let msg: string;
       if (errObj.status === 402) {
-        setError(mapErrorCode(errObj.detail?.message ?? errObj.detail?.error ?? errObj.message));
+        msg = mapErrorCode(errObj.detail?.message ?? errObj.detail?.error ?? errObj.message);
       } else {
-        setError(errObj.message || '对话失败，请稍后重试');
+        msg = errObj.message || '对话失败，请稍后重试';
       }
+      ensureDraft();
+      setDraft((prev) => (prev ? { ...prev, content: msg } : prev));
+      setError(null);
     } finally {
       setStreaming(false);
       abortRef.current = null;

@@ -39,7 +39,13 @@ export default function TrainingListPage() {
 
   useEffect(() => {
     listTrainingPlans()
-      .then((r) => setPlans(r.plans))
+      .then((r) =>
+        setPlans(
+          r.plans
+            .slice()
+            .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+        ),
+      )
       .catch((e) => setError((e as Error).message));
   }, []);
 
