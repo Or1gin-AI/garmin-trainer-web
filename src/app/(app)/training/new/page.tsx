@@ -24,6 +24,11 @@ import { CoachPanel } from '@/components/training/CoachPanel';
 import { TrainingEvidencePanel } from '@/components/training/TrainingEvidencePanel';
 import { applyToolEvent } from '@/components/training/ToolCallStack';
 import type { ToolEventUi } from '@/components/training/ToolCallCard';
+import {
+  readScheduleNoteEstimatedTrainingLoad,
+  readWorkoutEstimatedTrainingLoad,
+  sumCalendarEstimatedTrainingLoad,
+} from '@/lib/training-load';
 
 // ---------------------------------------------------------------------------
 
@@ -41,6 +46,7 @@ interface StreamedWorkoutRaw {
   targetPower: string;
   workoutStructure: string;
   targets: string[];
+  estimatedTrainingLoad: number | null;
   adaptation: string;
 }
 
@@ -215,6 +221,11 @@ function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkoutRaw {
     targetPower: String(raw.targetPower ?? '不适用'),
     workoutStructure: String(raw.workoutStructure ?? ''),
     targets: Array.isArray(raw.targets) ? (raw.targets as string[]) : [],
+    estimatedTrainingLoad: readWorkoutEstimatedTrainingLoad(
+      raw.parameterSource && typeof raw.parameterSource === 'object'
+        ? raw.parameterSource as { replacedVariables?: Record<string, unknown> }
+        : null,
+    ),
     adaptation: String(raw.adaptation ?? ''),
   };
 }
@@ -407,6 +418,7 @@ export default function NewTrainingPlanPage() {
             targetMetric: mapped.targetMetric as CalendarCellWorkout['targetMetric'],
             targetPace: mapped.targetPace,
             targetHeartRate: mapped.targetHeartRate,
+            estimatedTrainingLoad: mapped.estimatedTrainingLoad,
             intensity: mapped.intensity,
             status: 'planned',
           };
@@ -504,6 +516,8 @@ export default function NewTrainingPlanPage() {
 
   const selectedSports = SPORT_OPTIONS.filter((s) => form[s.field] === true);
   const eventsArray = useMemo(() => Array.from(toolEvents.values()), [toolEvents]);
+  const streamedEstimatedTrainingLoad =
+    sumCalendarEstimatedTrainingLoad(workouts) ?? readScheduleNoteEstimatedTrainingLoad(scheduleNotes);
 
   // ---- Staging / Finishing view ----
   if (view !== 'form') {
@@ -534,12 +548,19 @@ export default function NewTrainingPlanPage() {
               eyebrow="本周日程"
               title="周一 → 周日"
               right={
-                <span
-                  className={view === 'staging' && !allDone ? 'track-blink' : ''}
-                  style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}
-                >
-                  ● {workouts.size}/{days?.length ?? 7} 已生成
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {streamedEstimatedTrainingLoad != null && (
+                    <span style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
+                      预计负荷 {streamedEstimatedTrainingLoad}
+                    </span>
+                  )}
+                  <span
+                    className={view === 'staging' && !allDone ? 'track-blink' : ''}
+                    style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}
+                  >
+                    ● {workouts.size}/{days?.length ?? 7} 已生成
+                  </span>
+                </div>
               }
             />
             <div style={{ marginTop: 16 }}>

@@ -143,7 +143,7 @@ function selectDecisionNotes(
   ].filter(Boolean);
   const selected = notes.filter((note, index, arr) => {
     if (arr.indexOf(note) !== index) return false;
-    return /容量|恢复|高强度|上限|未按原|明确要求|可用时间|同日|多练|强度/.test(note);
+    return /容量|恢复|负荷|高强度|上限|未按原|明确要求|可用时间|同日|多练|强度/.test(note);
   });
   if (forceRequestedSchedule) {
     selected.unshift('用户已明确要求按原请求生成；系统保留风险提示，但不自动删除用户坚持要求的训练。');

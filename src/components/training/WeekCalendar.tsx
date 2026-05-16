@@ -2,6 +2,7 @@
 
 import { T, SPORT, INTENSITY, type SportKind, type IntensityKind } from '@/components/track';
 import type { Sport, TargetMetric, TrainingWorkout, WorkoutStatus } from '@/lib/api';
+import { readWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
 
 export interface CalendarDay {
   dayIndex: number;
@@ -20,6 +21,7 @@ export interface CalendarCellWorkout {
   targetMetric?: TargetMetric;
   targetPace?: string;
   targetHeartRate?: string;
+  estimatedTrainingLoad?: number | null;
   intensity?: 'low' | 'medium' | 'high' | null;
   status?: WorkoutStatus;
 }
@@ -117,6 +119,7 @@ export function WeekCalendar({
             : null;
         const totalDuration = items.reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0);
         const totalDistance = items.reduce((sum, item) => sum + (item.distanceKm ?? 0), 0);
+        const totalLoad = items.reduce((sum, item) => sum + (item.estimatedTrainingLoad ?? 0), 0);
         const dayIntensity = items
           .map((item) => item.intensity)
           .sort((a, b) => intensityRank(b) - intensityRank(a))[0] ?? null;
@@ -307,6 +310,9 @@ export function WeekCalendar({
                 {totalDuration > 0 && (
                   <span style={{ flexShrink: 0 }}>{totalDuration}min</span>
                 )}
+                {totalLoad > 0 && (
+                  <span style={{ flexShrink: 0, color: T.lime }}>负荷 {totalLoad}</span>
+                )}
               </div>
             )}
 
@@ -341,6 +347,7 @@ export function toCalendarCell(w: TrainingWorkout): CalendarCellWorkout {
     targetMetric: w.targetMetric,
     targetPace: w.targetPace,
     targetHeartRate: w.targetHeartRate,
+    estimatedTrainingLoad: readWorkoutEstimatedTrainingLoad(w.parameterSource),
     intensity: w.intensity,
     status: w.status,
   };

@@ -301,9 +301,21 @@ export interface TrainingWorkout {
   targetPower: string;
   workoutStructure: string;
   targets: string[];
-  parameterSource: unknown;
+  parameterSource: TrainingWorkoutParameterSource | null;
   adaptation: string | null;
   status: WorkoutStatus;
+}
+
+export interface TrainingWorkoutParameterSource {
+  replacedVariables?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface TrainingPlanModelMeta {
+  estimatedTrainingLoad?: {
+    estimated: number;
+  };
+  [key: string]: unknown;
 }
 
 export interface TrainingChatMessage {
@@ -322,7 +334,7 @@ export interface TrainingPlanDetail {
     request: unknown;
     monitoring: string | null;
     adjustmentRules: string | null;
-    modelMeta: unknown;
+    modelMeta: TrainingPlanModelMeta | null;
     athleteProfileSnapshot: unknown;
   };
   workouts: TrainingWorkout[];

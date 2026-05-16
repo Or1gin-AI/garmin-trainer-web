@@ -30,6 +30,7 @@ import {
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
 import { formatWeekStart } from '@/lib/format';
+import { readPlanEstimatedTrainingLoad, sumWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
 import { useGarminPublish, garminRegionLabel, GARMIN_REGIONS } from './_components/useGarminPublish';
 import { ConfirmDialog } from './_components/ConfirmDialog';
 
@@ -256,6 +257,8 @@ export default function TrainingPlanDetailPage() {
   const ordered = [...workouts].sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
   const completed = ordered.filter((w) => w.status === 'completed').length;
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
+  const estimatedTrainingLoad =
+    readPlanEstimatedTrainingLoad(plan.modelMeta) ?? sumWorkoutEstimatedTrainingLoad(ordered);
   const trainingDayCount = new Set(
     ordered
       .filter((w) => w.sport !== 'rest' && w.sport !== 'mobility')
@@ -452,10 +455,11 @@ export default function TrainingPlanDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
         {/* Left: main content */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
             <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
             <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
             <StatTile label="训练日" value={`${trainingDayCount}`} unit="天" accent={T.amber} />
+            <StatTile label="预计训练负荷" value={estimatedTrainingLoad == null ? '—' : String(estimatedTrainingLoad)} unit="Garmin" accent={T.lime} />
           </div>
 
           <Card style={{ padding: 18, marginBottom: 18 }}>

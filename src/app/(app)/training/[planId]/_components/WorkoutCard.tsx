@@ -5,6 +5,7 @@ import {
   T, Btn, Card, StatusBadge, IntensityMeter, SportTag, WorkoutCodename,
   type StatusKind, type IntensityKind, type SportKind,
 } from '@/components/track';
+import { readWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
 
 const STATUS_MAP: Record<TrainingWorkout['status'], StatusKind> = {
   planned: 'planned',
@@ -64,6 +65,7 @@ export function WorkoutCard({
   const intensityKind: IntensityKind = isRest ? 'rest' : (w.intensity ?? 'low');
   const sportKind = w.sport as SportKind;
   const { dd, mm } = formatDate(w.date);
+  const estimatedLoad = readWorkoutEstimatedTrainingLoad(w.parameterSource);
 
   const accent = highlighted ? T.amber : (w.status === 'regenerating' ? T.cyan : null);
 
@@ -111,6 +113,7 @@ export function WorkoutCard({
             gap: 8,
           }}>
             {w.durationMinutes != null && <DataChip label="总时长" value={`${w.durationMinutes} 分钟`} />}
+            {estimatedLoad != null && <DataChip label="预计训练负荷" value={`${estimatedLoad}`} hot />}
             {w.distanceKm != null && <DataChip label="距离" value={`${Number(w.distanceKm).toFixed(1)} 公里`} />}
             {w.workoutType && <DataChip label="类型" value={w.workoutType} />}
             {w.intensity && <DataChip label="强度" value={w.intensity} />}
