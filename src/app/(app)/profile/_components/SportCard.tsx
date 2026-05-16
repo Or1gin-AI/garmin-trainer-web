@@ -1,12 +1,10 @@
 import type { ReactNode } from 'react';
-import type { AthleticProfileSport, AthleticSport, PerformanceRecord } from '@/lib/api';
+import type { AthleticProfileSport, AthleticSport } from '@/lib/api';
 import { Card, CardHeader, StatusBadge, T } from '@/components/track';
-import { PrTable } from './PrTable';
 
 interface Props {
   sport: AthleticSport;
   profile: AthleticProfileSport | null;
-  prs: PerformanceRecord[];
 }
 
 const SPORT_META: Record<AthleticSport, { label: string; code: string; color: string }> = {
@@ -15,7 +13,7 @@ const SPORT_META: Record<AthleticSport, { label: string; code: string; color: st
   cycling: { label: '骑行', code: 'BIKE', color: T.amber },
 };
 
-export function SportCard({ sport, profile, prs }: Props) {
+export function SportCard({ sport, profile }: Props) {
   const meta = SPORT_META[sport];
 
   if (!profile || !profile.available) {
@@ -41,21 +39,6 @@ export function SportCard({ sport, profile, prs }: Props) {
         <div style={{ marginTop: 16, fontFamily: T.mono, fontSize: 10, color: T.inkGhost, letterSpacing: 1.4 }}>
           ACTIVITY.COUNT {count.toLocaleString()} · READ.ONLY
         </div>
-        {prs.length > 0 && (
-          <details style={{ marginTop: 18 }}>
-            <summary style={{
-              cursor: 'pointer',
-              color: T.lime,
-              fontFamily: T.mono,
-              fontSize: 11,
-              letterSpacing: 1.2,
-              userSelect: 'none',
-            }}>
-              PR.EVIDENCE [{prs.length}]
-            </summary>
-            <PrTable prs={prs} sport={sport} />
-          </details>
-        )}
       </Card>
     );
   }
@@ -86,20 +69,6 @@ export function SportCard({ sport, profile, prs }: Props) {
         <Fact label="LAST" value={fmtDate(profile.lastActivityAt)} />
         <Fact label="UPD" value={fmtDate(profile.updatedAt)} />
       </div>
-
-      <details style={{ marginTop: 18 }}>
-        <summary style={{
-          cursor: 'pointer',
-          color: T.lime,
-          fontFamily: T.mono,
-          fontSize: 11,
-          letterSpacing: 1.2,
-          userSelect: 'none',
-        }}>
-          PR.EVIDENCE [{prs.length}]
-        </summary>
-        <PrTable prs={prs} sport={sport} />
-      </details>
     </Card>
   );
 }
@@ -141,7 +110,6 @@ function CyclingStats({ profile }: { profile: AthleticProfileSport }) {
       <Metric label="节奏区" value={fmtWatts(snapshotNumber(snap, 'tempoWatts'))} />
       <Metric label="阈值区" value={fmtWatts(snapshotNumber(snap, 'thresholdWatts'))} />
       <Metric label="VO2 区" value={fmtWatts(snapshotNumber(snap, 'vo2Watts'))} />
-      <Metric label="来源" value={String(snapshotValue(snap, 'sourceAnchor') ?? '—')} compact />
     </MetricGrid>
   );
 }

@@ -5,7 +5,6 @@ import {
   getAthleticProfile,
   type AthleticProfileResponse,
   type AthleticSport,
-  type PerformanceRecord,
 } from '@/lib/api';
 import { Banner, Btn, PageHero, SectionLabel, StatTile, T } from '@/components/track';
 import { ActivityList } from './_components/ActivityList';
@@ -40,18 +39,6 @@ export default function ProfilePage() {
     return map;
   }, [data]);
 
-  const prsBySport = useMemo(() => {
-    const map = new Map<AthleticSport, PerformanceRecord[]>();
-    for (const sport of SPORTS) map.set(sport, []);
-    for (const record of data?.performanceRecords ?? []) {
-      map.get(record.sport)?.push(record);
-    }
-    for (const records of map.values()) {
-      records.sort((a, b) => a.anchor.localeCompare(b.anchor));
-    }
-    return map;
-  }, [data]);
-
   const availableCount = SPORTS.filter((sport) => sportsById.get(sport)?.available).length;
   const activityCount =
     data?.sports.reduce((sum, sport) => sum + sport.activityCountUsed, 0) ?? 0;
@@ -63,7 +50,7 @@ export default function ProfilePage() {
       <PageHero
         eyebrow="ATHLETE.PROFILE"
         title="运动能力"
-        sub="只读档案：展示后端保存的能力快照、PR 证据和结构化活动指标。"
+        sub="只读档案：展示后端保存的能力快照和结构化活动指标。"
         actions={
           <Btn variant="ghost" onClick={() => void load()} disabled={loading}>
             <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>
@@ -93,7 +80,6 @@ export default function ProfilePage() {
             marginBottom: 28,
           }}>
             <StatTile label="可用项目" value={`${availableCount}/3`} unit="SPORT" accent={availableCount > 0 ? T.lime : T.borderStrong} />
-            <StatTile label="PR 证据" value={data.performanceRecords.length.toLocaleString()} unit="ROWS" accent={T.cyan} />
             <StatTile label="参与活动" value={activityCount.toLocaleString()} unit="ACT" accent={T.amber} />
             <StatTile label="最近更新" value={latestUpdate.short} unit={latestUpdate.unit} accent={T.lime} />
           </div>
@@ -117,7 +103,6 @@ export default function ProfilePage() {
                 key={sport}
                 sport={sport}
                 profile={sportsById.get(sport) ?? null}
-                prs={prsBySport.get(sport) ?? []}
               />
             ))}
           </div>
