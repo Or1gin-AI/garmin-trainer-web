@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { T, Btn, Field, Banner, TrackInput, BrandIcon } from '@/components/track';
 
 const NAME_RE = /^[\p{L}\p{N}_-]{2,30}$/u;
+const PROMO_FREE_MAX_END = new Date('2026-06-15T23:59:59Z');
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
@@ -103,6 +104,17 @@ function SignUpForm() {
             fontSize: 12, color: T.lime, fontFamily: T.mono, letterSpacing: 0.5,
           }}>
             你被好友邀请加入 Garmin Trainer
+          </div>
+        )}
+
+        {new Date() < PROMO_FREE_MAX_END && (
+          <div style={{
+            marginBottom: 14, padding: '10px 14px', borderRadius: 8,
+            background: 'rgba(198,255,58,0.10)', border: `1px solid ${T.lime}50`,
+            fontSize: 12, color: T.ink, lineHeight: 1.6,
+          }}>
+            <span style={{ color: T.lime, fontFamily: T.mono, letterSpacing: 0.5 }}>限时活动 · </span>
+            注册即享免费 <span style={{ color: T.lime, fontWeight: 700 }}>Max</span> 会员至 2026-06-15
           </div>
         )}
 

@@ -65,6 +65,7 @@ export interface UserPlanInfo {
   autoSyncEnabled: boolean;
   lastAutoSyncAt: string | null;
   referralCode: string;
+  promoFreeMaxUntil: string | null;
 }
 
 export interface ReferralStats {

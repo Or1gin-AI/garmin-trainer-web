@@ -135,12 +135,35 @@ export default function SubscriptionPage() {
   const canUseAi = me?.plan.canUseAi ?? false;
   const autoSync = me?.plan.autoSyncEnabled ?? false;
 
+  const promoUntil = me?.plan.promoFreeMaxUntil ?? null;
+
   return (
     <>
       <PageHero
         title="订阅"
         sub="选择适合你的方案，解锁自动同步或 AI 训练教练。"
       />
+
+      {promoUntil && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            padding: '14px 18px', borderRadius: 10,
+            background: T.limeGlow, border: `1px solid ${T.lime}60`,
+            display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+          }}>
+            <span style={{
+              fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+              color: T.bg, background: T.lime, padding: '3px 8px', borderRadius: 3,
+            }}>LIMITED</span>
+            <span style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>
+              限时活动：全员免费 Max 至 {fmtDate(promoUntil)}
+            </span>
+            <span style={{ fontSize: 12, color: T.inkDim }}>
+              注册即享 AI 教练与自动同步，邀请 2 位好友再送 1 个月 Max。
+            </span>
+          </div>
+        </div>
+      )}
 
       {success && (
         <div style={{ marginBottom: 20 }}>
@@ -311,7 +334,7 @@ export default function SubscriptionPage() {
       {/* Referral */}
       {refStats && refStats.referralCode && (
         <Card style={{ padding: 24, marginBottom: 28 }}>
-          <CardHeader eyebrow="REFERRAL" title="邀请好友" />
+          <CardHeader eyebrow="REFERRAL" title="邀请 2 位好友，再送 1 个月 Max" />
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <div style={{ fontSize: 13, color: T.inkDim, marginBottom: 8 }}>你的专属邀请链接</div>
@@ -352,7 +375,7 @@ export default function SubscriptionPage() {
               background: 'rgba(198,255,58,0.06)', border: `1px solid ${T.lime}20`,
               fontSize: 12, color: T.inkDim, lineHeight: 1.6,
             }}>
-              每成功推荐一位好友注册并验证邮箱，你将获得 <span style={{ color: T.lime, fontFamily: T.mono }}>15 天 Max</span> 会员，最多累计 {refStats.maxDays} 天。
+              每位好友通过你的链接注册并完成邮箱验证后，你立即获得 <span style={{ color: T.lime, fontFamily: T.mono }}>15 天 Max</span>。邀请 2 位 = 完整 1 个月 Max（累计上限 {refStats.maxDays} 天）。
             </div>
           </div>
         </Card>
