@@ -1,5 +1,7 @@
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  process.env.NODE_ENV === 'production'
+    ? (typeof window === 'undefined' ? 'https://garmin-trainer.uk' : window.location.origin)
+    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const API_URL = API_BASE;
 
 export class ApiError extends Error {

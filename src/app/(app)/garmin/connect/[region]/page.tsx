@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = process.env.NODE_ENV === 'production'
+  ? ''
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const BIND_LIMIT_NOTICE = '绑定成功后，同一区域 7 天内只能绑定一次 Garmin 账号。请确认这是你自己的账号后再登录。';
 
 type Tone = 'info' | 'warning' | 'danger' | 'success';
