@@ -67,7 +67,7 @@ function SignUpForm() {
       username,
       email,
       password,
-      callbackURL: `${window.location.origin}/verify-email?verified=1`,
+      callbackURL: 'https://garmin-trainer.uk/verify-email?verified=1',
     } as never);
     setLoading(false);
     if (err) {

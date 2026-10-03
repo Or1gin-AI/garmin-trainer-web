@@ -28,7 +28,7 @@ function VerifyEmailInner() {
     setResent(false);
     await authClient.sendVerificationEmail({
       email,
-      callbackURL: `${window.location.origin}/verify-email?verified=1`,
+      callbackURL: 'https://garmin-trainer.uk/verify-email?verified=1',
     });
     setResending(false);
     setResent(true);

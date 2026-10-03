@@ -68,7 +68,7 @@ export default function SignInPage() {
     setResending(true);
     await authClient.sendVerificationEmail({
       email: unverifiedEmail,
-      callbackURL: `${window.location.origin}/verify-email?verified=1`,
+      callbackURL: 'https://garmin-trainer.uk/verify-email?verified=1',
     });
     setResending(false);
     setResent(true);
