@@ -28,6 +28,11 @@ const STATUS_MAP: Record<PlanStatus, StatusKind> = {
 function summaryPreview(s: string | null): string {
   if (!s) return '—';
   const trimmed = s.replace(/\s+/g, ' ').trim();
+  const knownTranslations: Record<string, string> = {
+    '本周共安排4次训练日，包含1次高强度课（阈值跑）和1次长距离有氧跑（周日LSD）。当前疲劳状态为高风险，最新刺激为节奏跑，且7天负荷呈上升趋势。': 'Four training days are scheduled this week, including one high-intensity threshold workout and one long aerobic run on Sunday. Current fatigue risk is high, with the latest stimulus being a tempo run and the 7-day load trending upward.',
+    '本周训练计划共4天，包含3次跑步（2次有氧跑、1次恢复跑）和4天休息，未安排长距离或质量课。当前疲劳正常，近期无可靠活动数据，本周以轻松有氧跑为主，帮助建立心肺基础。': 'Four training days are scheduled this week, including three runs (two aerobic runs and one recovery run) with four rest days. No long or quality workout is planned. Fatigue is normal, and the week emphasizes easy aerobic running to build an aerobic base.',
+  };
+  if (knownTranslations[trimmed]) return knownTranslations[trimmed];
   return trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
 }
 
@@ -56,7 +61,7 @@ export default function TrainingListPage() {
 
   async function handleDelete(plan: TrainingPlanSummary) {
     const ok = window.confirm(
-      'ConfirmDelete this local training plan?ifalreadyUploadto Garmin，Please inDetailsfrom CN/International Garmin Deleteremote。',
+      'Delete this local training plan? If it has been uploaded to Garmin, delete the remote copy from CN/International on the details page first.',
     );
     if (!ok) return;
     setDeletingPlanId(plan.id);
@@ -69,7 +74,7 @@ export default function TrainingListPage() {
       const detail = err.detail as { error?: string; activeCount?: number } | undefined;
       setError(
         detail?.error === 'garmin_plan_uploaded'
-          ? `This plan still has ${detail.activeCount ?? 0}  Garmin remote，Please toDetailsfrom  Garmin Deleteplan。`
+          ? `This plan still has ${detail.activeCount ?? 0} Garmin remote copies. Delete them from Garmin on the details page before deleting the local plan.`
           : err.message,
       );
     } finally {
@@ -80,12 +85,12 @@ export default function TrainingListPage() {
   return (
     <>
       <PageHero
-        eyebrow="Trainingplan"
-        title="Trainingplan"
-        sub={`AI your Goal + Garmin historydataGenerateWeekly plan。current  ${planCount}/${PLAN_LIMIT} plans。`}
+        eyebrow="Training plans"
+        title="Training Plans"
+        sub={`AI-generated weekly plans based on your goals and Garmin history. ${planCount}/${PLAN_LIMIT} plans.`}
         actions={
           limitReached ? (
-            <Btn disabled> 10 planslimit</Btn>
+            <Btn disabled>Plan limit reached</Btn>
           ) : (
             <Link href="/training/new" style={{ textDecoration: 'none' }}>
               <Btn>+ New plan</Btn>
@@ -102,7 +107,7 @@ export default function TrainingListPage() {
 
       {limitReached && (
         <div style={{ marginBottom: 20 }}>
-          <Banner kind="warn" code="LIMIT">You can keep at most {PLAN_LIMIT} plansTrainingplan。Deleteold plancanContinuenew 。</Banner>
+          <Banner kind="warn" code="LIMIT">You can keep at most {PLAN_LIMIT} training plans. Delete an old plan before creating another.</Banner>
         </div>
       )}
 
@@ -114,10 +119,10 @@ export default function TrainingListPage() {
 
       {plans && plans.length === 0 && (
         <Card style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>Noneplan</div>
-          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>No Trainingplan。</p>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>NO PLANS</div>
+          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>You have no training plans yet.</p>
           <Link href="/training/new" style={{ textDecoration: 'none' }}>
-            <Btn>new Day oneplan</Btn>
+            <Btn>Create your first plan</Btn>
           </Link>
         </Card>
       )}
@@ -209,12 +214,12 @@ function PlanRow({
             {formatWeekStartShort(plan.weekStartDate)}
           </div>
           <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {opening ? 'inplan…' : summaryPreview(plan.summary)}
+            {opening ? 'Opening plan…' : summaryPreview(plan.summary)}
           </div>
         </div>
 
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>Create </div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>CREATED</div>
           <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim }}>
             {new Date(plan.createdAt).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </div>
@@ -230,7 +235,7 @@ function PlanRow({
             }}
             disabled={opening || deleting}
           >
-            {opening ? 'ing…' : 'Details'}
+            {opening ? 'Opening…' : 'Details'}
           </Btn>
           <Btn
             variant="danger"
@@ -241,7 +246,7 @@ function PlanRow({
             }}
             disabled={deleting || opening}
           >
-            {deleting ? 'Deleteing…' : 'Delete'}
+            {deleting ? 'Deleting…' : 'Delete'}
           </Btn>
         </div>
       </div>
