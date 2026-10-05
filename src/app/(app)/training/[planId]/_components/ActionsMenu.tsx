@@ -43,15 +43,15 @@ export function ActionsMenu({
   const statusText = garmin.status
     ? uploaded
       ? failed > 0
-        ? `${regionMeta.label}已上传 ${scheduled} 节，${failed} 节需处理`
-        : `${regionMeta.label}已上传 ${scheduled} 节`
-      : `${regionMeta.label}尚未上传`
-    : '读取中…';
+        ? `${regionMeta.label}Uploaded ${scheduled} workout,${failed} need`
+        : `${regionMeta.label}Uploaded ${scheduled} `
+      : `${regionMeta.label}Not uploaded yet`
+    : 'Reading…';
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <Btn variant="ghost" size="sm" onClick={() => setOpen(!open)}>
-        操作 {open ? '▴' : '▾'}
+        Actions {open ? '▴' : '▾'}
       </Btn>
       {open && (
         <Card style={{
@@ -98,11 +98,11 @@ export function ActionsMenu({
             <div style={{ fontSize: 12, color: T.inkDim, marginBottom: 8 }}>{statusText}</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <Btn size="sm" onClick={garmin.push} disabled={!planReady || garmin.busy !== null}>
-                {garmin.busy === 'push' ? '上传中…' : uploaded ? '重新上传' : '上传'}
+                {garmin.busy === 'push' ? 'Uploading…' : uploaded ? 'Upload again' : 'Upload'}
               </Btn>
               {uploaded && (
                 <Btn variant="danger" size="sm" onClick={() => { garmin.setConfirmDelete(true); setOpen(false); }} disabled={garmin.busy !== null}>
-                  删除远端
+                  Deleteremote
                 </Btn>
               )}
             </div>
@@ -110,7 +110,7 @@ export function ActionsMenu({
 
           <div style={{ padding: '14px 16px' }}>
             <Btn variant="danger" size="sm" onClick={() => { onDeletePlan(); setOpen(false); }} style={{ width: '100%' }}>
-              删除本地计划
+              Deleteplan
             </Btn>
           </div>
         </Card>

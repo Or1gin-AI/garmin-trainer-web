@@ -56,7 +56,7 @@ export default function TrainingListPage() {
 
   async function handleDelete(plan: TrainingPlanSummary) {
     const ok = window.confirm(
-      '确认删除这份本地训练计划？如果它已经上传到 Garmin，请先在详情页从国区/国际区 Garmin 删除远端副本。',
+      'ConfirmDelete this local training plan?ifalreadyUploadto Garmin，Please inDetailsfrom CN/International Garmin Deleteremote。',
     );
     if (!ok) return;
     setDeletingPlanId(plan.id);
@@ -69,7 +69,7 @@ export default function TrainingListPage() {
       const detail = err.detail as { error?: string; activeCount?: number } | undefined;
       setError(
         detail?.error === 'garmin_plan_uploaded'
-          ? `这份计划还有 ${detail.activeCount ?? 0} 条 Garmin 远端副本，请先到详情页从 Garmin 删除后再删本地计划。`
+          ? `This plan still has ${detail.activeCount ?? 0}  Garmin remote，Please toDetailsfrom  Garmin Deleteplan。`
           : err.message,
       );
     } finally {
@@ -80,15 +80,15 @@ export default function TrainingListPage() {
   return (
     <>
       <PageHero
-        eyebrow="训练计划"
-        title="训练计划"
-        sub={`AI 根据你的目标 + Garmin 历史数据生成的周计划。当前 ${planCount}/${PLAN_LIMIT} 份。`}
+        eyebrow="Trainingplan"
+        title="Trainingplan"
+        sub={`AI your Goal + Garmin historydataGenerateWeekly plan。current  ${planCount}/${PLAN_LIMIT} plans。`}
         actions={
           limitReached ? (
-            <Btn disabled>已达 10 份上限</Btn>
+            <Btn disabled> 10 planslimit</Btn>
           ) : (
             <Link href="/training/new" style={{ textDecoration: 'none' }}>
-              <Btn>+ 新建计划</Btn>
+              <Btn>+ New plan</Btn>
             </Link>
           )
         }
@@ -102,29 +102,29 @@ export default function TrainingListPage() {
 
       {limitReached && (
         <div style={{ marginBottom: 20 }}>
-          <Banner kind="warn" code="LIMIT">最多同时保留 {PLAN_LIMIT} 份训练计划。删除旧计划后可以继续新建。</Banner>
+          <Banner kind="warn" code="LIMIT">You can keep at most {PLAN_LIMIT} plansTrainingplan。Deleteold plancanContinuenew 。</Banner>
         </div>
       )}
 
       {plans === null && !error && (
         <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // 加载中…
+          // Loading…
         </div>
       )}
 
       {plans && plans.length === 0 && (
         <Card style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>暂无计划</div>
-          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>你还没有训练计划。</p>
+          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>Noneplan</div>
+          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>No Trainingplan。</p>
           <Link href="/training/new" style={{ textDecoration: 'none' }}>
-            <Btn>新建第一个计划</Btn>
+            <Btn>new Day oneplan</Btn>
           </Link>
         </Card>
       )}
 
       {active.length > 0 && (
         <>
-          <SectionLabel>进行中</SectionLabel>
+          <SectionLabel>Active plans</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
             {active.map((p) => (
               <PlanRow
@@ -142,7 +142,7 @@ export default function TrainingListPage() {
 
       {archived.length > 0 && (
         <>
-          <SectionLabel>已归档</SectionLabel>
+          <SectionLabel>Archived</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {archived.map((p) => (
               <PlanRow
@@ -209,14 +209,14 @@ function PlanRow({
             {formatWeekStartShort(plan.weekStartDate)}
           </div>
           <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {opening ? '正在进入计划…' : summaryPreview(plan.summary)}
+            {opening ? 'inplan…' : summaryPreview(plan.summary)}
           </div>
         </div>
 
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>创建于</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>Create </div>
           <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim }}>
-            {new Date(plan.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            {new Date(plan.createdAt).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
 
@@ -230,7 +230,7 @@ function PlanRow({
             }}
             disabled={opening || deleting}
           >
-            {opening ? '进入中…' : '详情'}
+            {opening ? 'ing…' : 'Details'}
           </Btn>
           <Btn
             variant="danger"
@@ -241,7 +241,7 @@ function PlanRow({
             }}
             disabled={deleting || opening}
           >
-            {deleting ? '删除中…' : '删除'}
+            {deleting ? 'Deleteing…' : 'Delete'}
           </Btn>
         </div>
       </div>

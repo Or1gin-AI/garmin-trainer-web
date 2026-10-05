@@ -49,12 +49,12 @@ export default function ProfilePage() {
     <>
       <PageHero
         eyebrow="ATHLETE.PROFILE"
-        title="运动能力"
-        sub="只读档案：展示后端保存的能力快照和结构化活动指标。"
+        title="Athletic Profile"
+        sub="Read-only profile showing the saved performance snapshot and structured activity metrics."
         actions={
           <Btn variant="ghost" onClick={() => void load()} disabled={loading}>
             <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>
-            {loading ? '刷新中…' : '刷新'}
+            {loading ? 'Refreshing…' : 'Refresh'}
           </Btn>
         }
       />
@@ -67,7 +67,7 @@ export default function ProfilePage() {
 
       {loading && !data && !error && (
         <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // 加载运动能力档案…
+          // Loading athletic profile…
         </div>
       )}
 
@@ -79,9 +79,9 @@ export default function ProfilePage() {
             gap: 14,
             marginBottom: 28,
           }}>
-            <StatTile label="可用项目" value={`${availableCount}/3`} unit="SPORT" accent={availableCount > 0 ? T.lime : T.borderStrong} />
-            <StatTile label="参与活动" value={activityCount.toLocaleString()} unit="ACT" accent={T.amber} />
-            <StatTile label="最近更新" value={latestUpdate.short} unit={latestUpdate.unit} accent={T.lime} />
+            <StatTile label="Available sports" value={`${availableCount}/3`} unit="SPORT" accent={availableCount > 0 ? T.lime : T.borderStrong} />
+            <StatTile label="Activities" value={activityCount.toLocaleString()} unit="ACT" accent={T.amber} />
+            <StatTile label="Last updated" value={latestUpdate.short} unit={latestUpdate.unit} accent={T.lime} />
           </div>
 
           <SectionLabel right={
@@ -125,8 +125,8 @@ function latestDate(values: string[]): { short: string; full: string; unit: stri
   if (!latest) return { short: '—', full: '—', unit: '' };
 
   return {
-    short: latest.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
-    full: latest.toLocaleString('zh-CN', {
+    short: latest.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+    full: latest.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

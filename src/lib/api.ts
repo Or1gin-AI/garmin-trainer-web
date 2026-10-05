@@ -251,6 +251,61 @@ export async function getAthleticProfile(): Promise<AthleticProfileResponse> {
   return api.get<AthleticProfileResponse>('/api/profile');
 }
 
+// ===== Activity review =====
+
+export type ActivityReviewSeverity = 'high' | 'medium' | 'low' | 'opportunity';
+
+export interface ActivityReviewHighlight {
+  ruleId: string;
+  title: string;
+  severity: ActivityReviewSeverity;
+  body: string;
+  citation: string;
+}
+
+export interface ActivityReviewRuleResult {
+  ruleId: string;
+  ruleName: string;
+  category: string;
+  severity: ActivityReviewSeverity;
+  observed: Record<string, string | number | null>;
+  threshold: Record<string, string | number | null>;
+  advice: string;
+  citation: string;
+}
+
+export interface ActivityReviewResponse {
+  summary: string;
+  highlights: ActivityReviewHighlight[];
+  ruleResults: ActivityReviewRuleResult[];
+  ruleVersion: string;
+  cached: boolean;
+  createdAt?: string;
+}
+
+export async function getCachedActivityReview(
+  region: string,
+  activityId: string,
+): Promise<ActivityReviewResponse | null> {
+  try {
+    return await api.get<ActivityReviewResponse>(
+      `/api/activities/${region}/${encodeURIComponent(activityId)}/review`,
+    );
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function generateActivityReview(
+  region: string,
+  activityId: string,
+): Promise<ActivityReviewResponse> {
+  return api.post<ActivityReviewResponse>(
+    `/api/activities/${region}/${encodeURIComponent(activityId)}/review`,
+  );
+}
+
 // ===== Training plans =====
 
 export type Sport =
@@ -266,12 +321,12 @@ export type WorkoutStatus = 'planned' | 'completed' | 'skipped' | 'regenerating'
 export type PlanStatus = 'generating' | 'ready' | 'failed' | 'archived';
 
 export const SPORT_LABELS: Record<Sport, string> = {
-  running: '🏃 跑步',
-  cycling: '🚴 骑行',
-  swimming: '🏊 游泳',
-  rest: '💤 休息',
-  strength: '💪 力量',
-  mobility: '🧘 活动恢复',
+  running: '🏃 Running',
+  cycling: '🚴 Cycling',
+  swimming: '🏊 Swimming',
+  rest: '💤 Rest',
+  strength: '💪 Strength',
+  mobility: '🧘 activityRecovery',
 };
 
 export interface TrainingPlanSummary {

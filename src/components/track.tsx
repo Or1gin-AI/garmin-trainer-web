@@ -43,12 +43,12 @@ export const T = {
 export type SportKind = 'running' | 'cycling' | 'swimming' | 'rest' | 'strength' | 'mobility';
 
 export const SPORT: Record<SportKind, { code: string; label: string; color: string }> = {
-  running: { code: 'RUN', label: '跑步', color: T.amber },
-  cycling: { code: 'BIKE', label: '骑行', color: T.green },
-  swimming: { code: 'SWIM', label: '游泳', color: T.cyan },
-  rest: { code: '---', label: '休息', color: T.inkFaint },
-  strength: { code: 'STR', label: '力量', color: T.amber },
-  mobility: { code: 'MOB', label: '恢复', color: T.green },
+  running: { code: 'RUN', label: 'Running', color: T.amber },
+  cycling: { code: 'BIKE', label: 'Cycling', color: T.green },
+  swimming: { code: 'SWIM', label: 'Swimming', color: T.cyan },
+  rest: { code: '---', label: 'Rest', color: T.inkFaint },
+  strength: { code: 'STR', label: 'Strength', color: T.amber },
+  mobility: { code: 'MOB', label: 'Recovery', color: T.green },
 };
 
 export function BrandIcon({ size = 44, style }: { size?: number; style?: CSSProperties }) {
@@ -75,10 +75,10 @@ export function BrandIcon({ size = 44, style }: { size?: number; style?: CSSProp
 export type IntensityKind = 'low' | 'medium' | 'high' | 'rest';
 
 export const INTENSITY: Record<IntensityKind, { bars: number; code: string; label: string; color: string }> = {
-  high: { bars: 3, code: 'HIGH', label: '高强度', color: T.red },
-  medium: { bars: 2, code: 'MED', label: '中强度', color: T.amber },
-  low: { bars: 1, code: 'LOW', label: '低强度', color: T.lime },
-  rest: { bars: 0, code: 'REST', label: '休息', color: T.inkFaint },
+  high: { bars: 3, code: 'HIGH', label: 'High intensity', color: T.red },
+  medium: { bars: 2, code: 'MED', label: 'intensity', color: T.amber },
+  low: { bars: 1, code: 'LOW', label: 'Low intensity', color: T.lime },
+  rest: { bars: 0, code: 'REST', label: 'Rest', color: T.inkFaint },
 };
 
 export type StatusKind =
@@ -87,19 +87,19 @@ export type StatusKind =
   | 'generating' | 'ready' | 'archived';
 
 export const STATUS: Record<StatusKind, { code: string; label: string; color: string; anim?: boolean; glow?: boolean; dim?: boolean }> = {
-  planned: { code: 'PLANNED', label: '已计划', color: T.inkDim, dim: true },
-  today: { code: 'TODAY', label: '今日', color: T.lime, glow: true },
-  completed: { code: 'DONE', label: '已完成', color: T.green },
-  skipped: { code: 'SKIP', label: '已跳过', color: T.amber },
-  regenerating: { code: 'REGEN', label: '生成中', color: T.cyan, anim: true },
-  failed: { code: 'FAIL', label: '失败', color: T.red },
-  queued: { code: 'QUEUED', label: '排队中', color: T.cyan },
-  running: { code: 'RUNNING', label: '运行中', color: T.lime, anim: true },
-  success: { code: 'OK', label: '成功', color: T.green },
-  aborted: { code: 'ABORT', label: '已中止', color: T.amber },
-  generating: { code: 'GEN', label: '生成中', color: T.cyan, anim: true },
-  ready: { code: 'READY', label: '就绪', color: T.green },
-  archived: { code: 'ARCHIVED', label: '已归档', color: T.inkFaint, dim: true },
+  planned: { code: 'PLANNED', label: 'Planned', color: T.inkDim, dim: true },
+  today: { code: 'TODAY', label: 'Today', color: T.lime, glow: true },
+  completed: { code: 'DONE', label: 'Completed', color: T.green },
+  skipped: { code: 'SKIP', label: 'Skipped', color: T.amber },
+  regenerating: { code: 'REGEN', label: 'Generate', color: T.cyan, anim: true },
+  failed: { code: 'FAIL', label: 'Failed', color: T.red },
+  queued: { code: 'QUEUED', label: 'Queued', color: T.cyan },
+  running: { code: 'RUNNING', label: 'Running', color: T.lime, anim: true },
+  success: { code: 'OK', label: 'Success', color: T.green },
+  aborted: { code: 'ABORT', label: 'Aborted', color: T.amber },
+  generating: { code: 'GEN', label: 'Generate', color: T.cyan, anim: true },
+  ready: { code: 'READY', label: 'Ready', color: T.green },
+  archived: { code: 'ARCHIVED', label: 'Archived', color: T.inkFaint, dim: true },
 };
 
 // ─── StatusBadge ────────────────────────────────────────────────

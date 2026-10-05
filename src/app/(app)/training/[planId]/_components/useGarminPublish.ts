@@ -10,8 +10,8 @@ import {
 } from '@/lib/api';
 
 export const GARMIN_REGIONS: Array<{ key: GarminRegion; label: string; code: string; host: string }> = [
-  { key: 'cn', label: '国区', code: 'CN', host: 'garmin.cn' },
-  { key: 'global', label: '国际区', code: 'INTL', host: 'garmin.com' },
+  { key: 'cn', label: 'CN', code: 'CN', host: 'garmin.cn' },
+  { key: 'global', label: 'International', code: 'INTL', host: 'garmin.com' },
 ];
 
 export function garminRegionLabel(region: GarminRegion): string {
@@ -51,12 +51,12 @@ export function useGarminPublish(planId: string) {
       setStatus(result.status);
       setNotice(
         result.blockedByCleanup
-          ? `${label}旧副本有 ${result.failed} 节删除失败，已停止上传，避免重复堆积。`
+          ? `${label}old has ${result.failed} DeleteFailed，Upload，。`
           : result.failed > 0
-          ? `已上传 ${result.pushed} 节到${label}，${result.failed} 节失败，可重试。`
+          ? `Uploaded ${result.pushed} workouts to${label}，${result.failed} workout failed and can be retried.`
           : result.deletedBeforePush > 0
-            ? `已清理${label}旧副本 ${result.deletedBeforePush} 节，并重新上传 ${result.pushed} 节。`
-            : `已上传 ${result.pushed} 节到${label} Garmin。`,
+            ? `${label}old  ${result.deletedBeforePush} workout,Upload again ${result.pushed} workout.`
+            : `Uploaded ${result.pushed} workouts to${label} Garmin。`,
       );
     } catch (e) {
       setError((e as Error).message);
@@ -77,8 +77,8 @@ export function useGarminPublish(planId: string) {
       setConfirmDelete(false);
       setNotice(
         result.failed > 0
-          ? `已从${label}删除 ${result.deleted} 节，${result.failed} 节失败，可重试。`
-          : `已从${label} Garmin 删除 ${result.deleted} 节。`,
+          ? `Removed from${label}Delete ${result.deleted} workout,${result.failed} workout failed and can be retried.`
+          : `Removed from${label} Garmin Delete ${result.deleted} workout.`,
       );
     } catch (e) {
       setError((e as Error).message);

@@ -49,27 +49,27 @@ function VerifyEmailInner() {
         {verified ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>EMAIL.VERIFIED</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>邮箱已验证</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Email verified</h1>
             <Banner kind="ok" code="OK">
-              {session ? '正在为你跳转到主页…' : '现在可以登录使用 Garmin Trainer。'}
+              {session ? 'Taking you to the dashboard…' : 'You can now sign in to Garmin Trainer.'}
             </Banner>
             {!session && (
               <Link href="/sign-in" style={{ textDecoration: 'none' }}>
-                <Btn style={{ width: '100%' }}>去登录 →</Btn>
+                <Btn style={{ width: '100%' }}>Go to sign in →</Btn>
               </Link>
             )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>VERIFY.PENDING</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>查收验证邮件</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Check your email</h1>
             <p style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.65, margin: 0 }}>
-              我们已经向 {email
+              We sent a {email
                 ? <span style={{ fontFamily: T.mono, color: T.ink }}>{email}</span>
-                : '你的邮箱'} 发送了验证邮件。点击邮件中的「验证邮箱」按钮即可完成注册。链接 1 小时内有效。
+                : 'your email'} We sent a verification email. Click “Verify email” in the message to complete sign-up. The link is valid for one hour.
             </p>
             <p style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 0.5, margin: 0 }}>
-              {'// 没收到？检查垃圾邮件文件夹，或点击下方按钮重新发送。'}
+              {'// Did not receive it? Check your spam folder or resend it below.'}
             </p>
             {email && (
               <Btn
@@ -78,11 +78,11 @@ function VerifyEmailInner() {
                 onClick={resend}
                 disabled={resending || resent}
               >
-                {resending ? '发送中…' : resent ? '✓ 已重新发送' : '重新发送验证邮件'}
+                {resending ? 'Sending…' : resent ? '✓ Resent' : 'Resend verification email'}
               </Btn>
             )}
             <div style={{ textAlign: 'center', marginTop: 4 }}>
-              <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← 返回登录</Link>
+              <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← Back to sign in</Link>
             </div>
           </div>
         )}

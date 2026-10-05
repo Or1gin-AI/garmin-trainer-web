@@ -161,12 +161,12 @@ export default function TrainingPlanDetailPage() {
         onEvent: (ev: SseEvent) => {
           const data = (ev.data ?? null) as Record<string, unknown> | null;
           if (ev.event === 'error') {
-            fatal = data && typeof data.error === 'string' ? (data.error as string) : '重新生成失败';
+            fatal = data && typeof data.error === 'string' ? (data.error as string) : 'Regeneration failed';
           }
         },
       });
     } catch (e) {
-      fatal = (e as Error).message || '重新生成失败';
+      fatal = (e as Error).message || 'Regeneration failed';
     }
 
     if (fatal) {
@@ -192,7 +192,7 @@ export default function TrainingPlanDetailPage() {
       const d = err.detail as { error?: string; activeCount?: number } | undefined;
       setError(
         d?.error === 'garmin_plan_uploaded'
-          ? `这份计划还有 ${d.activeCount ?? 0} 条 Garmin 远端副本。请先从国区/国际区 Garmin 删除远端副本，再删除本地计划。`
+          ? `This plan still has ${d.activeCount ?? 0}  Garmin remote copy. Delete the remote copy from CN/International Garmin before deleting the local plan.`
           : err.message,
       );
       setConfirmLocalDelete(false);
@@ -231,25 +231,25 @@ export default function TrainingPlanDetailPage() {
   if (loading) {
     return (
       <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-        加载中…
+        Loading…
       </div>
     );
   }
   if (notFound) {
     return (
       <Card style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>404 · 未找到</div>
-        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>计划不存在</h2>
-        <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>这份计划可能已被删除，或不属于当前账号。</p>
+        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>404 · Not found</div>
+        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>Plan not found</h2>
+        <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>This plan may have been deleted or does not belong to the current account.</p>
         <Link href="/training" style={{ textDecoration: 'none' }}>
-          <Btn>返回列表</Btn>
+          <Btn>Backlist</Btn>
         </Link>
       </Card>
     );
   }
   if (!detail) {
     return (
-      <Banner kind="error" code="ERR">{error ?? '加载失败'}</Banner>
+      <Banner kind="error" code="ERR">{error ?? 'Loading failed'}</Banner>
     );
   }
 
@@ -270,28 +270,28 @@ export default function TrainingPlanDetailPage() {
   const garminRegion = GARMIN_REGIONS.find((r) => r.key === garmin.region) ?? GARMIN_REGIONS[0];
 
   const EXPORT_FORMATS = [
-    { key: 'intervals_icu', label: 'Intervals.icu 日历' },
-    { key: 'word', label: 'Word 文档' },
+    { key: 'intervals_icu', label: 'Intervals.icu Calendar' },
+    { key: 'word', label: 'Word document' },
     { key: 'pdf', label: 'PDF' },
-    { key: 'excel', label: 'Excel 表格' },
+    { key: 'excel', label: 'Excel spreadsheet' },
   ] as const;
 
   return (
     <>
       <div style={{ marginBottom: 18 }}>
         <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← 返回列表
+          ← Backlist
         </Link>
       </div>
 
       <PageHero
         title={formatWeekStart(plan.weekStartDate)}
-        sub={`创建于 ${new Date(plan.createdAt).toLocaleString('zh-CN')}`}
+        sub={`Create  ${new Date(plan.createdAt).toLocaleString('en-US')}`}
         actions={
           <>
             <StatusBadge kind={STATUS_MAP[plan.status]} />
             <Link href="/calendar" style={{ textDecoration: 'none' }}>
-              <Btn variant="ok" size="sm">去日历应用</Btn>
+              <Btn variant="ok" size="sm">Apply in Calendar</Btn>
             </Link>
             <div ref={actionPanelRef} style={{ position: 'relative', display: 'flex', gap: 8 }}>
               <Btn
@@ -299,14 +299,14 @@ export default function TrainingPlanDetailPage() {
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'export' ? null : 'export'))}
               >
-                导出
+                Export
               </Btn>
               <Btn
                 variant={openActionPanel === 'garmin' ? 'ok' : 'ghost'}
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'garmin' ? null : 'garmin'))}
               >
-                上传 Garmin
+                Upload Garmin
               </Btn>
 
               {openActionPanel === 'export' && (
@@ -322,7 +322,7 @@ export default function TrainingPlanDetailPage() {
                   boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
                 }}>
                   <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
-                    选择导出格式
+                    Choose export format
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
                     {EXPORT_FORMATS.map((f) => (
@@ -356,7 +356,7 @@ export default function TrainingPlanDetailPage() {
                   boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
                 }}>
                   <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
-                    选择上传区域
+                    Choose upload region
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
                     {GARMIN_REGIONS.map((r) => (
@@ -372,11 +372,11 @@ export default function TrainingPlanDetailPage() {
                     ))}
                   </div>
                   <div style={{ fontSize: 12, color: T.inkDim, lineHeight: 1.55, marginBottom: 12 }}>
-                    当前目标：<span style={{ color: T.ink }}>{garminRegion.label}</span>
+                    Current goal: <span style={{ color: T.ink }}>{garminRegion.label}</span>
                     {garmin.status && (
                       <>
-                        {' '}· {uploaded ? `已上传 ${garmin.status.scheduled} 节` : '尚未上传'}
-                        {garmin.status.failed > 0 ? ` · 失败 ${garmin.status.failed} 节` : ''}
+                        {' '}· {uploaded ? `Uploaded ${garmin.status.scheduled} ` : 'Not uploaded yet'}
+                        {garmin.status.failed > 0 ? ` · Failed ${garmin.status.failed} ` : ''}
                       </>
                     )}
                   </div>
@@ -390,7 +390,7 @@ export default function TrainingPlanDetailPage() {
                       disabled={plan.status !== 'ready' || garmin.busy !== null}
                       style={{ flex: 1 }}
                     >
-                      {garmin.busy === 'push' ? '上传中…' : uploaded ? '重新上传' : '上传'}
+                      {garmin.busy === 'push' ? 'Uploading…' : uploaded ? 'Upload again' : 'Upload'}
                     </Btn>
                     {uploaded && (
                       <Btn
@@ -402,7 +402,7 @@ export default function TrainingPlanDetailPage() {
                         }}
                         disabled={garmin.busy !== null}
                       >
-                        删除远端
+                        Deleteremote
                       </Btn>
                     )}
                   </div>
@@ -428,9 +428,9 @@ export default function TrainingPlanDetailPage() {
       {garmin.confirmDelete && (
         <ConfirmDialog
           eyebrow="GARMIN.DELETE"
-          title={`从${garminRegionLabel(garmin.region)} Garmin 删除这份计划？`}
-          description={`将删除${garminRegionLabel(garmin.region)} Garmin 日历中由 Garmin Trainer 创建的 ${garmin.status?.activeCount ?? 0} 条训练安排，并删除对应 workout 模板。本地训练计划不会删除。`}
-          confirmLabel={garmin.busy === 'delete' ? '删除中…' : '确认删除'}
+          title={`from ${garminRegionLabel(garmin.region)} Garmin Delete this plan?`}
+          description={`willDelete${garminRegionLabel(garmin.region)} Garmin Calendarcreated by Garmin Trainer ${garmin.status?.activeCount ?? 0} Training，Delete workout 。The local training plan will not be deleted.`}
+          confirmLabel={garmin.busy === 'delete' ? 'Deleteing…' : 'ConfirmDelete'}
           confirmVariant="danger"
           busy={garmin.busy === 'delete'}
           onCancel={() => garmin.setConfirmDelete(false)}
@@ -441,9 +441,9 @@ export default function TrainingPlanDetailPage() {
       {confirmLocalDelete && (
         <ConfirmDialog
           eyebrow="PLAN.DELETE"
-          title="删除这份本地训练计划？"
-          description="会删除本地计划、训练日程和对话记录。如果这份计划还有 Garmin 远端副本，系统会阻止删除，请先从国区/国际区 Garmin 删除。"
-          confirmLabel={localDeleteBusy ? '删除中…' : '确认删除'}
+          title="Delete this local training plan?"
+          description="This deletes the local plan, training schedule, and chat records.ifThis plan still has Garmin remote，systemDelete，Please from CN/International Garmin Delete。"
+          confirmLabel={localDeleteBusy ? 'Deleteing…' : 'ConfirmDelete'}
           confirmVariant="danger"
           busy={localDeleteBusy}
           onCancel={() => setConfirmLocalDelete(false)}
@@ -456,10 +456,10 @@ export default function TrainingPlanDetailPage() {
         {/* Left: main content */}
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
-            <StatTile label="已完成" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
-            <StatTile label="本周时长" value={String(totalMin)} unit="分钟" accent={T.cyan} />
-            <StatTile label="训练日" value={`${trainingDayCount}`} unit="天" accent={T.amber} />
-            <StatTile label="预计训练负荷" value={estimatedTrainingLoad == null ? '—' : String(estimatedTrainingLoad)} unit="Garmin" accent={T.lime} />
+            <StatTile label="Completed" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
+            <StatTile label="Weekly duration" value={String(totalMin)} unit="minutes" accent={T.cyan} />
+            <StatTile label="Training days" value={`${trainingDayCount}`} unit="days" accent={T.amber} />
+            <StatTile label="Estimated training load" value={estimatedTrainingLoad == null ? '—' : String(estimatedTrainingLoad)} unit="Garmin" accent={T.lime} />
           </div>
 
           <Card style={{ padding: 18, marginBottom: 18 }}>
@@ -490,7 +490,7 @@ export default function TrainingPlanDetailPage() {
               </div>
             ) : (
               <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
-                点击上方日历选择一天查看详情。
+                Select a day in the calendar above to view details.
               </Card>
             )}
           </div>

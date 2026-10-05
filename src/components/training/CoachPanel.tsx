@@ -12,9 +12,9 @@ export interface CoachPanelProps {
   summaryText?: string;
   /** Right-side status badge text + animation flag. */
   status?: { label: string; anim?: boolean; tone?: 'lime' | 'green' | 'amber' | 'cyan' };
-  /** Optional title (default: "AI 教练"). */
+  /** Optional title (default: "AI Coach"). */
   title?: string;
-  /** Eyebrow (default: "AI 实时过程"). */
+  /** Eyebrow (default: "AI Live process"). */
   eyebrow?: string;
   /** Optional footer slot (e.g. cancel button). */
   footer?: ReactNode;
@@ -24,8 +24,8 @@ export function CoachPanel({
   events,
   summaryText,
   status,
-  title = 'AI 教练',
-  eyebrow = 'AI 实时过程',
+  title = 'AI Coach',
+  eyebrow = 'AI Live process',
   footer,
 }: CoachPanelProps) {
   const toneColor =
@@ -112,7 +112,7 @@ export function CoachPanel({
               letterSpacing: 1.2,
             }}
           >
-            ● 正在准备 AI 教练…
+            ● Preparing AI Coach…
           </div>
         ) : (
           <ToolCallStack events={events} />

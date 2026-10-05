@@ -26,15 +26,15 @@ export default function Home() {
         <h1 style={{
           margin: 0, fontSize: 48, fontWeight: 700, letterSpacing: -1.2, lineHeight: 1.05, color: T.ink,
         }}>
-          你的 AI 教练
+          Your AI coach
           <br />
-          已就位
+          is ready
         </h1>
 
         <p style={{
           margin: '20px auto 0', maxWidth: 480, color: T.inkDim, fontSize: 16, lineHeight: 1.65,
         }}>
-          连接国区 + 国际区 Garmin · 自动同步活动 · AI 根据真实数据生成下一周训练。
+          Connect CN and International Garmin, auto-sync activities, and let AI generate next week’s training from real data.
         </p>
 
         <div style={{
@@ -42,10 +42,10 @@ export default function Home() {
           gap: 12, marginTop: 36, flexWrap: 'wrap',
         }}>
           <Link href="/sign-up" style={{ textDecoration: 'none' }}>
-            <Btn>注册账号 →</Btn>
+            <Btn>Sign-up account →</Btn>
           </Link>
           <Link href="/sign-in" style={{ textDecoration: 'none' }}>
-            <Btn variant="ghost">登录</Btn>
+            <Btn variant="ghost">Sign in</Btn>
           </Link>
         </div>
 
@@ -58,19 +58,19 @@ export default function Home() {
           <div>
             <div style={{ color: T.lime, marginBottom: 4 }}>SYNC</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              每 2 小时自动同步双区活动
+              Auto-sync both regions every 2 hours
             </div>
           </div>
           <div>
             <div style={{ color: T.lime, marginBottom: 4 }}>AI.COACH</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              对话式教练 · 按需调整训练
+              Conversational coach · Adjust training on demand
             </div>
           </div>
           <div>
             <div style={{ color: T.lime, marginBottom: 4 }}>DATA</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              基于历史数据生成周计划
+              Weekly plans based on your history
             </div>
           </div>
         </div>

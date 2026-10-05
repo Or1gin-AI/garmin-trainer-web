@@ -14,12 +14,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { href: '/garmin', label: '账号连接' },
-  { href: '/dashboard', label: '同步' },
-  { href: '/training', label: '训练' },
-  { href: '/profile', label: '运动能力' },
-  { href: '/calendar', label: '日历' },
-  { href: '/subscription', label: '订阅' },
+  { href: '/garmin', label: 'Connections' },
+  { href: '/dashboard', label: 'Sync' },
+  { href: '/training', label: 'Training' },
+  { href: '/profile', label: 'Athletic Profile' },
+  { href: '/calendar', label: 'Calendar' },
+  { href: '/subscription', label: 'Subscription' },
 ];
 
 function daysUntil(iso: string | null): number | null {
@@ -73,7 +73,7 @@ export default function AppLayout({
   }
 
   const role = (session.user as { role?: string }).role;
-  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: '管理后台' }] : NAV;
+  const nav = role === 'admin' ? [...NAV, { href: '/admin', label: 'Admin' }] : NAV;
 
   const cnOk = accounts.find((a) => a.region === 'cn')?.hasSession ?? false;
   const intlOk = accounts.find((a) => a.region === 'global')?.hasSession ?? false;
@@ -101,15 +101,15 @@ export default function AppLayout({
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3, lineHeight: 1 }}>GARMIN TRAINER</div>
               <div style={{ fontSize: 10, color: T.inkFaint, fontFamily: T.mono, marginTop: 2, letterSpacing: 1 }}>
-                国区账号 <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? '已连接' : '未连接'}</span>
+                CN account <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? 'Connected' : 'Not connected'}</span>
                 {' '}·{' '}
-                国际区账号 <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? '已连接' : '未连接'}</span>
+                International account <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? 'Connected' : 'Not connected'}</span>
               </div>
             </div>
           </Link>
 
           <nav
-            aria-label="主菜单"
+            aria-label="Main menu"
             style={{
               display: 'flex',
               gap: 2,
@@ -163,7 +163,7 @@ export default function AppLayout({
               }}
               className="track-link"
               style={{ background: 'transparent', border: 'none', fontFamily: T.sans, fontSize: 12, padding: 0 }}
-            >退出</button>
+            >Sign out</button>
           </div>
         </div>
       </header>

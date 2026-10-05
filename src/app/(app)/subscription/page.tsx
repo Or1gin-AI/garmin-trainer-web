@@ -8,7 +8,7 @@ import {
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('zh-CN');
+  return new Date(d).toLocaleDateString('en-US');
 }
 
 function daysUntil(iso: string | null): number | null {
@@ -37,27 +37,27 @@ const PLANS: {
   {
     name: 'PLUS',
     price: '¥5',
-    period: '/月',
-    desc: 'Garmin 数据自动同步',
+    period: '/month',
+    desc: 'Automatic Garmin data sync',
     features: [
-      '每 2 小时自动同步运动记录',
-      '历史活动全量回填',
-      '同步失败自动重试',
-      '支持国区 + 国际区',
+      ' 2 hoursAutoSyncactivities',
+      'historyactivity',
+      'SyncFailedAutoRetry',
+      'supportsCN + International',
     ],
     href: PAY_URLS.pro,
   },
   {
     name: 'MAX',
     price: '¥15',
-    period: '/月',
-    desc: 'AI 训练计划 + 全部同步能力',
+    period: '/month',
+    desc: 'AI Trainingplan + AllSync',
     features: [
-      '包含 Plus 全部同步功能',
-      'AI 生成个性化周训练计划',
-      'AI 教练对话、改课、答疑',
-      '训练计划导出（PDF / Word / Excel）',
-      '一键推送计划到 Garmin 日历',
+      ' Plus AllSyncfeature',
+      'AI GenerateweekTrainingplan',
+      'AI Coach chat, workout changes, and Q&A',
+      'TrainingplanExport（PDF / Word / Excel）',
+      'one-clickpublishplanto Garmin Calendar',
     ],
     href: PAY_URLS.max,
     hot: true,
@@ -103,7 +103,7 @@ export default function SubscriptionPage() {
         '/api/redemption/redeem',
         { code: code.trim() },
       );
-      setSuccess(`兑换成功，已激活 ${redeemedPlanLabel(r.subscriptionPlan)}，到期时间 ${fmtDate(r.expiresAt)}`);
+      setSuccess(`RedeemSuccess， ${redeemedPlanLabel(r.subscriptionPlan)}，Expires ${fmtDate(r.expiresAt)}`);
       setCode('');
       await refresh();
     } catch (e) {
@@ -124,7 +124,7 @@ export default function SubscriptionPage() {
 
   function confirmExternalPurchase(planName: 'PLUS' | 'MAX'): boolean {
     return window.confirm(
-      `即将跳转到链动小铺购买 ${planName} 会员。支付完成后请复制卡密，回到本站订阅页兑换。是否继续？`,
+      `You are about to buy ${planName} membership in the store. After payment, copy the code and return to the Subscription page to redeem. Continue?`,
     );
   }
 
@@ -140,8 +140,8 @@ export default function SubscriptionPage() {
   return (
     <>
       <PageHero
-        title="订阅"
-        sub="选择适合你的方案，解锁自动同步或 AI 训练教练。"
+        title="Subscription"
+        sub="Choose a plan to unlock automatic sync and AI coaching."
       />
 
       {promoUntil && (
@@ -156,10 +156,10 @@ export default function SubscriptionPage() {
               color: T.bg, background: T.lime, padding: '3px 8px', borderRadius: 3,
             }}>LIMITED</span>
             <span style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>
-              限时活动：全员免费 Max 至 {fmtDate(promoUntil)}
+              Limited-time offer: Free Max for everyone until {fmtDate(promoUntil)}
             </span>
             <span style={{ fontSize: 12, color: T.inkDim }}>
-              注册即享 AI 教练与自动同步，邀请 2 位好友再送 1 个月 Max。
+              Sign up for AI Coach and automatic sync, then invite 2 friends to get 1 extra month of Max.
             </span>
           </div>
         </div>
@@ -186,16 +186,16 @@ export default function SubscriptionPage() {
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim, letterSpacing: 1 }}>
                 {isPaid ? (
-                  <>到期 {fmtDate(me?.plan.expiresAt ?? null)}{planDays != null && <> · <span style={{ color: T.amber }}>剩余 {planDays} 天</span></>}</>
+                  <>Expires {fmtDate(me?.plan.expiresAt ?? null)}{planDays != null && <> · <span style={{ color: T.amber }}>remaining {planDays} days</span></>}</>
                 ) : (
-                  '免费版 · 仅支持手动同步'
+                  'Free · Manual sync only'
                 )}
               </span>
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              <Mini k="自动同步" v={canAutoSync && autoSync ? '已开启' : 'Plus'} c={canAutoSync && autoSync ? T.lime : T.amber} />
-              <Mini k="AI 教练" v={canUseAi ? '已解锁' : '仅 Max'} c={canUseAi ? T.lime : T.inkFaint} />
-              <Mini k="区域" v="国区 + 国际区" c={T.ink} />
+              <Mini k="AutoSync" v={canAutoSync && autoSync ? 'Enabled' : 'Plus'} c={canAutoSync && autoSync ? T.lime : T.amber} />
+              <Mini k="AI Coach" v={canUseAi ? 'Unlocked' : 'Max only'} c={canUseAi ? T.lime : T.inkFaint} />
+              <Mini k="Region" v="CN + International" c={T.ink} />
             </div>
           </div>
           {canAutoSync && (
@@ -221,7 +221,7 @@ export default function SubscriptionPage() {
                 }} />
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2, color: autoSync ? T.lime : T.inkDim }}>
-                自动同步 · 每 2 小时
+                Automatic sync · Every 2 hours
               </span>
             </label>
           )}
@@ -244,7 +244,7 @@ export default function SubscriptionPage() {
                   <span style={{
                     fontFamily: T.mono, fontSize: 9, letterSpacing: 1.5,
                     color: T.bg, background: T.lime, padding: '2px 8px', borderRadius: 3, fontWeight: 700,
-                  }}>推荐</span>
+                  }}>Recommended</span>
                 )}
               </div>
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'baseline', gap: 2 }}>
@@ -275,7 +275,7 @@ export default function SubscriptionPage() {
                 style={{ textDecoration: 'none', display: 'block' }}
               >
                 <Btn variant={p.hot ? 'primary' : 'ghost'} style={{ width: '100%' }}>
-                  购买 {p.name} ↗
+                  Buy {p.name} ↗
                 </Btn>
               </a>
             </div>
@@ -287,12 +287,12 @@ export default function SubscriptionPage() {
       <Card style={{ padding: 24, marginBottom: 28 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>如何购买</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>How to buy</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                { step: '1', text: '点击上方购买按钮，跳转到链动小铺完成支付' },
-                { step: '2', text: '支付成功后页面会显示一串卡密' },
-                { step: '3', text: '复制卡密，回到本页右侧粘贴兑换' },
+                { step: '1', text: 'Click Buy above to complete payment on the store' },
+                { step: '2', text: 'After successful payment, the page will display a code' },
+                { step: '3', text: 'Copy the code and paste it into Redeem on the right' },
               ].map((s) => (
                 <div key={s.step} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{
@@ -309,12 +309,12 @@ export default function SubscriptionPage() {
               background: 'rgba(198,255,58,0.06)', border: `1px solid ${T.lime}20`,
               fontSize: 12, color: T.inkDim, lineHeight: 1.6,
             }}>
-              卡密格式：<span style={{ fontFamily: T.mono, color: T.lime }}>XXXX-XXXX-XXXX-XXXX</span>，不区分大小写。
-              兑换后会员立即生效，有效期 30 天。重复兑换会叠加时长。
+              Code format: <span style={{ fontFamily: T.mono, color: T.lime }}>XXXX-XXXX-XXXX-XXXX</span>. Codes are case-insensitive.
+              Membership activates immediately after redemption and lasts 30 days. Repeat redemptions add time.
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>兑换卡密</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>Redeem a code</div>
             <form onSubmit={redeem} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <TrackInput
                 mono
@@ -324,7 +324,7 @@ export default function SubscriptionPage() {
                 style={{ letterSpacing: 2, fontSize: 14 }}
               />
               <Btn type="submit" disabled={!code || busy}>
-                {busy ? '兑换中…' : '兑换'}
+                {busy ? 'Redeeming…' : 'Redeem'}
               </Btn>
             </form>
           </div>
@@ -334,10 +334,10 @@ export default function SubscriptionPage() {
       {/* Referral */}
       {refStats && refStats.referralCode && (
         <Card style={{ padding: 24, marginBottom: 28 }}>
-          <CardHeader eyebrow="REFERRAL" title="邀请 2 位好友，再送 1 个月 Max" />
+          <CardHeader eyebrow="REFERRAL" title="Invite 2 friends, get 1 extra month of Max" />
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 13, color: T.inkDim, marginBottom: 8 }}>你的专属邀请链接</div>
+              <div style={{ fontSize: 13, color: T.inkDim, marginBottom: 8 }}>Your personal invite link</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{
                   flex: 1, fontFamily: T.mono, fontSize: 13, color: T.ink,
@@ -360,14 +360,14 @@ export default function SubscriptionPage() {
                     });
                   }}
                 >
-                  {copied ? '已复制' : '复制链接'}
+                  {copied ? 'Copied' : 'Copy link'}
                 </Btn>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-              <Mini k="已邀请" v={`${refStats.completedCount} / ${refStats.maxDays / 15} 人`} c={refStats.completedCount > 0 ? T.lime : T.inkFaint} />
-              <Mini k="已获得" v={`${refStats.daysEarned} / ${refStats.maxDays} 天 Max`} c={refStats.daysEarned > 0 ? T.lime : T.inkFaint} />
+              <Mini k="Invited" v={`${refStats.completedCount} / ${refStats.maxDays / 15} people`} c={refStats.completedCount > 0 ? T.lime : T.inkFaint} />
+              <Mini k="Earned" v={`${refStats.daysEarned} / ${refStats.maxDays} days Max`} c={refStats.daysEarned > 0 ? T.lime : T.inkFaint} />
             </div>
 
             <div style={{
@@ -375,7 +375,7 @@ export default function SubscriptionPage() {
               background: 'rgba(198,255,58,0.06)', border: `1px solid ${T.lime}20`,
               fontSize: 12, color: T.inkDim, lineHeight: 1.6,
             }}>
-              每位好友通过你的链接注册并完成邮箱验证后，你立即获得 <span style={{ color: T.lime, fontFamily: T.mono }}>15 天 Max</span>。邀请 2 位 = 完整 1 个月 Max（累计上限 {refStats.maxDays} 天）。
+              For each friend who signs up through your link and completes email verification, you immediately earn <span style={{ color: T.lime, fontFamily: T.mono }}>15 days Max</span>. Invite 2 friends to earn 1 full month of Max (total limit {refStats.maxDays} days).
             </div>
           </div>
         </Card>

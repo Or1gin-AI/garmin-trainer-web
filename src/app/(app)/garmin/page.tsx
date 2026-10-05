@@ -10,11 +10,11 @@ import {
 
 type Region = 'cn' | 'global';
 
-const BIND_LIMIT_NOTICE = '为防止账号代同步，同一区域 7 天内只能成功绑定一次 Garmin 账号。请确认这是你自己的账号后再继续。';
+const BIND_LIMIT_NOTICE = 'To prevent account sync abuse, a Garmin account can only be linked once per region every 7 days. Confirm that this is your account before continuing.';
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleString('zh-CN');
+  return new Date(d).toLocaleString('en-US');
 }
 
 export default function GarminPage() {
@@ -42,18 +42,18 @@ export default function GarminPage() {
       setError(err);
       router.replace('/garmin');
     } else if (connected && region) {
-      setSuccess(`${region === 'cn' ? '国区' : '国际区'} Garmin 已连接${name ? `（${name}）` : ''}`);
+      setSuccess(`${region === 'cn' ? 'CN' : 'International'} Garmin Connected${name ? `（${name}）` : ''}`);
       refresh().finally(() => router.replace('/garmin'));
     }
   }, [params, router]);
 
   async function disconnect(region: Region) {
-    if (!confirm(`断开 ${region === 'cn' ? '国区' : '国际区'} 的 Garmin 连接？`)) return;
+    if (!confirm(`Disconnect ${region === 'cn' ? 'CN' : 'International'}  Garmin Connect ？`)) return;
     setError(null);
     try {
       await api.del(`/api/garmin/accounts/${region}`);
       await refresh();
-      setSuccess('已断开');
+      setSuccess('Disconnect');
     } catch (e) {
       setError((e as Error).message);
     }
@@ -63,8 +63,8 @@ export default function GarminPage() {
     <>
       <PageHero
         eyebrow="ACCT.LINK"
-        title="Garmin 账号"
-        sub="点击下方按钮，在 Garmin 官方页面（sso.garmin.cn / sso.garmin.com）完成登录，登录成功后会自动绑定到当前账号。"
+        title="Garmin Account"
+        sub="Use the button below to sign in on the official Garmin page (sso.garmin.cn / sso.garmin.com). After sign-in, the account will be linked automatically."
       />
 
       {error && (
@@ -100,13 +100,13 @@ export default function GarminPage() {
 
       <SectionLabel>FLOW</SectionLabel>
       <Card style={{ padding: 22 }}>
-        <CardHeader eyebrow="HOW.IT.WORKS" title="连接流程" />
+        <CardHeader eyebrow="HOW.IT.WORKS" title="Connection flow" />
         <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
           {[
-            { n: '01', t: 'CLICK', d: '点击「连接 Garmin」按钮' },
-            { n: '02', t: 'REDIRECT', d: '跳转到官方登录页 sso.garmin.cn / .com' },
-            { n: '03', t: 'AUTH', d: '输入账号密码，必要时输入 MFA 验证码' },
-            { n: '04', t: 'BIND', d: '浏览器自动跳回，账号变为「已连接」' },
+            { n: '01', t: 'CLICK', d: 'Click “Connect Garmin”' },
+            { n: '02', t: 'REDIRECT', d: 'Open the official Garmin sign-in page sso.garmin.cn / .com' },
+            { n: '03', t: 'AUTH', d: 'Enter your Garmin account password and MFA code if required' },
+            { n: '04', t: 'BIND', d: 'The browser returns automatically and the account becomes “Connected”' },
           ].map((s) => (
             <div key={s.n} style={{
               padding: 14, border: `1px solid ${T.border}`, borderRadius: 8,
@@ -123,7 +123,7 @@ export default function GarminPage() {
           background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
           fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 0.6, lineHeight: 1.6,
         }}>
-          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; 会话失效后页面会提示「请重新连接」。Plus/Max 用户可同时绑定 CN + INTL 双区，但每个区域仍遵守 7 天绑定限制。
+          <span style={{ fontWeight: 600 }}>NOTE</span> &nbsp; When the session expires, the page will prompt you to reconnect. Plus/Max users can link both CN and international regions, subject to the 7-day limit for each region.
         </div>
       </Card>
     </>
@@ -140,13 +140,13 @@ function RegionCard({
   onDisconnect: () => void;
 }) {
   const code = region === 'cn' ? 'CN' : 'INTL';
-  const label = region === 'cn' ? '国区' : '国际区';
+  const label = region === 'cn' ? 'CN' : 'International';
   const host = region === 'cn' ? 'sso.garmin.cn' : 'sso.garmin.com';
   const loginHref = `/garmin/connect/${region}`;
   const connected = !!account?.hasSession;
   const canBind = account?.canBind !== false;
   const nextBindText = fmtDate(account?.nextBindAllowedAt ?? null);
-  const bindConfirmText = `${label} Garmin 账号绑定成功后，同一区域 7 天内不能再次绑定。请确认这是你自己的 Garmin 账号。是否继续？`;
+  const bindConfirmText = `${label} Garmin account linking succeeds, it cannot be linked again in the same region for 7 days. Confirm that this is your Garmin account. Continue?`;
 
   return (
     <Card hot={connected} style={{ padding: 22 }}>
@@ -173,7 +173,7 @@ function RegionCard({
           marginTop: 16, padding: 18, border: `1px dashed ${T.border}`, borderRadius: 8,
           fontSize: 13, color: T.inkDim, textAlign: 'center',
         }}>
-          还没有连接。点击下方按钮在 Garmin 官方页面登录。
+          Not connected. Use the button below to sign in on the official Garmin page.
         </div>
       )}
 
@@ -190,7 +190,7 @@ function RegionCard({
           letterSpacing: 0.8,
           lineHeight: 1.6,
         }}>
-          7 天绑定冷却中 · {nextBindText} 后可再次绑定
+          7 daysLink cooldown · {nextBindText} before linking again
         </div>
       )}
 
@@ -204,17 +204,17 @@ function RegionCard({
             }}
           >
             <Btn variant={connected ? 'ghost' : 'primary'}>
-              {connected ? '重新连接' : '连接 Garmin →'}
+              {connected ? 'Reconnect' : 'Connect Garmin →'}
             </Btn>
           </Link>
         ) : (
           <Btn variant="ghost" disabled>
-            {connected ? '重新连接' : '连接 Garmin →'}
+            {connected ? 'Reconnect' : 'Connect Garmin →'}
           </Btn>
         )}
         {connected && (
           <Btn variant="danger" style={{ marginLeft: 'auto' }} onClick={onDisconnect}>
-            断开连接
+            Disconnect
           </Btn>
         )}
       </div>

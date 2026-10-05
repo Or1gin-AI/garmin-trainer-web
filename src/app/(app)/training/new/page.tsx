@@ -53,13 +53,13 @@ interface StreamedWorkoutRaw {
 function mapTrainingError(code: string): string {
   switch (code) {
     case 'pro_required':
-      return 'AI 训练计划生成（包含高级训练计划）是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
+      return 'AI TrainingAI training plan generation, including advanced plans, is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
     case 'max_required':
-      return 'AI 训练计划生成（包含高级训练计划）是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
+      return 'AI TrainingAI training plan generation, including advanced plans, is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
     case 'quota_exceeded':
-      return '本月 AI 计划生成额度已用完。';
+      return 'This month’s AI plan generation limit has been reached.';
     default:
-      return code || '生成失败，请稍后重试。';
+      return code || 'Generation failed. Please try again later.';
   }
 }
 
@@ -130,14 +130,14 @@ const initialForm = (): FormState => ({
 });
 
 const REST_DAYS: { value: string; label: string }[] = [
-  { value: '', label: '不指定' },
-  { value: 'monday', label: '周一' },
-  { value: 'tuesday', label: '周二' },
-  { value: 'wednesday', label: '周三' },
-  { value: 'thursday', label: '周四' },
-  { value: 'friday', label: '周五' },
-  { value: 'saturday', label: '周六' },
-  { value: 'sunday', label: '周日' },
+  { value: '', label: 'No preference' },
+  { value: 'monday', label: 'Monday' },
+  { value: 'tuesday', label: 'Tuesday' },
+  { value: 'wednesday', label: 'Wednesday' },
+  { value: 'thursday', label: 'Thursday' },
+  { value: 'friday', label: 'Friday' },
+  { value: 'saturday', label: 'Saturday' },
+  { value: 'sunday', label: 'Sunday' },
 ];
 
 function parseOptionalNumberInput(value: string): number | '' {
@@ -153,18 +153,18 @@ function clampOptionalNumber(value: number | '', min: number, max: number): numb
 
 function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.weekStartDate)) {
-    return { error: '请选择周一日期' };
+    return { error: 'Please select a Monday' };
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.weekStartDate)!;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  if (d.getDay() !== 1) return { error: '周一日期必须是周一' };
-  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: '每周训练天数需为 1–7' };
-  if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) return { error: '至少选择一项训练项目' };
+  if (d.getDay() !== 1) return { error: 'The start date must be a Monday' };
+  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: 'Training days per weekneed 1–7' };
+  if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) return { error: 'Select at least one sport' };
   if (f.weeklyMaxMinutes !== '' && (f.weeklyMaxMinutes < 15 || f.weeklyMaxMinutes > 1200)) {
-    return { error: '每周时长上限需为 15–1200 分钟' };
+    return { error: 'Weekly duration limitneed 15–1200 minutes' };
   }
   if (f.dailyPreferredMinutes !== '' && (f.dailyPreferredMinutes < 15 || f.dailyPreferredMinutes > 1200)) {
-    return { error: '每日偏好时长需为 15–1200 分钟' };
+    return { error: 'Preferred daily durationneed 15–1200 minutes' };
   }
 
   const sportPriorities: Sport[] | undefined =
@@ -216,9 +216,9 @@ function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkoutRaw {
         ? null
         : Number(raw.distanceKm),
     targetMetric: String(raw.targetMetric ?? 'none'),
-    targetHeartRate: String(raw.targetHeartRate ?? '不适用'),
-    targetPace: String(raw.targetPace ?? '不适用'),
-    targetPower: String(raw.targetPower ?? '不适用'),
+    targetHeartRate: String(raw.targetHeartRate ?? 'N/A'),
+    targetPace: String(raw.targetPace ?? 'N/A'),
+    targetPower: String(raw.targetPower ?? 'N/A'),
     workoutStructure: String(raw.workoutStructure ?? ''),
     targets: Array.isArray(raw.targets) ? (raw.targets as string[]) : [],
     estimatedTrainingLoad: readWorkoutEstimatedTrainingLoad(
@@ -233,66 +233,66 @@ function mapStreamedWorkout(raw: Record<string, unknown>): StreamedWorkoutRaw {
 type TrainingModeSport = 'running' | 'cycling' | 'swimming';
 
 const SPORT_OPTIONS: { k: TrainingModeSport; label: string; field: keyof FormState }[] = [
-  { k: 'running', label: '跑步', field: 'sportRunning' },
-  { k: 'cycling', label: '骑行', field: 'sportCycling' },
-  { k: 'swimming', label: '游泳', field: 'sportSwimming' },
+  { k: 'running', label: 'Running', field: 'sportRunning' },
+  { k: 'cycling', label: 'Cycling', field: 'sportCycling' },
+  { k: 'swimming', label: 'Swimming', field: 'sportSwimming' },
 ];
 
 type TrainingMode = {
   name: string;
   phrase: string;
-  kind: '基础' | '高级' | '专项';
+  kind: 'Base' | 'Advanced' | 'Specialized';
 };
 
 const TRAINING_MODE_GROUPS: Record<TrainingModeSport, { title: string; modes: TrainingMode[] }> = {
   running: {
-    title: '跑步训练模式',
+    title: 'RunningTrainingMode',
     modes: [
-      { name: '恢复跑', phrase: '安排一次恢复跑', kind: '基础' },
-      { name: '普通有氧跑', phrase: '安排一次有氧跑', kind: '基础' },
-      { name: 'LSD 长距离', phrase: '安排一次 LSD 长距离跑', kind: '基础' },
-      { name: 'Tempo 节奏跑', phrase: '安排一次节奏跑', kind: '专项' },
-      { name: '阈值跑', phrase: '安排一次阈值跑', kind: '专项' },
-      { name: '短间歇 400/800m', phrase: '安排一次 400/800 米间歇', kind: '高级' },
-      { name: '倒金字塔间歇', phrase: '安排一次倒金字塔', kind: '高级' },
-      { name: 'VO2max 间歇', phrase: '安排一次跑步 VO2max', kind: '高级' },
-      { name: '上坡冲刺', phrase: '安排一次上坡冲刺', kind: '高级' },
-      { name: 'Strides 大步跑', phrase: '安排一次大步跑', kind: '高级' },
-      { name: '渐进跑', phrase: '安排一次渐进跑', kind: '专项' },
-      { name: '比赛配速专项', phrase: '安排一次比赛配速专项', kind: '专项' },
-      { name: '双阈值 AM/PM', phrase: '安排一次双阈值', kind: '高级' },
+      { name: 'Recovery run', phrase: 'onetimesRecovery run', kind: 'Base' },
+      { name: 'Easy aerobic run', phrase: 'Schedule an aerobic run', kind: 'Base' },
+      { name: 'LSD Long run', phrase: 'onetimes LSD Long run', kind: 'Base' },
+      { name: 'Tempo Tempo run', phrase: 'onetimesTempo run', kind: 'Specialized' },
+      { name: 'Threshold run', phrase: 'onetimesThreshold run', kind: 'Specialized' },
+      { name: 'Short intervals 400/800m', phrase: 'Schedule 400/800 m intervals', kind: 'Advanced' },
+      { name: 'Reverse pyramid intervals', phrase: 'Schedule reverse pyramid intervals', kind: 'Advanced' },
+      { name: 'VO2max intervals', phrase: 'Schedule a running VO2max session', kind: 'Advanced' },
+      { name: 'Uphill sprints', phrase: 'onetimesUphill sprints', kind: 'Advanced' },
+      { name: 'Strides Strides', phrase: 'onetimesStrides', kind: 'Advanced' },
+      { name: 'Progression run', phrase: 'onetimesProgression run', kind: 'Specialized' },
+      { name: 'Race-pace workout', phrase: 'onetimesRace-pace workout', kind: 'Specialized' },
+      { name: 'Double threshold AM/PM', phrase: 'Schedule a double-threshold session', kind: 'Advanced' },
     ],
   },
   cycling: {
-    title: '骑行训练模式',
+    title: 'CyclingTrainingMode',
     modes: [
-      { name: '恢复骑', phrase: '安排一次恢复骑', kind: '基础' },
-      { name: 'Z2 耐力骑', phrase: '安排一次 Z2 耐力骑', kind: '基础' },
-      { name: '长距离耐力骑', phrase: '安排一次长骑', kind: '基础' },
-      { name: 'Tempo 骑', phrase: '安排一次 Tempo 骑', kind: '专项' },
-      { name: '甜区骑', phrase: '安排一次甜区骑', kind: '专项' },
-      { name: '阈值骑', phrase: '安排一次阈值骑', kind: '专项' },
-      { name: 'VO2max 骑', phrase: '安排一次骑行 VO2max', kind: '高级' },
-      { name: '无氧容量 / 30-15', phrase: '安排一次 30/15', kind: '高级' },
-      { name: '冲刺骑', phrase: '安排一次冲刺骑', kind: '高级' },
-      { name: '踏频技术骑', phrase: '安排一次踏频技术骑', kind: '基础' },
-      { name: '爬坡专项骑', phrase: '安排一次爬坡骑', kind: '高级' },
-      { name: 'Over-under / Criss-cross', phrase: '安排一次 over-under', kind: '高级' },
+      { name: 'Recovery ride', phrase: 'onetimesRecovery ride', kind: 'Base' },
+      { name: 'Z2 Endurance ride', phrase: 'onetimes Z2 Endurance ride', kind: 'Base' },
+      { name: 'Long runEndurance ride', phrase: 'Schedule a long ride', kind: 'Base' },
+      { name: 'Tempo ', phrase: 'Schedule a tempo ride', kind: 'Specialized' },
+      { name: 'Sweet-spot ride', phrase: 'onetimesSweet-spot ride', kind: 'Specialized' },
+      { name: 'Threshold ride', phrase: 'onetimesThreshold ride', kind: 'Specialized' },
+      { name: 'VO2max ', phrase: 'Schedule a cycling VO2max session', kind: 'Advanced' },
+      { name: 'NoneVO2max / 30-15', phrase: 'onetimes 30/15', kind: 'Advanced' },
+      { name: 'Sprint ride', phrase: 'Schedule a sprint ride', kind: 'Advanced' },
+      { name: 'Cadence technique ride', phrase: 'onetimesCadence technique ride', kind: 'Base' },
+      { name: 'Climbing workout', phrase: 'Schedule a climbing ride', kind: 'Advanced' },
+      { name: 'Over-under / Criss-cross', phrase: 'onetimes over-under', kind: 'Advanced' },
     ],
   },
   swimming: {
-    title: '游泳训练模式',
+    title: 'SwimmingTrainingMode',
     modes: [
-      { name: '恢复游', phrase: '安排一次恢复游', kind: '基础' },
-      { name: '技术游', phrase: '安排一次技术游', kind: '基础' },
-      { name: '有氧游', phrase: '安排一次有氧游', kind: '基础' },
-      { name: '长组耐力游', phrase: '安排一次长组耐力游', kind: '基础' },
-      { name: 'CSS / 阈值游', phrase: '安排一次 CSS 阈值游', kind: '专项' },
-      { name: 'VO2max 游', phrase: '安排一次游泳 VO2max', kind: '高级' },
-      { name: '短冲游', phrase: '安排一次 50 米冲刺游', kind: '高级' },
-      { name: '划手专项', phrase: '安排一次划手专项', kind: '专项' },
-      { name: '打腿专项', phrase: '安排一次打腿专项', kind: '专项' },
-      { name: '公开水域专项', phrase: '安排一次公开水域专项', kind: '高级' },
+      { name: 'Recovery swim', phrase: 'onetimesRecovery swim', kind: 'Base' },
+      { name: 'Technique swim', phrase: 'onetimesTechnique swim', kind: 'Base' },
+      { name: 'Aerobic swim', phrase: 'onetimesAerobic swim', kind: 'Base' },
+      { name: 'Long-set endurance swim', phrase: 'onetimesLong-set endurance swim', kind: 'Base' },
+      { name: 'CSS / Threshold swim', phrase: 'onetimes CSS Threshold swim', kind: 'Specialized' },
+      { name: 'VO2max ', phrase: 'Schedule a swimming VO2max session', kind: 'Advanced' },
+      { name: 'Sprint swim', phrase: 'Schedule 50 m sprints', kind: 'Advanced' },
+      { name: 'Pull-focused workout', phrase: 'onetimesPull-focused workout', kind: 'Specialized' },
+      { name: 'Kick-focused workout', phrase: 'onetimesKick-focused workout', kind: 'Specialized' },
+      { name: 'Open-water workout', phrase: 'onetimesOpen-water workout', kind: 'Advanced' },
     ],
   },
 };
@@ -443,7 +443,7 @@ export default function NewTrainingPlanPage() {
             ? (data.message as string)
             : data && typeof data.error === 'string'
               ? (data.error as string)
-              : '生成失败';
+              : 'GenerateFailed';
         fatalRef.current = mapTrainingError(msg);
         abortRef.current?.abort();
         return;
@@ -487,9 +487,9 @@ export default function NewTrainingPlanPage() {
           'training_plan_limit_reached'
       ) {
         const limit = (errObj as Error & { detail?: { limit?: number } }).detail?.limit ?? 10;
-        fatalRef.current = `最多同时保留 ${limit} 份训练计划。请先删除旧计划后再新建。`;
+        fatalRef.current = `You can keep at most ${limit} training plans at once. Delete an old plan before creating a new one.`;
       } else if (!ctrl.signal.aborted) {
-        fatalRef.current = errObj.message || '生成失败';
+        fatalRef.current = errObj.message || 'GenerateFailed';
       }
     }
 
@@ -504,7 +504,7 @@ export default function NewTrainingPlanPage() {
         router.push(`/training/${planIdRef.current}`);
       }, 900);
     } else {
-      setError('生成已完成，但未获取到计划 ID。请回到列表页查看。');
+      setError('GenerateCompleted，Get toplan ID。Please tolistView 。');
       setView('form');
     }
   }
@@ -523,42 +523,42 @@ export default function NewTrainingPlanPage() {
   if (view !== 'form') {
     const allDone = workouts.size >= (days?.length ?? 0) && (days?.length ?? 0) > 0;
     const statusLabel = view === 'finishing'
-      ? '准备就绪，跳转中…'
+      ? 'Ready. Redirecting…'
       : allDone
-        ? '所有日程已就绪'
-        : '正在生成…';
+        ? 'All sessions are ready'
+        : 'Generating…';
     const statusTone = view === 'finishing' || allDone ? 'green' as const : 'cyan' as const;
     return (
       <>
         <div style={{ marginBottom: 18 }}>
           <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
-            // 生成中… 取消即返回填写表单
+            // Generatein progress… Cancel to return to the form
           </span>
         </div>
 
         <PageHero
-          eyebrow="AI 正在工作"
-          title="生成本周计划"
-          sub="AI 教练正在读取你的 Garmin 数据、编排日程并配置每一节课。整个过程透明可见 ↓"
+          eyebrow="AI Working"
+          title="GenerateThis week’s plan"
+          sub="AI CoachReading your Garmin data, arranging the schedule, and configuring each workout. The process is fully visible ↓"
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
           <Card style={{ padding: 22 }}>
             <CardHeader
-              eyebrow="本周日程"
-              title="周一 → 周日"
+              eyebrow="This week’s plan"
+              title="Monday → Sunday"
               right={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {streamedEstimatedTrainingLoad != null && (
                     <span style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
-                      预计负荷 {streamedEstimatedTrainingLoad}
+                      Estimated load {streamedEstimatedTrainingLoad}
                     </span>
                   )}
                   <span
                     className={view === 'staging' && !allDone ? 'track-blink' : ''}
                     style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}
                   >
-                    ● {workouts.size}/{days?.length ?? 7} 已生成
+                    ● {workouts.size}/{days?.length ?? 7} Generated
                   </span>
                 </div>
               }
@@ -582,11 +582,11 @@ export default function NewTrainingPlanPage() {
             events={eventsArray}
             summaryText={summary}
             status={{ label: statusLabel, anim: view === 'staging' && !allDone, tone: statusTone }}
-            eyebrow="AI 实时过程"
-            title="AI 教练"
+            eyebrow="AI Live process"
+            title="AI Coach"
             footer={
               view === 'staging' ? (
-                <Btn variant="ghost" size="sm" onClick={handleCancel}>取消并返回</Btn>
+                <Btn variant="ghost" size="sm" onClick={handleCancel}>Canceland go back</Btn>
               ) : null
             }
           />
@@ -600,14 +600,14 @@ export default function NewTrainingPlanPage() {
     <>
       <div style={{ marginBottom: 18 }}>
         <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← 返回列表
+          ← Backlist
         </Link>
       </div>
 
       <PageHero
-        eyebrow="新建计划"
-        title="新建训练计划"
-        sub="AI 训练计划生成是 Max 功能；未开通 Max 也可以浏览和填写，点击生成时会提示升级。"
+        eyebrow="New plan"
+        title="Create training plan"
+        sub="AI TrainingTraining plan generation is a Max feature. You can browse and fill out the form without Max; clicking Generate will prompt you to upgrade."
       />
 
       {error && (
@@ -618,9 +618,9 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="基础设置" title="基础设置" />
+          <CardHeader eyebrow="Basic settings" title="Basic settings" />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-            <Field label="运动项目" full>
+            <Field label="Sports" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {SPORT_OPTIONS.map((s) => {
                   const active = form[s.field] as boolean;
@@ -643,16 +643,16 @@ export default function NewTrainingPlanPage() {
               <TrainingModeGuide selectedSports={selectedSports.map((s) => s.k)} />
             </Field>
 
-            <Field label="目标">
+            <Field label="Goal">
               <TrackInput
                 value={form.goal}
                 onChange={(e) => setField('goal', e.target.value)}
                 maxLength={500}
-                placeholder="半马 PB / 完成首场全马 / 提升耐力"
+                placeholder="Half-marathon PB / first completed marathon / improve endurance"
               />
             </Field>
 
-            <Field label="目标距离">
+            <Field label="GoalDistance">
               <TrackInput
                 mono
                 value={form.goalDistance}
@@ -662,7 +662,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="周一日期">
+            <Field label="Monday date">
               <TrackInput
                 type="date"
                 value={form.weekStartDate}
@@ -671,7 +671,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="比赛日期(可选)">
+            <Field label="Race date(optional)">
               <TrackInput
                 type="date"
                 value={form.raceDate}
@@ -679,7 +679,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label={`每周训练天数 · ${form.daysPerWeek} 天`} full>
+            <Field label={`Training days per week · ${form.daysPerWeek} days`} full>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                   <button key={d} type="button" onClick={() => setField('daysPerWeek', d)} style={{
@@ -693,7 +693,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="偏好休息日">
+            <Field label="Preferred rest days">
               <TrackSelect
                 value={form.preferredRestDay}
                 onChange={(e) => setField('preferredRestDay', e.target.value)}
@@ -704,24 +704,24 @@ export default function NewTrainingPlanPage() {
               </TrackSelect>
             </Field>
 
-            <Field label="主项目">
+            <Field label="Primary sport">
               <TrackSelect
                 value={form.sportPriority}
                 onChange={(e) => setField('sportPriority', e.target.value as SportPriorityChoice)}
               >
-                <option value="auto">自动</option>
-                <option value="running">跑步优先</option>
-                <option value="cycling">骑行优先</option>
-                <option value="swimming">游泳优先</option>
+                <option value="auto">Auto</option>
+                <option value="running">Runningpreferred</option>
+                <option value="cycling">Cyclingpreferred</option>
+                <option value="swimming">Swimmingpreferred</option>
               </TrackSelect>
             </Field>
 
-            <Field label="主指标偏好" full>
+            <Field label="Primary metric" full>
               <div style={{ display: 'flex', gap: 8 }}>
                 {([
-                  { v: 'auto', label: '自动' },
-                  { v: 'heart_rate', label: '心率优先' },
-                  { v: 'pace', label: '配速优先' },
+                  { v: 'auto', label: 'Auto' },
+                  { v: 'heart_rate', label: 'Heart rate first' },
+                  { v: 'pace', label: 'Pace first' },
                 ] as const).map((opt) => {
                   const active = form.targetMetricPreference === opt.v;
                   return (
@@ -741,7 +741,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="每周高强度上限">
+            <Field label="Weekly high-intensity limit">
               <TrackInput
                 type="number"
                 min={0}
@@ -754,11 +754,11 @@ export default function NewTrainingPlanPage() {
                     v === '' ? '' : Math.max(0, Math.min(7, Number(v))),
                   );
                 }}
-                placeholder="留空 = 自动"
+                placeholder="Leave blank = Auto"
               />
             </Field>
 
-            <Field label="每日偏好时长">
+            <Field label="Preferred daily duration">
               <TrackInput
                 type="number"
                 min={15}
@@ -770,11 +770,11 @@ export default function NewTrainingPlanPage() {
                 onBlur={() => {
                   setField('dailyPreferredMinutes', clampOptionalNumber(form.dailyPreferredMinutes, 15, 1200));
                 }}
-                placeholder="例：75"
+                placeholder="：75"
               />
             </Field>
 
-            <Field label="每周时长上限">
+            <Field label="Weekly duration limit">
               <TrackInput
                 type="number"
                 min={15}
@@ -786,29 +786,29 @@ export default function NewTrainingPlanPage() {
                 onBlur={() => {
                   setField('weeklyMaxMinutes', clampOptionalNumber(form.weeklyMaxMinutes, 15, 1200));
                 }}
-                placeholder="默认 1200"
+                placeholder="Default 1200"
               />
             </Field>
 
-            <Field label="可用时间(可选)">
+            <Field label="Available time(optional)">
               <TrackInput
                 value={form.availableTime}
                 onChange={(e) => setField('availableTime', e.target.value)}
                 maxLength={200}
-                placeholder="工作日 60 分钟 / 周末 90+ 分钟"
+                placeholder="60 minutes on weekdays / 90+ minutes on weekends"
               />
             </Field>
 
-            <Field label="偏好时段">
+            <Field label="Preferred time">
               <TrackInput
                 value={form.preferredTrainingWindows}
                 onChange={(e) => setField('preferredTrainingWindows', e.target.value)}
                 maxLength={200}
-                placeholder="上午, 晚上"
+                placeholder="Morning, Evening"
               />
             </Field>
 
-            <Field label="高级训练" full>
+            <Field label="Advanced training" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -818,11 +818,11 @@ export default function NewTrainingPlanPage() {
                     if (!e.target.checked) setField('allowDoubleDays', false);
                   }}
                 />
-                允许 VO2max、短间歇、无氧、冲刺、坡跑/爬坡、比赛专项等高级课
+                Allowed VO2max、Advanced workouts such as short intervals, VO2max, sprints, hills, and race-specific sessions
               </label>
             </Field>
 
-            <Field label="多时段/一天多练" full>
+            <Field label="Multiple sessions / double days" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -830,65 +830,65 @@ export default function NewTrainingPlanPage() {
                   disabled={!form.allowAdvancedWorkouts}
                   onChange={(e) => setField('allowDoubleDays', e.target.checked)}
                 />
-                允许同一天安排两练，包括双阈值；仅在高级训练开启后生效
+                Allowedonedays，threshold；inAdvanced trainingOn
               </label>
             </Field>
 
-            <Field label="严格按要求生成" full>
+            <Field label="Generate strictly to requirements" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
                   checked={form.forceRequestedSchedule}
                   onChange={(e) => setField('forceRequestedSchedule', e.target.checked)}
                 />
-                默认开启：按我填写的训练天数、时长和强度意图生成；容量/恢复问题只保留风险提示
+                DefaultOn：Generate according to the training days, duration, and intensity preferences entered; show capacity and recovery issues as warnings only
               </label>
             </Field>
 
-            <Field label="伤病禁忌" full>
+            <Field label="Injury constraints" full>
               <TrackTextarea
                 value={form.injuries}
                 onChange={(e) => setField('injuries', e.target.value)}
                 maxLength={500}
                 rows={2}
-                placeholder="例：左膝软骨敏感，避免大量下坡"
+                placeholder="Example: sensitive left knee cartilage; avoid extensive downhill running"
               />
             </Field>
 
-            <Field label="备注" full>
+            <Field label="Notes" full>
               <TrackTextarea
                 value={form.notes}
                 onChange={(e) => setField('notes', e.target.value)}
                 maxLength={2000}
                 rows={3}
-                placeholder="任何想让 AI 教练知道的事…"
+                placeholder="Anything you want the AI Coach to know…"
               />
             </Field>
 
             <div style={{ gridColumn: '1 / -1', marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
               <Link href="/training" style={{ textDecoration: 'none' }}>
-                <Btn variant="ghost" type="button">返回</Btn>
+                <Btn variant="ghost" type="button">Back</Btn>
               </Link>
               <Btn type="submit">
-                生成计划 →
+                Generateplan →
               </Btn>
             </div>
           </form>
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="AI 预览" title="AI 将基于以下输入" />
+          <CardHeader eyebrow="AI Preview" title="AI willEnter " />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <Row k="周一日期" v={form.weekStartDate} c={T.lime} />
-            <Row k="每周天数" v={`${form.daysPerWeek} 天`} />
-            <Row k="运动项目" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].label).join(' · ') : '—'} c={T.cyan} />
-            <Row k="主项目" v={form.sportPriority === 'auto' ? '自动' : SPORT_META[form.sportPriority as SportKind].label} />
-            <Row k="主指标" v={form.targetMetricPreference === 'auto' ? '自动' : form.targetMetricPreference === 'heart_rate' ? '心率优先' : '配速优先'} />
-            <Row k="高强度" v={form.maxHardSessionsPerWeek === '' ? '自动' : `${form.maxHardSessionsPerWeek} 次/周`} />
-            <Row k="周时长" v={form.weeklyMaxMinutes === '' ? '默认 1200 分钟' : `${form.weeklyMaxMinutes} 分钟`} />
-            <Row k="高级课" v={form.allowAdvancedWorkouts ? '允许' : '关闭'} />
-            <Row k="多练" v={form.allowDoubleDays ? '允许' : '关闭'} />
-            <Row k="严格模式" v={form.forceRequestedSchedule ? '开启' : '关闭'} c={form.forceRequestedSchedule ? T.amber : undefined} />
+            <Row k="Monday date" v={form.weekStartDate} c={T.lime} />
+            <Row k="Days per week" v={`${form.daysPerWeek} days`} />
+            <Row k="Sports" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].label).join(' · ') : '—'} c={T.cyan} />
+            <Row k="Primary sport" v={form.sportPriority === 'auto' ? 'Auto' : SPORT_META[form.sportPriority as SportKind].label} />
+            <Row k="Primary metric" v={form.targetMetricPreference === 'auto' ? 'Auto' : form.targetMetricPreference === 'heart_rate' ? 'Heart rate first' : 'Pace first'} />
+            <Row k="High intensity" v={form.maxHardSessionsPerWeek === '' ? 'Auto' : `${form.maxHardSessionsPerWeek} sessions/week`} />
+            <Row k="Weekly duration" v={form.weeklyMaxMinutes === '' ? 'Default 1200 minutes' : `${form.weeklyMaxMinutes} minutes`} />
+            <Row k="Advanced workouts" v={form.allowAdvancedWorkouts ? 'Allowed' : 'Close'} />
+            <Row k="Double days" v={form.allowDoubleDays ? 'Allowed' : 'Close'} />
+            <Row k="Strict mode" v={form.forceRequestedSchedule ? 'On' : 'Close'} c={form.forceRequestedSchedule ? T.amber : undefined} />
           </div>
           <div style={{
             marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,
@@ -896,7 +896,7 @@ export default function NewTrainingPlanPage() {
             border: `1px solid ${T.border}`, borderRadius: 6,
           }}>
             <span style={{ color: T.cyan }}>● </span>
-            点击生成后会进入 AI 教练界面，逐条展示数据加载、日程编排、参数化与校验等步骤。
+            After clicking Generate, the AI Coach view will show data loading, schedule planning, parameterization, and validation step by step.
           </div>
         </Card>
       </div>
@@ -931,8 +931,8 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
         fontSize: 12,
         lineHeight: 1.6,
       }}>
-        如果想要某种训练，可以在备注里直接指定，例如「安排一次跑步 VO2max」或「本周要一次 over-under」。
-        高级课建议同时开启下方「高级训练」，高时长计划建议开启「一天多练」。
+        ifneedTraining，caninNotesdirectly，For example「Schedule a running VO2max session」or「weekneedonetimes over-under」。
+        Advanced workoutssuggestionsOnbelow「Advanced training」，DurationplansuggestionsOn「onedaysDouble days」。
       </div>
 
       {selectedSports.map((sport) => {
@@ -971,7 +971,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
             >
               <span>{group.title}</span>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.1 }}>
-                {group.modes.length} 种 · {isOpen ? '点击收起' : '点击展开'}
+                {group.modes.length} types · {isOpen ? 'Click to collapse' : 'Click to expand'}
               </span>
             </summary>
             <div style={{
@@ -991,7 +991,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                     background: 'rgba(255,255,255,0.025)',
                     minWidth: 0,
                   }}
-                  title={`备注示例：${mode.phrase}`}
+                  title={`Notes example: ${mode.phrase}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>
@@ -1001,8 +1001,8 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                       flexShrink: 0,
                       fontFamily: T.mono,
                       fontSize: 9,
-                      color: mode.kind === '高级' ? T.amber : mode.kind === '专项' ? T.cyan : T.inkFaint,
-                      border: `1px solid ${mode.kind === '高级' ? T.amber : mode.kind === '专项' ? T.cyan : T.border}55`,
+                      color: mode.kind === 'Advanced' ? T.amber : mode.kind === 'Specialized' ? T.cyan : T.inkFaint,
+                      border: `1px solid ${mode.kind === 'Advanced' ? T.amber : mode.kind === 'Specialized' ? T.cyan : T.border}55`,
                       borderRadius: 4,
                       padding: '1px 5px',
                     }}>

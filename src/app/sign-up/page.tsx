@@ -13,15 +13,15 @@ const PROMO_FREE_MAX_END = new Date('2026-06-15T23:59:59Z');
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('username') && (m.includes('taken') || m.includes('exists') || m.includes('already'))) {
-    return '昵称已被占用，请换一个';
+    return 'usernameAlready taken. Please choose another.';
   }
   if (m.includes('email') && (m.includes('exists') || m.includes('already') || m.includes('taken'))) {
-    return '该邮箱已注册，请直接登录或找回密码';
+    return 'That email is already registered. Sign in or reset your password.';
   }
   if (m.includes('username') && m.includes('invalid')) {
-    return '昵称只能用中英文 / 数字 / _ - ，2-30 位';
+    return 'usernameUse letters, numbers, _ - ，2-30 ';
   }
-  if (m.includes('password') && m.includes('short')) return '密码至少 8 位';
+  if (m.includes('password') && m.includes('short')) return 'Password must be at least 8 characters';
   return message;
 }
 
@@ -49,15 +49,15 @@ function SignUpForm() {
     setError(null);
 
     if (!NAME_RE.test(username)) {
-      setError('昵称只能用中英文 / 数字 / _ - ，2-30 位');
+      setError('usernameUse letters, numbers, _ - ，2-30 ');
       return;
     }
     if (password !== confirm) {
-      setError('两次输入的密码不一致');
+      setError('Passwords do not match');
       return;
     }
     if (password.length < 8) {
-      setError('密码至少 8 位');
+      setError('Password must be at least 8 characters');
       return;
     }
 
@@ -71,7 +71,7 @@ function SignUpForm() {
     } as never);
     setLoading(false);
     if (err) {
-      setError(humanizeError(err.message ?? '注册失败'));
+      setError(humanizeError(err.message ?? 'Sign-up failed'));
       return;
     }
     if (ref) {
@@ -103,7 +103,7 @@ function SignUpForm() {
             background: 'rgba(198,255,58,0.08)', border: `1px solid ${T.lime}30`,
             fontSize: 12, color: T.lime, fontFamily: T.mono, letterSpacing: 0.5,
           }}>
-            你被好友邀请加入 Garmin Trainer
+            A friend invited you to Garmin Trainer
           </div>
         )}
 
@@ -113,15 +113,15 @@ function SignUpForm() {
             background: 'rgba(198,255,58,0.10)', border: `1px solid ${T.lime}50`,
             fontSize: 12, color: T.ink, lineHeight: 1.6,
           }}>
-            <span style={{ color: T.lime, fontFamily: T.mono, letterSpacing: 0.5 }}>限时活动 · </span>
-            注册即享免费 <span style={{ color: T.lime, fontWeight: 700 }}>Max</span> 会员至 2026-06-15
+            <span style={{ color: T.lime, fontFamily: T.mono, letterSpacing: 0.5 }}>Limited-time offer · </span>
+            Sign up to get Free <span style={{ color: T.lime, fontWeight: 700 }}>Max</span> membership through 2026-06-15
           </div>
         )}
 
-        <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>注册账号</h1>
+        <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Sign-up account</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
-          已有账号？
-          <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>直接登录</Link>
+          Already have an account?
+          <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>Sign in</Link>
         </p>
 
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -130,7 +130,7 @@ function SignUpForm() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="2-30 位 · 中英文 / 数字 / _ -"
+              placeholder="2-30  · letters / numbers / _ -"
             />
           </Field>
 
@@ -164,7 +164,7 @@ function SignUpForm() {
             />
             {confirm && password !== confirm && (
               <div style={{ fontFamily: T.mono, fontSize: 10, color: T.red, letterSpacing: 1, marginTop: 4 }}>
-                ! 密码不一致
+                ! passwords do not match
               </div>
             )}
           </Field>
@@ -172,7 +172,7 @@ function SignUpForm() {
           {error && <Banner kind="error" code="ERR">{error}</Banner>}
 
           <Btn type="submit" disabled={loading} style={{ marginTop: 4 }}>
-            {loading ? '注册中…' : '创建账号 →'}
+            {loading ? 'Creating account…' : 'Create account →'}
           </Btn>
         </form>
       </div>

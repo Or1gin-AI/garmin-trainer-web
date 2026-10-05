@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 const API_URL = process.env.NODE_ENV === 'production'
   ? ''
   : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-const BIND_LIMIT_NOTICE = '绑定成功后，同一区域 7 天内只能绑定一次 Garmin 账号。请确认这是你自己的账号后再登录。';
+const BIND_LIMIT_NOTICE = 'After successful linking，oneRegion 7 dayswithinonlyonetimes Garmin Account。Please ConfirmThis isAccountSign in。';
 
 type Tone = 'info' | 'warning' | 'danger' | 'success';
 type SsoMessage = {
@@ -29,7 +29,7 @@ export default function GarminConnectPage() {
     | 'global'
     | null;
 
-  const [status, setStatus] = useState('正在加载 Garmin 登录表单…');
+  const [status, setStatus] = useState('Loading Garmin sign-in form…');
   const [tone, setTone] = useState<Tone>('info');
   const [error, setError] = useState<string | null>(null);
   const submitted = useRef(false);
@@ -40,7 +40,7 @@ export default function GarminConnectPage() {
     setTone(t);
   }, []);
 
-  const invalidRegionError = !region ? '无效区域，请回到上一页重新选择' : null;
+  const invalidRegionError = !region ? 'Invalid region. Go back and choose again.' : null;
 
   useEffect(() => {
     if (!region) return;
@@ -100,7 +100,7 @@ export default function GarminConnectPage() {
     const submitTicket = async (ticket: string, serviceUrl: string | null) => {
       if (submitted.current) return;
       submitted.current = true;
-      setStatusMessage('登录成功，正在与服务器绑定…', 'success');
+      setStatusMessage('Sign-in successful. Linking to the server…', 'success');
       try {
         const res = await fetch(`${API_URL}/api/garmin/callback/${region}`, {
           method: 'POST',
@@ -120,8 +120,8 @@ export default function GarminConnectPage() {
           throw new Error(
             data.error ||
               (res.status === 401
-                ? '登录态已过期，请重新登录后再连接 Garmin'
-                : '绑定失败，请稍后重试'),
+                ? 'Sign in，Please new Sign inConnect Garmin'
+                : 'Linking failed. Please try again.'),
           );
         }
         const name = data.profile?.fullName || data.profile?.userName || '';
@@ -148,7 +148,7 @@ export default function GarminConnectPage() {
 
       if (typeof parsed.gauthInitHeight === 'number') {
         iframe.style.height = `${Number(parsed.gauthInitHeight) + 20}px`;
-        setStatusMessage('Garmin 官方登录表单已加载，请直接在下方完成登录');
+        setStatusMessage('The official Garmin sign-in form is loaded. Complete sign-in below.');
         return;
       }
       if (typeof parsed.gauthHeight === 'number') {
@@ -156,7 +156,7 @@ export default function GarminConnectPage() {
         return;
       }
       if (parsed.openLiteBox) {
-        setStatusMessage('Garmin 打开了附加验证（图形验证码），请在下方页面继续', 'warning');
+        setStatusMessage('Garmin opened an additional verification step. Continue below.', 'warning');
         return;
       }
 
@@ -174,19 +174,19 @@ export default function GarminConnectPage() {
         // SUCCESS-without-ticket branch only fires when redirectAfter* is set,
         // and that path also does top.location.href which would have
         // navigated us away anyway.
-        setStatusMessage('Garmin 返回成功但缺 ticket，请刷新页面重试', 'danger');
+        setStatusMessage('Garmin returned successfully but no ticket was provided. Refresh and try again.', 'danger');
         return;
       }
       if (status === 'FAIL') {
-        setStatusMessage('账号或密码错误，请在下方表单中重新输入', 'danger');
+        setStatusMessage('Account or password is incorrect. Re-enter it below.', 'danger');
         return;
       }
       if (status === 'ACCOUNT_LOCKED') {
-        setStatusMessage('Garmin 账号被暂时锁定，请稍后再试', 'danger');
+        setStatusMessage('The Garmin account is temporarily locked. Try again later.', 'danger');
         return;
       }
       if (status === 'ACCOUNT_DISABLED') {
-        setStatusMessage('Garmin 账号不可用，请先在官方页面确认账号状态', 'danger');
+        setStatusMessage('The Garmin account is unavailable. Confirm its status on the official Garmin page.', 'danger');
         return;
       }
     };
@@ -205,7 +205,7 @@ export default function GarminConnectPage() {
     success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
   }[tone];
 
-  const regionLabel = region === 'cn' ? '国区 (garmin.cn)' : region === 'global' ? '国际区 (garmin.com)' : '';
+  const regionLabel = region === 'cn' ? 'CN (garmin.cn)' : region === 'global' ? 'International (garmin.com)' : '';
   const displayError = invalidRegionError || error;
 
   return (
@@ -213,14 +213,14 @@ export default function GarminConnectPage() {
       <div className="max-w-2xl mx-auto space-y-6">
         <header>
           <Link href="/garmin" className="text-sm text-zinc-500 hover:text-zinc-900">
-            ← 返回
+            ← Back
           </Link>
-          <h1 className="text-2xl font-bold mt-2">连接 {regionLabel} Garmin</h1>
+          <h1 className="text-2xl font-bold mt-2">Connect  {regionLabel} Garmin</h1>
           <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-            下方登录表单由 Garmin 官方的 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 渲染。
+            The sign-in form below is rendered by Garmin at <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 。
           </p>
           <p className="text-sm text-red-600 mt-1 font-medium leading-relaxed">
-            你的 Garmin 密码直接提交到 <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>，不经过我们的服务器。我们只收到 Garmin 返回的一次性登录票据用于换取 OAuth 令牌。
+            Your Garmin password is submitted directly to <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>，we 。we to Garmin BackonetimesSign in OAuth 。
           </p>
         </header>
 
@@ -233,7 +233,7 @@ export default function GarminConnectPage() {
             {displayError}
             <div className="mt-3">
               <Link href="/garmin" className="text-emerald-600 hover:underline">
-                返回重试
+                Go back and retry
               </Link>
             </div>
           </div>

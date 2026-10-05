@@ -172,12 +172,12 @@ export default function AdminPage() {
   }
 
   async function grantMax(userId: string) {
-    const days = Number(prompt('授予多少天 Max？', '30'));
+    const days = Number(prompt('How many days of Max should be granted?', '30'));
     if (!days) return;
     try {
       await api.post('/api/admin/grant', { userId, plan: 'max', planDays: days });
       await refresh();
-      alert('已授予');
+      alert('Granted');
     } catch (e) {
       alert((e as Error).message);
     }
@@ -188,8 +188,8 @@ export default function AdminPage() {
       <div style={{ maxWidth: T.pageMaxW, margin: '0 auto' }}>
         <PageHero
           eyebrow="ADMIN.CONSOLE"
-          title="管理后台"
-          sub="生成卡密 · 管理用户 · 查看 AI 聊天记录 · 配置 AI 模型 · 查看用量"
+          title="Admin"
+          sub="Generate codes · Manage users · View AI chat records · Configure AI models · View usage"
         />
 
         <div style={{
@@ -197,16 +197,16 @@ export default function AdminPage() {
           borderBottom: `1px solid ${T.border}`,
         }}>
           <TabButton active={tab === 'users'} onClick={() => setTab('users')} code="USERS">
-            用户与聊天记录
+            Users and chat records
           </TabButton>
           <TabButton active={tab === 'codes'} onClick={() => setTab('codes')} code="CODES">
-            卡密
+            code
           </TabButton>
           <TabButton active={tab === 'ai'} onClick={() => setTab('ai')} code="AI.CFG">
-            AI 配置
+            AI configuration
           </TabButton>
           <TabButton active={tab === 'usage'} onClick={() => setTab('usage')} code="USAGE">
-            用量
+            Usage
           </TabButton>
         </div>
 
@@ -219,7 +219,7 @@ export default function AdminPage() {
         {tab === 'codes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Card style={{ padding: 24 }}>
-              <CardHeader eyebrow="CODES.GENERATE" title="生成卡密" />
+              <CardHeader eyebrow="CODES.GENERATE" title="Generatecode" />
               <form
                 onSubmit={generate}
                 style={{
@@ -271,12 +271,12 @@ export default function AdminPage() {
                   <TrackInput
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="可选"
+                    placeholder="optional"
                   />
                 </Field>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <Btn type="submit" disabled={busy}>
-                    {busy ? '生成中…' : '生成卡密 →'}
+                    {busy ? 'Generateing…' : 'Generatecode →'}
                   </Btn>
                 </div>
               </form>
@@ -312,7 +312,7 @@ export default function AdminPage() {
             <Card style={{ padding: 24 }}>
               <CardHeader
                 eyebrow="CODES.RECENT"
-                title="最近卡密"
+                title="Recent codes"
                 right={
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
                     {codes.length} ROWS
@@ -340,7 +340,7 @@ export default function AdminPage() {
                         <Td>
                           {c.usedBy ? (
                             <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim }}>
-                              {new Date(c.usedAt!).toLocaleDateString('zh-CN')} · {c.usedBy.slice(0, 8)}
+                              {new Date(c.usedAt!).toLocaleDateString('en-US')} · {c.usedBy.slice(0, 8)}
                             </span>
                           ) : (
                             <span style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>● UNUSED</span>
@@ -433,11 +433,11 @@ function Td({
 }
 
 function fmtDateTime(value: string): string {
-  return new Date(value).toLocaleString('zh-CN');
+  return new Date(value).toLocaleString('en-US');
 }
 
 function pageRangeText(page: AdminPageMeta | null, count: number): string {
-  if (!page) return `${count} 条`;
+  if (!page) return `${count} `;
   if (page.total === 0) return '0 / 0';
   return `${page.offset + 1}-${page.offset + count} / ${page.total}`;
 }
@@ -488,12 +488,12 @@ function StatusPill({ status }: { status: AdminTrainingPlanRow['status'] }) {
   const color = status === 'ready' ? T.lime : status === 'failed' ? T.red : status === 'generating' ? T.cyan : T.inkFaint;
   const label =
     status === 'ready'
-      ? '已生成'
+      ? 'Generated'
       : status === 'failed'
-        ? '失败'
+        ? 'Failed'
         : status === 'generating'
-          ? '生成中'
-          : '已归档';
+          ? 'Generate'
+          : 'Archived';
   return (
     <span style={{
       fontFamily: T.mono,
@@ -513,9 +513,9 @@ function StatusPill({ status }: { status: AdminTrainingPlanRow['status'] }) {
 function formatSports(sports: AdminTrainingPlanRow['request']['sports'] | undefined): string {
   if (!sports) return '—';
   const enabled = [
-    sports.running ? '跑步' : null,
-    sports.cycling ? '骑行' : null,
-    sports.swimming ? '游泳' : null,
+    sports.running ? 'Running' : null,
+    sports.cycling ? 'Cycling' : null,
+    sports.swimming ? 'Swimming' : null,
   ].filter(Boolean);
   return enabled.length ? enabled.join(' · ') : '—';
 }
@@ -552,17 +552,17 @@ function previewText(value: string | null | undefined, max = 120): string {
 function sportLabel(sport: string): string {
   switch (sport) {
     case 'running':
-      return '跑步';
+      return 'Running';
     case 'cycling':
-      return '骑行';
+      return 'Cycling';
     case 'swimming':
-      return '游泳';
+      return 'Swimming';
     case 'strength':
-      return '力量';
+      return 'Strength';
     case 'mobility':
-      return '灵活性';
+      return 'Mobility';
     case 'rest':
-      return '休息';
+      return 'Rest';
     default:
       return sport;
   }
@@ -592,7 +592,7 @@ function PlanWorkoutList({
         color: T.inkDim,
         fontSize: 13,
       }}>
-        这份计划没有训练课表记录。
+        This plan has no workout records.
       </div>
     );
   }
@@ -617,7 +617,7 @@ function PlanWorkoutList({
               {w.date} · {sportLabel(w.sport)} · {w.intensity}
             </span>
             <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
-              {w.durationMinutes ?? '—'} 分钟{w.distanceKm ? ` · ${w.distanceKm} km` : ''}
+              {w.durationMinutes ?? '—'} minutes{w.distanceKm ? ` · ${w.distanceKm} km` : ''}
             </span>
           </div>
           <div style={{
@@ -626,10 +626,10 @@ function PlanWorkoutList({
             gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             gap: 8,
           }}>
-            <MiniLine label="指标" value={w.targetMetric || '—'} />
-            <MiniLine label="心率" value={w.targetHeartRate || '—'} />
-            <MiniLine label="配速" value={w.targetPace || '—'} />
-            <MiniLine label="功率" value={w.targetPower || '—'} />
+            <MiniLine label="" value={w.targetMetric || '—'} />
+            <MiniLine label="heart rate" value={w.targetHeartRate || '—'} />
+            <MiniLine label="Pace" value={w.targetPace || '—'} />
+            <MiniLine label="power" value={w.targetPower || '—'} />
           </div>
           {w.workoutStructure && (
             <div style={{
@@ -802,14 +802,14 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="USERS"
-          title="所有用户"
+          title="hasusers"
           right={
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
                 {users.length} TOTAL
               </span>
               <RowBtn color={T.lime} onClick={() => onRefreshUsers()}>
-                刷新
+                Refresh
               </RowBtn>
             </div>
           }
@@ -818,11 +818,11 @@ function UsersAndChatsSection({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
-                <Th>邮箱</Th>
-                <Th>昵称</Th>
-                <Th>会员</Th>
-                <Th>角色</Th>
-                <Th>注册时间</Th>
+                <Th>email</Th>
+                <Th>username</Th>
+                <Th>membership</Th>
+                <Th>Role</Th>
+                <Th>Sign-up date</Th>
                 <Th />
               </tr>
             </thead>
@@ -832,7 +832,7 @@ function UsersAndChatsSection({
                   <Td>
                     <div style={{ color: T.ink, fontWeight: 500 }}>{u.email}</div>
                     <div style={{ fontFamily: T.mono, fontSize: 10, color: u.emailVerified ? T.lime : T.amber, marginTop: 3 }}>
-                      {u.emailVerified ? '邮箱已验证' : '邮箱未验证'}
+                      {u.emailVerified ? 'Email verified' : 'Email not verified'}
                     </div>
                   </Td>
                   <Td>{u.displayUsername || u.name || '—'}</Td>
@@ -841,7 +841,7 @@ function UsersAndChatsSection({
                       <PlanPill plan={u.plan} />
                       {u.expiresAt && (
                         <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
-                          到期 {new Date(u.expiresAt).toLocaleDateString('zh-CN')}
+                          Expires {new Date(u.expiresAt).toLocaleDateString('en-US')}
                         </span>
                       )}
                     </div>
@@ -856,12 +856,12 @@ function UsersAndChatsSection({
                     }}>{u.role.toUpperCase()}</span>
                   </Td>
                   <Td mono dim>
-                    {new Date(u.createdAt).toLocaleDateString('zh-CN')}
+                    {new Date(u.createdAt).toLocaleDateString('en-US')}
                   </Td>
                   <Td>
                     <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
                       <RowBtn color={T.cyan} onClick={() => inspectUser(u.id)}>
-                        看记录
+                        View records
                       </RowBtn>
                       <RowBtn color={T.lime} onClick={() => onGrantMax(u.id)}>
                         + Max
@@ -878,17 +878,17 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="TRAINING.PLANS"
-          title={selectedUser ? `训练计划 · ${selectedUser.email}` : '所有用户训练计划'}
+          title={selectedUser ? `Trainingplan · ${selectedUser.email}` : 'All users’ training plans'}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-                每页 {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(planPage, plans.length)}
+                per page {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(planPage, plans.length)}
               </span>
               <RowBtn color={T.cyan} onClick={() => turnPlanPage(-1)} disabled={plansLoading || planOffset <= 0}>
-                上一页
+                Previous
               </RowBtn>
               <RowBtn color={T.cyan} onClick={() => turnPlanPage(1)} disabled={plansLoading || !planPage?.hasMore}>
-                下一页
+                Next
               </RowBtn>
             </div>
           }
@@ -904,12 +904,12 @@ function UsersAndChatsSection({
             alignItems: 'end',
           }}
         >
-          <Field label="用户">
+          <Field label="users">
             <TrackSelect
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
-              <option value="">全部用户</option>
+              <option value="">Allusers</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.email}
@@ -917,27 +917,27 @@ function UsersAndChatsSection({
               ))}
             </TrackSelect>
           </Field>
-          <Field label="状态">
+          <Field label="Status">
             <TrackSelect
               value={planStatus}
               onChange={(e) => setPlanStatus(e.target.value as PlanStatusFilter)}
             >
-              <option value="all">全部</option>
-              <option value="ready">已生成</option>
-              <option value="generating">生成中</option>
-              <option value="failed">失败</option>
-              <option value="archived">已归档</option>
+              <option value="all">All</option>
+              <option value="ready">Generated</option>
+              <option value="generating">Generate</option>
+              <option value="failed">Failed</option>
+              <option value="archived">Archived</option>
             </TrackSelect>
           </Field>
-          <Field label="关键词">
+          <Field label="keyword">
             <TrackInput
               value={planQuery}
               onChange={(e) => setPlanQuery(e.target.value)}
-              placeholder="搜索邮箱、昵称、总结或监控建议"
+              placeholder="Search email, username, summaries, or monitoring suggestions"
             />
           </Field>
           <Btn type="submit" disabled={plansLoading}>
-            {plansLoading ? '查询中…' : '查询'}
+            {plansLoading ? 'Searching…' : 'Search'}
           </Btn>
         </form>
 
@@ -955,7 +955,7 @@ function UsersAndChatsSection({
               textAlign: 'center',
               fontSize: 13,
             }}>
-              没有匹配的训练计划。
+              No matching training plans.
             </div>
           ) : (
             plans.map((p) => (
@@ -973,7 +973,7 @@ function UsersAndChatsSection({
                   <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{p.email}</span>
                   {p.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{p.displayName}</span>}
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
-                    周计划 {String(p.weekStartDate).slice(0, 10)}
+                    Weekly plan {String(p.weekStartDate).slice(0, 10)}
                   </span>
                   <span style={{ color: T.inkFaint, fontSize: 12 }}>
                     {previewText(p.request?.goal || p.summary, 72)}
@@ -984,10 +984,10 @@ function UsersAndChatsSection({
                       setExpandedPlanInfoId((current) => (current === p.id ? null : p.id))
                     }
                   >
-                    {expandedPlanInfoId === p.id ? '收起计划' : '展开计划'}
+                    {expandedPlanInfoId === p.id ? 'Collapse plan' : 'Expand plan'}
                   </RowBtn>
                   <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
-                    创建 {fmtDateTime(p.createdAt)}
+                    Created {fmtDateTime(p.createdAt)}
                   </span>
                 </div>
 
@@ -999,10 +999,10 @@ function UsersAndChatsSection({
                       gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                       gap: 10,
                     }}>
-                      <MiniLine label="目标" value={p.request?.goal || '—'} />
-                      <MiniLine label="距离" value={p.request?.goalDistance || '—'} />
-                      <MiniLine label="天数" value={p.request?.daysPerWeek ? `${p.request.daysPerWeek} 天/周` : '—'} />
-                      <MiniLine label="项目" value={formatSports(p.request?.sports)} />
+                      <MiniLine label="Goal" value={p.request?.goal || '—'} />
+                      <MiniLine label="Distance" value={p.request?.goalDistance || '—'} />
+                      <MiniLine label="Days" value={p.request?.daysPerWeek ? `${p.request.daysPerWeek} days/week` : '—'} />
+                      <MiniLine label="Sport" value={formatSports(p.request?.sports)} />
                     </div>
 
                     {p.summary && (
@@ -1026,7 +1026,7 @@ function UsersAndChatsSection({
                     {Boolean(p.monitoring || p.adjustmentRules || p.modelMeta) && (
                       <details style={{ marginTop: 10 }}>
                         <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
-                          监控建议 / 调整规则 / 模型信息
+                          monitoringsuggestions / adjustmentrule / Model
                         </summary>
                         <pre style={{
                           margin: '10px 0 0',
@@ -1052,7 +1052,7 @@ function UsersAndChatsSection({
 
                     <div style={{ marginTop: 10 }}>
                       <RowBtn color={T.lime} onClick={() => togglePlanDetails(p.id)}>
-                        {expandedWorkoutPlanId === p.id ? '收起课表' : '查看课表'}
+                        {expandedWorkoutPlanId === p.id ? 'Collapse workouts' : 'View workouts'}
                       </RowBtn>
                     </div>
 
@@ -1073,17 +1073,17 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="CHAT.LOGS"
-          title={selectedUser ? `聊天记录 · ${selectedUser.email}` : '所有 AI 聊天记录'}
+          title={selectedUser ? `Chat records · ${selectedUser.email}` : 'has AI Chat records'}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-                每页 {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(chatPage, messages.length)}
+                per page {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(chatPage, messages.length)}
               </span>
               <RowBtn color={T.cyan} onClick={() => turnChatPage(-1)} disabled={loading || chatOffset <= 0}>
-                上一页
+                Previous
               </RowBtn>
               <RowBtn color={T.cyan} onClick={() => turnChatPage(1)} disabled={loading || !chatPage?.hasMore}>
-                下一页
+                Next
               </RowBtn>
             </div>
           }
@@ -1099,12 +1099,12 @@ function UsersAndChatsSection({
             alignItems: 'end',
           }}
         >
-          <Field label="用户">
+          <Field label="users">
             <TrackSelect
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
-              <option value="">全部用户</option>
+              <option value="">Allusers</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.email}
@@ -1112,26 +1112,26 @@ function UsersAndChatsSection({
               ))}
             </TrackSelect>
           </Field>
-          <Field label="角色">
+          <Field label="Role">
             <TrackSelect
               value={role}
               onChange={(e) => setRole(e.target.value as ChatRoleFilter)}
             >
-              <option value="all">全部</option>
-              <option value="user">用户</option>
+              <option value="all">All</option>
+              <option value="user">users</option>
               <option value="assistant">AI</option>
-              <option value="tool">工具</option>
+              <option value="tool">Tool</option>
             </TrackSelect>
           </Field>
-          <Field label="关键词">
+          <Field label="keyword">
             <TrackInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索邮箱、昵称或消息内容"
+              placeholder="Search email, username, or message content"
             />
           </Field>
           <Btn type="submit" disabled={loading}>
-            {loading ? '查询中…' : '查询'}
+            {loading ? 'Searching…' : 'Search'}
           </Btn>
         </form>
 
@@ -1149,7 +1149,7 @@ function UsersAndChatsSection({
               textAlign: 'center',
               fontSize: 13,
             }}>
-              没有匹配的聊天记录。
+              No matching chat records.
             </div>
           ) : (
             messages.map((m) => (
@@ -1167,7 +1167,7 @@ function UsersAndChatsSection({
                   <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{m.email}</span>
                   {m.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{m.displayName}</span>}
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
-                    周计划 {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
+                    Weekly plan {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
                   </span>
                   <span style={{ color: T.inkFaint, fontSize: 12 }}>
                     {previewText(m.content, 96)}
@@ -1178,7 +1178,7 @@ function UsersAndChatsSection({
                       setExpandedMessageId((current) => (current === m.id ? null : m.id))
                     }
                   >
-                    {expandedMessageId === m.id ? '收起' : '展开'}
+                    {expandedMessageId === m.id ? '' : ''}
                   </RowBtn>
                   <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
                     {fmtDateTime(m.createdAt)}
@@ -1205,7 +1205,7 @@ function UsersAndChatsSection({
                     {(m.toolCalls || m.toolResultRefs) && (
                       <details style={{ marginTop: 10 }}>
                         <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
-                          工具调用 / 修改记录
+                          Tool / Records
                         </summary>
                         <pre style={{
                           margin: '10px 0 0',
@@ -1303,26 +1303,26 @@ function AiConfigSection() {
   }
 
   function validate(isCreate: boolean): string | null {
-    if (!form.name.trim() || form.name.length > 50) return '名称必填，最多 50 字符';
-    if (!form.baseUrl.trim()) return 'Base URL 必填';
+    if (!form.name.trim() || form.name.length > 50) return 'Name is required, up to 50 characters';
+    if (!form.baseUrl.trim()) return 'Base URL is required';
     try {
       const u = new URL(form.baseUrl);
       const isLocalhost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(u.hostname);
       if (u.protocol !== 'https:' && !(u.protocol === 'http:' && isLocalhost)) {
-        return 'Base URL 需为 https://（仅 localhost 允许 http://）';
+        return 'Base URL must use https:// (http:// is allowed only for localhost)';
       }
     } catch {
-      return 'Base URL 格式无效';
+      return 'Invalid Base URL format';
     }
-    if (isCreate && !form.apiKey) return '新增时 API Key 必填';
-    if (form.apiKey.length > 200) return 'API Key 长度超出 200';
-    if (!form.model.trim() || form.model.length > 100) return 'Model 必填，最多 100 字符';
+    if (isCreate && !form.apiKey) return 'API Key is required when creating';
+    if (form.apiKey.length > 200) return 'API Key exceeds 200 characters';
+    if (!form.model.trim() || form.model.length > 100) return 'Model ， 100 ';
     if (
       !Number.isInteger(form.maxOutputTokens) ||
       form.maxOutputTokens < 1 ||
       form.maxOutputTokens > 32768
     ) {
-      return 'Max Output Tokens 范围 1–32768';
+      return 'Max Output Tokens  1–32768';
     }
     return null;
   }
@@ -1384,7 +1384,7 @@ function AiConfigSection() {
 
   async function remove(row: LlmConfigSummary) {
     if (row.isActive) return;
-    if (!confirm(`删除 LLM 配置 “${row.name}”？此操作不可撤销。`)) return;
+    if (!confirm(`Delete LLM Configuration “${row.name}”？Actions。`)) return;
     setBusy(true);
     setError(null);
     try {
@@ -1404,14 +1404,14 @@ function AiConfigSection() {
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="LLM.CONFIGS"
-          title="AI 模型配置"
+          title="AI ModelConfiguration"
           right={
             <Btn
               size="sm"
               onClick={startCreate}
               disabled={busy || editingId !== null}
             >
-              + 新增
+              + Add
             </Btn>
           }
         />
@@ -1430,7 +1430,7 @@ function AiConfigSection() {
               color: T.inkDim,
               fontSize: 13,
             }}>
-              尚未配置 LLM。点击「+ 新增」开始。
+              not yetConfiguration LLM。「+ new 」。
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -1513,7 +1513,7 @@ function AiConfigSection() {
         <Card hot style={{ padding: 24 }}>
           <CardHeader
             eyebrow={editingId === 'new' ? '// LLM.NEW' : '// LLM.EDIT'}
-            title={editingId === 'new' ? '新增配置' : `编辑：${form.name}`}
+            title={editingId === 'new' ? 'new Configuration' : `Edit：${form.name}`}
           />
           <form
             onSubmit={submit}
@@ -1538,7 +1538,7 @@ function AiConfigSection() {
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
                 maxLength={100}
-                placeholder="例如 gpt-4o-mini"
+                placeholder="For example gpt-4o-mini"
                 required
               />
             </Field>
@@ -1551,7 +1551,7 @@ function AiConfigSection() {
                 required
               />
             </Field>
-            <Field label={editingId === 'new' ? 'API.KEY' : 'API.KEY（留空则保留原值）'}>
+            <Field label={editingId === 'new' ? 'API.KEY' : 'API.KEY（Leave blank）'}>
               <TrackInput
                 mono
                 type="password"
@@ -1590,16 +1590,16 @@ function AiConfigSection() {
                   style={{ accentColor: T.lime }}
                 />
                 <span style={{ fontSize: 13, color: T.inkDim }}>
-                  保存后将其设为唯一激活配置
+                  SavewilloneConfiguration
                 </span>
               </label>
             </Field>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10 }}>
               <Btn type="submit" disabled={busy}>
-                {busy ? '保存中…' : '保存 →'}
+                {busy ? 'Saveing…' : 'Save →'}
               </Btn>
               <Btn type="button" variant="ghost" onClick={cancelEdit} disabled={busy}>
-                取消
+                Cancel
               </Btn>
             </div>
           </form>
@@ -1689,7 +1689,7 @@ function AiUsageSection() {
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="AI.USAGE"
-          title={`AI 用量 · ${period.slice(0, 7)}`}
+          title={`AI Usage · ${period.slice(0, 7)}`}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <RowBtn color={T.inkDim} onClick={() => setPeriod(shiftMonth(period, -1))}>← PREV</RowBtn>
@@ -1739,7 +1739,7 @@ function AiUsageSection() {
               color: T.inkDim,
               fontSize: 13,
             }}>
-              本月暂无用量数据。
+              No usage data for this month yet.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>

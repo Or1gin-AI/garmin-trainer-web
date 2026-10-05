@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://garmin-trainer.uk'),
   title: 'Garmin Trainer',
-  description: '把国区 Garmin 运动记录同步到国际区',
+  description: 'Sync CN Garmin activities to International',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Garmin Trainer',
-    description: '把国区 Garmin 运动记录同步到国际区',
+    description: 'Sync CN Garmin activities to International',
     images: [{ url: '/brand-icon.png', width: 512, height: 512, alt: 'Garmin Trainer' }],
   },
   twitter: {
     card: 'summary',
     title: 'Garmin Trainer',
-    description: '把国区 Garmin 运动记录同步到国际区',
+    description: 'Sync CN Garmin activities to International',
     images: ['/brand-icon.png'],
   },
 };

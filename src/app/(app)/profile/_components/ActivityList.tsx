@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AthleticProfileResponse, ProfileActivity } from '@/lib/api';
 import { Btn, Card, CardHeader, T } from '@/components/track';
+import { ActivityReview } from './ActivityReview';
 
 const PAGE_SIZE = 20;
 
 const SPORT_LABEL: Record<ProfileActivity['sport'], string> = {
-  running: '跑步',
-  swimming: '游泳',
-  cycling: '骑行',
-  other: '其他',
+  running: 'Running',
+  swimming: 'Swimming',
+  cycling: 'Cycling',
+  other: 'Other',
 };
 
 export function ActivityList({
@@ -19,6 +20,7 @@ export function ActivityList({
   activities: AthleticProfileResponse['activities'];
 }) {
   const [page, setPage] = useState(0);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const pageCount = Math.max(1, Math.ceil(activities.length / PAGE_SIZE));
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export function ActivityList({
   if (activities.length === 0) {
     return (
       <Card style={{ padding: 22 }}>
-        <CardHeader eyebrow="ACTIVITY.METRICS" title="参与计算的活动" />
+        <CardHeader eyebrow="ACTIVITY.METRICS" title="activities included in the calculation" />
         <p style={{ margin: '16px 0 0', color: T.inkDim, fontSize: 13 }}>
-          还没有结构化活动数据。
+          No structured activity data yet.
         </p>
       </Card>
     );
@@ -46,7 +48,7 @@ export function ActivityList({
     <Card style={{ padding: 22 }}>
       <CardHeader
         eyebrow="ACTIVITY.METRICS"
-        title="参与计算的活动"
+        title="activities included in the calculation"
         right={
           <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
             {safePage + 1}/{pageCount} · {activities.length} ACT
@@ -70,35 +72,65 @@ export function ActivityList({
               <th style={thStyle}>TIME</th>
               <th style={thStyle}>AVG</th>
               <th style={thStyle}>HR</th>
-              <th style={thStyleLast}>QUALITY</th>
+              <th style={thStyle}>QUALITY</th>
+              <th style={thStyleLast}>REVIEW</th>
             </tr>
           </thead>
           <tbody>
-            {visible.map((a) => (
-              <tr
-                key={`${a.region}:${a.activityId}:${a.startTime}`}
-                className="track-row"
-                style={{ opacity: a.excluded ? 0.45 : 1 }}
-              >
-                <td style={tdMono}>{fmtDate(a.startTime)}</td>
-                <td style={tdStyle}>
-                  <span style={{ color: sportColor(a.sport), fontWeight: 600 }}>{SPORT_LABEL[a.sport] ?? a.sport}</span>
-                  {a.excluded && (
-                    <span style={{ marginLeft: 8, color: T.amber, fontFamily: T.mono, fontSize: 10 }}>EXCL</span>
+            {visible.map((a) => {
+              const key = `${a.region}:${a.activityId}`;
+              const isExpanded = expanded === key;
+              return (
+                <>
+                  <tr
+                    key={`${key}:${a.startTime}`}
+                    className="track-row"
+                    style={{
+                      opacity: a.excluded ? 0.45 : 1,
+                      cursor: a.excluded ? 'default' : 'pointer',
+                    }}
+                    onClick={() => {
+                      if (a.excluded) return;
+                      setExpanded(isExpanded ? null : key);
+                    }}
+                  >
+                    <td style={tdMono}>{fmtDate(a.startTime)}</td>
+                    <td style={tdStyle}>
+                      <span style={{ color: sportColor(a.sport), fontWeight: 600 }}>
+                        {SPORT_LABEL[a.sport] ?? a.sport}
+                      </span>
+                      {a.excluded && (
+                        <span style={{ marginLeft: 8, color: T.amber, fontFamily: T.mono, fontSize: 10 }}>
+                          EXCL
+                        </span>
+                      )}
+                    </td>
+                    <td style={tdMono}>{String(a.region).toUpperCase()}</td>
+                    <td style={tdMono}>{fmtDistance(a.distanceKm)}</td>
+                    <td style={tdMono}>{fmtDuration(a.durationMin)}</td>
+                    <td style={tdMono}>{fmtAverage(a)}</td>
+                    <td style={tdMono}>{a.avgHr ?? '—'}</td>
+                    <td style={tdMono}>
+                      <span style={{ color: confidenceColor(a.qualityConfidence), textTransform: 'uppercase' }}>
+                        {a.qualityConfidence}
+                      </span>
+                    </td>
+                    <td style={tdMonoLast}>
+                      <span style={{ color: T.lime, fontFamily: T.mono, fontSize: 11 }}>
+                        {isExpanded ? '▼' : '▶'}
+                      </span>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr key={`${key}:${a.startTime}:review`}>
+                      <td colSpan={9} style={{ padding: 0, borderTop: `1px solid ${T.border}` }}>
+                        <ActivityReview region={String(a.region)} activityId={a.activityId} />
+                      </td>
+                    </tr>
                   )}
-                </td>
-                <td style={tdMono}>{String(a.region).toUpperCase()}</td>
-                <td style={tdMono}>{fmtDistance(a.distanceKm)}</td>
-                <td style={tdMono}>{fmtDuration(a.durationMin)}</td>
-                <td style={tdMono}>{fmtAverage(a)}</td>
-                <td style={tdMono}>{a.avgHr ?? '—'}</td>
-                <td style={tdMonoLast}>
-                  <span style={{ color: confidenceColor(a.qualityConfidence), textTransform: 'uppercase' }}>
-                    {a.qualityConfidence}
-                  </span>
-                </td>
-              </tr>
-            ))}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -120,7 +152,7 @@ export function ActivityList({
             size="sm"
             disabled={safePage === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            aria-label="上一页"
+            aria-label="Previous"
           >
             ‹
           </Btn>
@@ -129,7 +161,7 @@ export function ActivityList({
             size="sm"
             disabled={safePage >= pageCount - 1}
             onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-            aria-label="下一页"
+            aria-label="Next"
           >
             ›
           </Btn>
@@ -174,7 +206,7 @@ function fmtDate(value: string): string {
   if (!value) return '—';
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) return value.slice(0, 10) || '—';
-  return parsed.toLocaleString('zh-CN', {
+  return parsed.toLocaleString('en-US', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',

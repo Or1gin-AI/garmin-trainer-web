@@ -51,7 +51,7 @@ export function sumCalendarEstimatedTrainingLoad(
 
 export function readScheduleNoteEstimatedTrainingLoad(notes: string[]): number | null {
   for (const note of notes) {
-    const m = /预计\s*Garmin\s*周训练负荷约\s*(\d+(?:\.\d+)?)/i.exec(note);
+    const m = /\s*Garmin\s*weekTrainingLoad\s*(\d+(?:\.\d+)?)/i.exec(note);
     const load = normalizeLoad(m?.[1]);
     if (load != null) return load;
   }

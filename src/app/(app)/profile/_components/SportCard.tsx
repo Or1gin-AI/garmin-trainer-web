@@ -8,9 +8,9 @@ interface Props {
 }
 
 const SPORT_META: Record<AthleticSport, { label: string; code: string; color: string }> = {
-  running: { label: '跑步', code: 'RUN', color: T.lime },
-  swimming: { label: '游泳', code: 'SWIM', color: T.cyan },
-  cycling: { label: '骑行', code: 'BIKE', color: T.amber },
+  running: { label: 'Running', code: 'RUN', color: T.lime },
+  swimming: { label: 'Swimming', code: 'SWIM', color: T.cyan },
+  cycling: { label: 'Cycling', code: 'BIKE', color: T.amber },
 };
 
 export function SportCard({ sport, profile }: Props) {
@@ -34,7 +34,7 @@ export function SportCard({ sport, profile }: Props) {
           fontSize: 13,
           lineHeight: 1.7,
         }}>
-          数据不足。继续同步 Garmin 活动后会自动生成该项目能力档案。
+          Insufficient data. Continue syncing Garmin activities to generate this sport profile.
         </div>
         <div style={{ marginTop: 16, fontFamily: T.mono, fontSize: 10, color: T.inkGhost, letterSpacing: 1.4 }}>
           ACTIVITY.COUNT {count.toLocaleString()} · READ.ONLY
@@ -78,11 +78,11 @@ function RunningStats({ profile }: { profile: AthleticProfileSport }) {
   return (
     <MetricGrid>
       <Metric label="VDOT" value={fmtDecimal(profile.primaryMetric ?? snapshotNumber(snap, 'vdot', 'vo2Max'))} tone={T.lime} />
-      <Metric label="轻松配速" value={fmtPaceKm(snapshotNumber(snap, 'easyPaceSecPerKm'))} />
-      <Metric label="长距离" value={fmtPaceKm(snapshotNumber(snap, 'longPaceSecPerKm'))} />
-      <Metric label="阈值配速" value={fmtPaceKm(snapshotNumber(snap, 'thresholdPaceSecPerKm'))} />
-      <Metric label="VO2 配速" value={fmtPaceKm(snapshotNumber(snap, 'vo2PaceSecPerKm'))} />
-      <Metric label="间歇配速" value={fmtPaceKm(snapshotNumber(snap, 'intervalPaceSecPerKm'))} />
+      <Metric label="Easy pace" value={fmtPaceKm(snapshotNumber(snap, 'easyPaceSecPerKm'))} />
+      <Metric label="Long run" value={fmtPaceKm(snapshotNumber(snap, 'longPaceSecPerKm'))} />
+      <Metric label="Threshold pace" value={fmtPaceKm(snapshotNumber(snap, 'thresholdPaceSecPerKm'))} />
+      <Metric label="VO2 Pace" value={fmtPaceKm(snapshotNumber(snap, 'vo2PaceSecPerKm'))} />
+      <Metric label="intervalsPace" value={fmtPaceKm(snapshotNumber(snap, 'intervalPaceSecPerKm'))} />
     </MetricGrid>
   );
 }
@@ -92,11 +92,11 @@ function SwimmingStats({ profile }: { profile: AthleticProfileSport }) {
   return (
     <MetricGrid>
       <Metric label="CSS" value={fmtPace100(profile.primaryMetric ?? snapshotNumber(snap, 'cssSecPer100m', 'cssPaceSecPer100m'))} tone={T.cyan} />
-      <Metric label="轻松配速" value={fmtPace100(snapshotNumber(snap, 'easyPaceSecPer100m'))} />
-      <Metric label="耐力配速" value={fmtPace100(snapshotNumber(snap, 'endurancePaceSecPer100m'))} />
-      <Metric label="有氧配速" value={fmtPace100(snapshotNumber(snap, 'aerobicPaceSecPer100m'))} />
-      <Metric label="阈值配速" value={fmtPace100(snapshotNumber(snap, 'thresholdPaceSecPer100m'))} />
-      <Metric label="VO2 配速" value={fmtPace100(snapshotNumber(snap, 'vo2PaceSecPer100m'))} />
+      <Metric label="Easy pace" value={fmtPace100(snapshotNumber(snap, 'easyPaceSecPer100m'))} />
+      <Metric label="Endurance pace" value={fmtPace100(snapshotNumber(snap, 'endurancePaceSecPer100m'))} />
+      <Metric label="Aerobic pace" value={fmtPace100(snapshotNumber(snap, 'aerobicPaceSecPer100m'))} />
+      <Metric label="Threshold pace" value={fmtPace100(snapshotNumber(snap, 'thresholdPaceSecPer100m'))} />
+      <Metric label="VO2 Pace" value={fmtPace100(snapshotNumber(snap, 'vo2PaceSecPer100m'))} />
     </MetricGrid>
   );
 }
@@ -106,10 +106,10 @@ function CyclingStats({ profile }: { profile: AthleticProfileSport }) {
   return (
     <MetricGrid>
       <Metric label="FTP" value={fmtWatts(profile.primaryMetric ?? snapshotNumber(snap, 'ftpWatts'))} tone={T.amber} />
-      <Metric label="耐力区" value={fmtWatts(snapshotNumber(snap, 'enduranceWatts'))} />
-      <Metric label="节奏区" value={fmtWatts(snapshotNumber(snap, 'tempoWatts'))} />
-      <Metric label="阈值区" value={fmtWatts(snapshotNumber(snap, 'thresholdWatts'))} />
-      <Metric label="VO2 区" value={fmtWatts(snapshotNumber(snap, 'vo2Watts'))} />
+      <Metric label="Endurance zone" value={fmtWatts(snapshotNumber(snap, 'enduranceWatts'))} />
+      <Metric label="Tempo zone" value={fmtWatts(snapshotNumber(snap, 'tempoWatts'))} />
+      <Metric label="Threshold zone" value={fmtWatts(snapshotNumber(snap, 'thresholdWatts'))} />
+      <Metric label="VO2max zone" value={fmtWatts(snapshotNumber(snap, 'vo2Watts'))} />
     </MetricGrid>
   );
 }
@@ -259,5 +259,5 @@ function fmtDate(value: string | null): string {
   if (!value) return '—';
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) return value.slice(0, 10) || '—';
-  return parsed.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+  return parsed.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
 }

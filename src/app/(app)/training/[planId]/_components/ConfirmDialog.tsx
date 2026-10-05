@@ -7,7 +7,7 @@ export function ConfirmDialog({
   eyebrow,
   title,
   description,
-  confirmLabel = '确认',
+  confirmLabel = 'Confirm',
   confirmVariant = 'primary',
   busy,
   onCancel,
@@ -38,7 +38,7 @@ export function ConfirmDialog({
         <h2 style={{ margin: '0 0 10px', color: T.ink, fontSize: 20, fontWeight: 700 }}>{title}</h2>
         <div style={{ margin: '0 0 18px', color: T.inkDim, fontSize: 13, lineHeight: 1.7 }}>{description}</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <Btn variant="ghost" size="sm" onClick={onCancel} disabled={busy}>取消</Btn>
+          <Btn variant="ghost" size="sm" onClick={onCancel} disabled={busy}>Cancel</Btn>
           <Btn variant={confirmVariant} size="sm" onClick={onConfirm} disabled={busy}>
             {confirmLabel}
           </Btn>

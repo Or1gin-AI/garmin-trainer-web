@@ -67,7 +67,7 @@ export function ToolCallCard({ ev }: { ev: ToolEventUi }) {
           {ev.displayName}
           {ev.phase === 'start' && (
             <span style={{ color: T.inkFaint, marginLeft: 6, fontWeight: 400 }}>
-              · 进行中…
+              · In progress…
             </span>
           )}
           {ev.phase === 'done' && ev.durationMs != null && (
@@ -101,7 +101,7 @@ export function ToolCallCard({ ev }: { ev: ToolEventUi }) {
               wordBreak: 'break-word',
             }}
           >
-            {ev.errorMessage || '失败'}
+            {ev.errorMessage || 'Failed'}
           </div>
         )}
       </div>

@@ -17,7 +17,7 @@ import {
   T, Btn, Card, PageHero, SectionLabel, Banner, StatusBadge,
 } from '@/components/track';
 
-const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function dateOnly(d: Date): string {
   const y = d.getFullYear();
@@ -46,7 +46,7 @@ function monthEnd(d: Date): Date {
 }
 
 function monthLabel(d: Date): string {
-  return `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+  return `${d.getFullYear()}year ${d.getMonth() + 1}month`;
 }
 
 function monthGrid(d: Date): Array<string | null> {
@@ -66,18 +66,18 @@ function formatMD(date: string): string {
 }
 
 function sportLabel(sport: string): string {
-  if (sport === 'running') return '跑步';
-  if (sport === 'cycling') return '骑行';
-  if (sport === 'swimming') return '游泳';
-  if (sport === 'rest') return '休息';
-  if (sport === 'strength') return '力量';
-  if (sport === 'mobility') return '恢复';
-  return '运动';
+  if (sport === 'running') return 'Running';
+  if (sport === 'cycling') return 'Cycling';
+  if (sport === 'swimming') return 'Swimming';
+  if (sport === 'rest') return 'Rest';
+  if (sport === 'strength') return 'Strength';
+  if (sport === 'mobility') return 'Recovery';
+  return 'Sport';
 }
 
 function regionLabel(region: string | null): string {
-  if (region === 'cn') return '国区';
-  if (region === 'global') return '国际区';
+  if (region === 'cn') return 'CN';
+  if (region === 'global') return 'International';
   return 'Garmin';
 }
 
@@ -94,9 +94,9 @@ function metricText(e: TrainingCalendarEvent): string[] {
     if (typeof load === 'number') out.push(`Load ${Math.round(load)}`);
     return out;
   }
-  if (e.targetPower && e.targetPower !== '不适用') out.push(e.targetPower);
-  else if (e.targetHeartRate && e.targetHeartRate !== '不适用') out.push(e.targetHeartRate);
-  else if (e.targetPace && e.targetPace !== '不适用') out.push(e.targetPace);
+  if (e.targetPower && e.targetPower !== 'N/A') out.push(e.targetPower);
+  else if (e.targetHeartRate && e.targetHeartRate !== 'N/A') out.push(e.targetHeartRate);
+  else if (e.targetPace && e.targetPace !== 'N/A') out.push(e.targetPace);
   return out;
 }
 
@@ -114,7 +114,7 @@ function formatWeekStart(d: string): string {
 
 function eventTime(e: TrainingCalendarEvent): string | null {
   if (!e.startTimeLocal) return null;
-  return new Date(e.startTimeLocal).toLocaleTimeString('zh-CN', {
+  return new Date(e.startTimeLocal).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -195,10 +195,10 @@ export default function CalendarPage() {
   const canNext = dateOnly(nextMonth) <= range.to;
 
   async function clearActivePlan() {
-    if (!window.confirm('确认从日历移除当前训练计划？')) return;
+    if (!window.confirm('ConfirmRemove the current training plan from the calendar?')) return;
     try {
       await clearCalendarTrainingPlan();
-      setNotice('已移除当前日历计划。');
+      setNotice('The current calendar plan was removed.');
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -206,14 +206,14 @@ export default function CalendarPage() {
   }
 
   async function applyPlan(plan: TrainingPlanSummary) {
-    const ok = window.confirm('确认将这份训练计划应用到日历？它会从今天起按 7 天课表循环应用到未来 30 天，并替换当前应用的计划。');
+    const ok = window.confirm('ConfirmApply this training plan to the calendar? It will repeat the 7-day schedule for the next 30 days and replace the current plan.');
     if (!ok) return;
     setBusyPlanId(plan.id);
     setError(null);
     setNotice(null);
     try {
       await importPlanToCalendar(plan.id);
-      setNotice('已应用到未来 30 天日历。');
+      setNotice('Applied to the calendar for the next 30 days.');
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -225,22 +225,22 @@ export default function CalendarPage() {
   return (
     <>
       <PageHero
-        eyebrow="个人日历"
-        title="训练日历"
-        sub={`${range.from} 至 ${range.to} · 一次查看一个月`}
+        eyebrow="Personal calendar"
+        title="TrainingCalendar"
+        sub={`${range.from} to ${range.to} · onetimesView onemonth`}
         actions={
           <>
             {data?.calendar.activePlan ? (
               <>
                 <StatusBadge kind="ready" />
                 <Link href={`/training/${data.calendar.activePlan.id}`} style={{ textDecoration: 'none' }}>
-                  <Btn variant="ghost" size="sm">当前计划</Btn>
+                  <Btn variant="ghost" size="sm">Current plan</Btn>
                 </Link>
-                <Btn variant="ghost" size="sm" onClick={clearActivePlan}>移除计划</Btn>
+                <Btn variant="ghost" size="sm" onClick={clearActivePlan}>Remove plan</Btn>
               </>
             ) : (
               <Link href="/training/new" style={{ textDecoration: 'none' }}>
-                <Btn variant="ghost" size="sm">新建计划</Btn>
+                <Btn variant="ghost" size="sm">New plan</Btn>
               </Link>
             )}
           </>
@@ -253,7 +253,7 @@ export default function CalendarPage() {
         <div style={{ marginBottom: 18 }}>
           <Banner kind="warn" code="GARMIN">
             {activitySourceErrors
-              .map((source) => `${regionLabel(source.region)}活动读取失败，请重新连接 Garmin`)
+              .map((source) => `${regionLabel(source.region)}activityRead failed. Please reconnect Garmin.`)
               .join('；')}
           </Banner>
         </div>
@@ -261,16 +261,16 @@ export default function CalendarPage() {
 
       {loading && (
         <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // 加载日历…
+          // Loading calendar…
         </div>
       )}
 
       {!loading && (
         <>
-          <SectionLabel>应用训练计划</SectionLabel>
+          <SectionLabel>Apply training plan</SectionLabel>
           <Card style={{ padding: 16, marginBottom: 22 }}>
             {plans.length === 0 ? (
-              <div style={{ color: T.inkFaint, fontSize: 13 }}>暂无可应用计划。</div>
+              <div style={{ color: T.inkFaint, fontSize: 13 }}>No plan is available to apply.</div>
             ) : (
               <div style={{ display: 'grid', gap: 10 }}>
                 {plans.map((p) => {
@@ -291,10 +291,10 @@ export default function CalendarPage() {
                     >
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: T.mono, fontSize: 10, color: active ? T.lime : T.inkFaint, letterSpacing: 1.2, marginBottom: 4 }}>
-                          {formatWeekStart(p.weekStartDate)} · 未来 30 天循环
+                          {formatWeekStart(p.weekStartDate)} · 30-day loop
                         </div>
                         <div style={{ color: T.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.summary ?? '训练计划'}
+                          {p.summary ?? 'Trainingplan'}
                         </div>
                       </div>
                       <Btn
@@ -303,7 +303,7 @@ export default function CalendarPage() {
                         onClick={() => applyPlan(p)}
                         disabled={active || busyPlanId === p.id}
                       >
-                        {active ? '已应用' : busyPlanId === p.id ? '应用中…' : '应用到未来30天'}
+                        {active ? 'Applied' : busyPlanId === p.id ? 'Applying…' : 'Apply for the next 30 days'}
                       </Btn>
                     </div>
                   );
@@ -315,13 +315,13 @@ export default function CalendarPage() {
           <SectionLabel
             right={
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(prevMonth)} disabled={!canPrev}>上一月</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(prevMonth)} disabled={!canPrev}>Previous month</Btn>
                 <div style={{ fontFamily: T.mono, fontSize: 12, color: T.ink }}>{monthLabel(visibleMonth)}</div>
-                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(nextMonth)} disabled={!canNext}>下一月</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(nextMonth)} disabled={!canNext}>Next month</Btn>
               </div>
             }
           >
-            月视图
+            Month view
           </SectionLabel>
           <div style={{ overflowX: 'auto', marginBottom: 24, paddingBottom: 6 }}>
             <div style={{ minWidth: 980 }}>
@@ -381,9 +381,9 @@ export default function CalendarPage() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {plannedCount > 0 && <MiniBadge color={T.lime}>计划 {plannedCount}</MiniBadge>}
-                        {activityCount > 0 && <MiniBadge color={T.cyan}>记录 {activityCount}</MiniBadge>}
-                        {hasEvaluation && <MiniBadge color={T.amber}>评价</MiniBadge>}
+                        {plannedCount > 0 && <MiniBadge color={T.lime}>plan {plannedCount}</MiniBadge>}
+                        {activityCount > 0 && <MiniBadge color={T.cyan}>Records {activityCount}</MiniBadge>}
+                        {hasEvaluation && <MiniBadge color={T.amber}>Review</MiniBadge>}
                       </div>
                       <div style={{ display: 'grid', gap: 6 }}>
                         {list.slice(0, 4).map((e) => (
@@ -396,7 +396,7 @@ export default function CalendarPage() {
                             }}
                           >
                             <div style={{ fontSize: 11, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {e.kind === 'garmin_activity' ? '记录' : e.sessionLabel ?? '计划'} · {e.title}
+                              {e.kind === 'garmin_activity' ? 'Records' : e.sessionLabel ?? 'plan'} · {e.title}
                             </div>
                             <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {metricText(e).slice(0, 2).join(' · ')}
@@ -405,7 +405,7 @@ export default function CalendarPage() {
                         ))}
                         {list.length > 4 && (
                           <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint }}>
-                            +{list.length - 4} 条
+                            +{list.length - 4}
                           </div>
                         )}
                       </div>
@@ -416,12 +416,12 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <SectionLabel>{selectedDate} 训练详情</SectionLabel>
+          <SectionLabel>{selectedDate} TrainingDetails</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, marginBottom: 24 }}>
             <div style={{ display: 'grid', gap: 10 }}>
               {selectedPlanEvents.length === 0 ? (
                 <Card style={{ padding: 24, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
-                  这一天没有计划训练。
+                  This onedaysNo planTraining。
                 </Card>
               ) : (
                 selectedPlanEvents.map((e) => <EventDetail key={e.id} event={e} />)
@@ -430,7 +430,7 @@ export default function CalendarPage() {
             <div style={{ display: 'grid', gap: 10 }}>
               {selectedActivityEvents.length === 0 ? (
                 <Card style={{ padding: 24, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
-                  这一天没有 Garmin 运动记录。
+                  This onedaysNo  Garmin activities。
                 </Card>
               ) : (
                 <Card style={{ padding: 18 }}>
@@ -450,7 +450,7 @@ export default function CalendarPage() {
           {/* Evaluations — auto-generated by the backend */}
           {selectedEvaluations.length > 0 && (
             <>
-              <SectionLabel>{selectedDate} 训练评价</SectionLabel>
+              <SectionLabel>{selectedDate} TrainingReview</SectionLabel>
               <div style={{ display: 'grid', gap: 10, marginBottom: 24 }}>
                 {selectedEvaluations.map((evaluation) => (
                   <EvaluationResultCard key={evaluation.id} evaluation={evaluation} />
@@ -465,12 +465,12 @@ export default function CalendarPage() {
 }
 
 const VERDICT_ZH: Record<string, { label: string; color: string }> = {
-  matched: { label: '训练达标', color: T.lime },
-  under_done: { label: '训练不足', color: T.amber },
-  over_done: { label: '训练过量', color: T.amber },
-  different_sport: { label: '项目不匹配', color: T.cyan },
-  missed: { label: '训练缺失', color: T.red },
-  rest_day_active: { label: '休息日活动', color: T.cyan },
+  matched: { label: 'Trainingmatched', color: T.lime },
+  under_done: { label: 'Traininginsufficient', color: T.amber },
+  over_done: { label: 'Trainingtoo much', color: T.amber },
+  different_sport: { label: 'Sportmatch', color: T.cyan },
+  missed: { label: 'Trainingmissing', color: T.red },
+  rest_day_active: { label: 'Restdaily activity', color: T.cyan },
 };
 
 function scoreColor(score: number): string {
@@ -504,14 +504,14 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
           EVALUATION.{evaluation.status.toUpperCase()}
         </div>
         <div style={{ color: T.ink, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-          {result?.title ?? '训练评价'}
+          {result?.title ?? 'TrainingReview'}
         </div>
         <div style={{ color: T.inkDim, fontSize: 12, lineHeight: 1.6 }}>
-          {result?.summary ?? '评价已提交，等待生成。'}
+          {result?.summary ?? 'Review submitted. Waiting for generation.'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          <MiniBadge color={T.lime}>计划 {result?.plannedWorkoutCount ?? evaluation.plannedWorkoutIds.length}</MiniBadge>
-          <MiniBadge color={T.cyan}>运动 {result?.activityCount ?? evaluation.activityRefs.length}</MiniBadge>
+          <MiniBadge color={T.lime}>plan {result?.plannedWorkoutCount ?? evaluation.plannedWorkoutIds.length}</MiniBadge>
+          <MiniBadge color={T.cyan}>Sport {result?.activityCount ?? evaluation.activityRefs.length}</MiniBadge>
         </div>
       </div>
     );
@@ -568,10 +568,10 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
       {/* Adherence grid */}
       {r.adherence && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-          <MiniStat label="运动匹配" value={r.adherence.sportMatched ? '✓' : '✗'} color={r.adherence.sportMatched ? T.lime : T.red} />
-          <MiniStat label="时长" value={ratioText(r.adherence.durationRatio)} color={ratioStatColor(r.adherence.durationRatio)} />
-          <MiniStat label="距离" value={ratioText(r.adherence.distanceRatio)} color={ratioStatColor(r.adherence.distanceRatio)} />
-          <MiniStat label="强度" value={r.adherence.intensityMatched == null ? '—' : r.adherence.intensityMatched ? '✓' : '✗'} color={r.adherence.intensityMatched ? T.lime : r.adherence.intensityMatched === false ? T.amber : T.inkFaint} />
+          <MiniStat label="Sport match" value={r.adherence.sportMatched ? '✓' : '✗'} color={r.adherence.sportMatched ? T.lime : T.red} />
+          <MiniStat label="Duration" value={ratioText(r.adherence.durationRatio)} color={ratioStatColor(r.adherence.durationRatio)} />
+          <MiniStat label="Distance" value={ratioText(r.adherence.distanceRatio)} color={ratioStatColor(r.adherence.distanceRatio)} />
+          <MiniStat label="intensity" value={r.adherence.intensityMatched == null ? '—' : r.adherence.intensityMatched ? '✓' : '✗'} color={r.adherence.intensityMatched ? T.lime : r.adherence.intensityMatched === false ? T.amber : T.inkFaint} />
         </div>
       )}
 
@@ -622,8 +622,8 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
 
       {/* Counts */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        <MiniBadge color={T.lime}>计划 {r.plannedWorkoutCount}</MiniBadge>
-        <MiniBadge color={T.cyan}>运动 {r.activityCount}</MiniBadge>
+        <MiniBadge color={T.lime}>plan {r.plannedWorkoutCount}</MiniBadge>
+        <MiniBadge color={T.cyan}>Sport {r.activityCount}</MiniBadge>
       </div>
     </div>
   );
@@ -716,7 +716,7 @@ function EventDetail({ event }: { event: TrainingCalendarEvent }) {
         </div>
         {event.planId && (
           <Link href={`/training/${event.planId}`} style={{ textDecoration: 'none' }}>
-            <Btn variant="ghost" size="sm">计划详情</Btn>
+            <Btn variant="ghost" size="sm">Plan details</Btn>
           </Link>
         )}
       </div>

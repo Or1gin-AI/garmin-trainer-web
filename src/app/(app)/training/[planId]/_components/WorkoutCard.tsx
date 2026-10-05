@@ -21,25 +21,25 @@ function formatDate(d: string): { dd: string; mm: string } {
 }
 
 function usable(value: string | null | undefined): string | null {
-  return value && value !== '不适用' ? value : null;
+  return value && value !== 'N/A' ? value : null;
 }
 
 function allTargets(w: TrainingWorkout): Array<{ label: string; value: string; primary?: boolean }> {
   const rows: Array<{ label: string; value: string; primary?: boolean }> = [];
   const metricLabel: Record<string, string> = {
-    heart_rate: '主指标 心率',
-    pace: '主指标 配速',
-    power: '主指标 功率',
-    mixed: '主指标 混合',
-    none: '主指标 无',
+    heart_rate: 'Primary metric heart rate',
+    pace: 'Primary metric Pace',
+    power: 'Primary metric power',
+    mixed: 'Primary metric ',
+    none: 'Primary metric None',
   };
-  rows.push({ label: '目标模式', value: metricLabel[w.targetMetric] ?? w.targetMetric, primary: true });
+  rows.push({ label: 'GoalMode', value: metricLabel[w.targetMetric] ?? w.targetMetric, primary: true });
   const hr = usable(w.targetHeartRate);
   const pace = usable(w.targetPace);
   const power = usable(w.targetPower);
-  if (hr) rows.push({ label: '心率', value: hr, primary: w.targetMetric === 'heart_rate' });
-  if (pace) rows.push({ label: '配速', value: pace, primary: w.targetMetric === 'pace' });
-  if (power) rows.push({ label: '功率', value: power, primary: w.targetMetric === 'power' });
+  if (hr) rows.push({ label: 'heart rate', value: hr, primary: w.targetMetric === 'heart_rate' });
+  if (pace) rows.push({ label: 'Pace', value: pace, primary: w.targetMetric === 'pace' });
+  if (power) rows.push({ label: 'power', value: power, primary: w.targetMetric === 'power' });
   return rows;
 }
 
@@ -78,11 +78,11 @@ export function WorkoutCard({
     >
       <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr)', alignItems: 'center', padding: '14px 18px', gap: 16 }}>
         <div style={{ textAlign: 'center', borderRight: `1px solid ${T.border}`, paddingRight: 16 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>第</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5 }}>Day </div>
           <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: highlighted ? T.lime : T.ink, letterSpacing: -1, lineHeight: 1 }}>
             {w.dayIndex}
           </div>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 4, letterSpacing: 1 }}>天 · {mm || dd}</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 4, letterSpacing: 1 }}>days · {mm || dd}</div>
         </div>
 
         <div style={{ minWidth: 0 }}>
@@ -112,11 +112,11 @@ export function WorkoutCard({
             gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
             gap: 8,
           }}>
-            {w.durationMinutes != null && <DataChip label="总时长" value={`${w.durationMinutes} 分钟`} />}
-            {estimatedLoad != null && <DataChip label="预计训练负荷" value={`${estimatedLoad}`} hot />}
-            {w.distanceKm != null && <DataChip label="距离" value={`${Number(w.distanceKm).toFixed(1)} 公里`} />}
-            {w.workoutType && <DataChip label="类型" value={w.workoutType} />}
-            {w.intensity && <DataChip label="强度" value={w.intensity} />}
+            {w.durationMinutes != null && <DataChip label="Duration" value={`${w.durationMinutes} minutes`} />}
+            {estimatedLoad != null && <DataChip label="Estimated training load" value={`${estimatedLoad}`} hot />}
+            {w.distanceKm != null && <DataChip label="Distance" value={`${Number(w.distanceKm).toFixed(1)} `} />}
+            {w.workoutType && <DataChip label="Type" value={w.workoutType} />}
+            {w.intensity && <DataChip label="intensity" value={w.intensity} />}
             {targets.map((item) => (
               <DataChip
                 key={`${item.label}-${item.value}`}
@@ -129,7 +129,7 @@ export function WorkoutCard({
 
           {w.workoutStructure && (
             <div style={{ marginTop: 16 }}>
-              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>训练结构</div>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>TrainingStructure</div>
               <div style={{
                 fontFamily: T.mono, fontSize: 12, color: T.ink, lineHeight: 1.7,
                 background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 6, border: `1px solid ${T.border}`,
@@ -139,7 +139,7 @@ export function WorkoutCard({
           )}
           {(w.targets ?? []).length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>关键要点</div>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>Key points</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: T.ink }}>
                 {(w.targets ?? []).map((t, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -154,13 +154,13 @@ export function WorkoutCard({
               marginTop: 14, padding: 12, background: T.cyanSoft, border: `1px solid ${T.cyan}30`,
               borderRadius: 6, fontSize: 12, color: T.ink, lineHeight: 1.6,
             }}>
-              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginRight: 8 }}>适应</span>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.5, marginRight: 8 }}></span>
               {w.adaptation}
             </div>
           )}
           {!w.workoutStructure && (w.targets ?? []).length === 0 && !w.adaptation && (
             <div style={{ marginTop: 14, fontFamily: T.mono, fontSize: 11, color: T.inkFaint }}>
-              无更多细节
+              NoneMoredetails
             </div>
           )}
         </div>
@@ -176,18 +176,18 @@ export function WorkoutCard({
             {SPORT_LABELS[w.sport]}
           </span>
           <Btn variant="ok" size="sm" onClick={onComplete} disabled={busy || w.status === 'completed'}>
-            {w.status === 'completed' ? '✓ 已完成' : '完成'}
+            {w.status === 'completed' ? '✓ Completed' : 'Completed'}
           </Btn>
           <Btn variant="ghost" size="sm" onClick={onSkip} disabled={busy || w.status === 'skipped'}>
-            {w.status === 'skipped' ? '— 已跳过' : '跳过'}
+            {w.status === 'skipped' ? '— Skipped' : 'Skipped'}
           </Btn>
-          <Btn variant="ghost" size="sm" onClick={onRegenerate} disabled={busy}>↻ 重新生成</Btn>
+          <Btn variant="ghost" size="sm" onClick={onRegenerate} disabled={busy}>↻ Regenerate</Btn>
         </div>
       )}
 
       {isRest && (
         <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
-          休息日 · 主动恢复 / 拉伸即可
+          Rest day · Recovery / stretching
         </div>
       )}
     </Card>

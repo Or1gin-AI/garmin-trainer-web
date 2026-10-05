@@ -46,8 +46,8 @@ export function TrainingEvidencePanel({
   return (
     <Card style={{ padding: 22 }}>
       <CardHeader
-        eyebrow="专业生成依据"
-        title="这次课表为什么这样排"
+        eyebrow="Training rationale"
+        title="Why this plan is structured this way"
         right={
           <span style={{ fontFamily: T.mono, fontSize: 10, color: readinessColor, letterSpacing: 1.2 }}>
             ● READINESS.{String(readiness).toUpperCase()}
@@ -64,17 +64,17 @@ export function TrainingEvidencePanel({
             gap: 10,
           }}
         >
-          <Metric label="当前能力" value={levelZh(capacity.overall.level)} color={T.cyan} />
-          <Metric label="恢复状态" value={readinessZh(capacity.overall.readiness)} color={readinessColor} />
-          <Metric label="高强度上限" value={`${capacity.guardrails.maxHardSessionsPerWeek} 次/周`} color={T.amber} />
+          <Metric label="Current ability" value={levelZh(capacity.overall.level)} color={T.cyan} />
+          <Metric label="RecoveryStatus" value={readinessZh(capacity.overall.readiness)} color={readinessColor} />
+          <Metric label="High intensitylimit" value={`${capacity.guardrails.maxHardSessionsPerWeek} sessions/week`} color={T.amber} />
           <Metric
-            label="强度分钟"
-            value={capacity.guardrails.maxHighMinutesShare == null ? '受控' : `≤${Math.round(capacity.guardrails.maxHighMinutesShare * 100)}%`}
+            label="intensityminutes"
+            value={capacity.guardrails.maxHighMinutesShare == null ? 'Controlled' : `≤${Math.round(capacity.guardrails.maxHighMinutesShare * 100)}%`}
             color={T.lime}
           />
           <Metric
-            label="7/28负荷比"
-            value={capacity.load.acuteChronicRatio === null ? '不足' : String(capacity.load.acuteChronicRatio)}
+            label="7/28 load ratio"
+            value={capacity.load.acuteChronicRatio === null ? 'insufficient' : String(capacity.load.acuteChronicRatio)}
             color={T.cyan}
           />
         </div>
@@ -89,7 +89,7 @@ export function TrainingEvidencePanel({
         }}
       >
         <div style={boxStyle}>
-          <div style={boxTitleStyle}>系统实际做了什么</div>
+          <div style={boxTitleStyle}>What the system actually did</div>
           <ul style={listStyle}>
             {usefulNotes.map((note) => (
               <li key={note}>{note}</li>
@@ -98,12 +98,12 @@ export function TrainingEvidencePanel({
         </div>
 
         <div style={boxStyle}>
-          <div style={boxTitleStyle}>专业规则来源</div>
+          <div style={boxTitleStyle}>Sources of training rules</div>
           <ul style={listStyle}>
-            <li>用最近 7/28/56 天国区 Garmin 训练负荷判断近期压力，而不是只看用户填写的目标。</li>
-            <li>用 Foster monotony/strain 检查训练是否过于单调或压力集中。</li>
-            <li>用 Garmin 睡眠、HRV、训练状态、恢复时间作为恢复风险信号；缺失时降低置信度。</li>
-            <li>参考 Seiler 强度分布原则，限制阈值、VO2、无氧课数量，避免把长可用时间堆成高强度。</li>
+            <li>Use recent 7/28/56-day CN Garmin training load to assess current stress, rather than relying only on the user’s goal.</li>
+            <li>Use Foster monotony and strain to check whether training is repetitive or overly stressful.</li>
+            <li>Use Garmin sleep, HRV, training status, and recovery time as recovery-risk signals; reduce confidence when data is missing.</li>
+            <li>Follow Seiler intensity-distribution principles, limit threshold and VO2max sessions, and avoid turning all available time into high intensity.</li>
           </ul>
         </div>
       </div>
@@ -143,13 +143,13 @@ function selectDecisionNotes(
   ].filter(Boolean);
   const selected = notes.filter((note, index, arr) => {
     if (arr.indexOf(note) !== index) return false;
-    return /容量|恢复|负荷|高强度|上限|未按原|明确要求|可用时间|同日|多练|强度/.test(note);
+    return /|Recovery|Load|High intensity|limit||need|Available time|day|Double days|intensity/.test(note);
   });
   if (forceRequestedSchedule) {
-    selected.unshift('用户已明确要求按原请求生成；系统保留风险提示，但不自动删除用户坚持要求的训练。');
+    selected.unshift('The user explicitly requested generation as entered; keep risk warnings without automatically deleting requested training.');
   }
   if (selected.length > 0) return selected.slice(0, 6);
-  return ['本周课表已按近期训练量、恢复状态、项目能力和用户目标共同生成。'];
+  return ['This week’s plan was generated from recent training volume, recovery status, sport ability, and the user’s goal.'];
 }
 
 function isTrainingCapacityView(value: unknown): value is TrainingCapacityView {
@@ -159,18 +159,18 @@ function isTrainingCapacityView(value: unknown): value is TrainingCapacityView {
 }
 
 function levelZh(level: string): string {
-  if (level === 'advanced') return '高级';
-  if (level === 'trained') return '稳定';
-  if (level === 'developing') return '发展中';
-  if (level === 'novice') return '新手';
-  return level || '未知';
+  if (level === 'advanced') return 'Advanced';
+  if (level === 'trained') return 'Stable';
+  if (level === 'developing') return 'Developing';
+  if (level === 'novice') return 'Novice';
+  return level || 'Unknown';
 }
 
 function readinessZh(readiness: string): string {
-  if (readiness === 'green') return '良好';
-  if (readiness === 'yellow') return '谨慎';
-  if (readiness === 'red') return '高风险';
-  return readiness || '未知';
+  if (readiness === 'green') return 'Good';
+  if (readiness === 'yellow') return 'Caution';
+  if (readiness === 'red') return 'High risk';
+  return readiness || 'Unknown';
 }
 
 const boxStyle = {

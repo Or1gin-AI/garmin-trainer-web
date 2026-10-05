@@ -13,14 +13,14 @@ import { ToolCallStack, applyToolEvent } from '@/components/training/ToolCallSta
 import type { ToolEventUi } from '@/components/training/ToolCallCard';
 
 const TOOL_LABELS: Record<string, string> = {
-  regenerate_day: '重新生成训练',
-  update_workout_field: '更新训练状态',
+  regenerate_day: 'RegenerateTraining',
+  update_workout_field: 'UpdatingTrainingStatus',
 };
 
 const STATUS_ZH: Record<string, string> = {
-  completed: '已完成',
-  skipped: '已跳过',
-  planned: '计划中',
+  completed: 'Completed',
+  skipped: 'Skipped',
+  planned: 'Planned',
 };
 
 interface PersistedToolCall {
@@ -181,7 +181,7 @@ export function ChatPanel({
                 ? mapErrorCode(data.message)
                 : typeof data.error === 'string'
                   ? mapErrorCode(data.error)
-                  : '对话失败，请稍后重试';
+                  : 'Chat failed. Please try again later.';
             ensureDraft();
             setDraft((prev) => (prev ? { ...prev, content: msg } : prev));
             setError(null);
@@ -195,7 +195,7 @@ export function ChatPanel({
       if (errObj.status === 402) {
         msg = mapErrorCode(errObj.detail?.message ?? errObj.detail?.error ?? errObj.message);
       } else {
-        msg = errObj.message || '对话失败，请稍后重试';
+        msg = errObj.message || 'Chat failed. Please try again later.';
       }
       ensureDraft();
       setDraft((prev) => (prev ? { ...prev, content: msg } : prev));
@@ -216,15 +216,15 @@ export function ChatPanel({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       }}>
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>AI 教练</div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>对话教练</div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>AI Coach</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>Coach chat</div>
         </div>
         {streaming ? (
           <span className="track-blink" style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
-            ● 思考中…
+            ● Thinking…
           </span>
         ) : (
-          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.2 }}>● 待命</span>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.2 }}>● Ready</span>
         )}
       </div>
 
@@ -234,7 +234,7 @@ export function ChatPanel({
       >
         {items.length === 0 && (
           <p style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.6, margin: 0 }}>
-            可以问任何关于本周计划的问题，例如：「为什么周三是阈值跑」「腿酸，能换 LSD 吗」。
+            canThis week’s planquestion，For example：「Why WednesdayisThreshold run」「， LSD 」。
           </p>
         )}
         {items.map((item) => (
@@ -245,7 +245,7 @@ export function ChatPanel({
         {streaming && !draft && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, paddingLeft: 4 }}>
             <span className="track-blink" style={{ width: 6, height: 6, background: T.lime, borderRadius: 999, display: 'inline-block' }} />
-            <span>教练正在回复…</span>
+            <span>Coach is replying…</span>
           </div>
         )}
       </div>
@@ -272,15 +272,15 @@ export function ChatPanel({
               void handleSend();
             }
           }}
-          placeholder={streaming ? '正在等待回复…' : '问问你的 AI 教练（Enter 发送，Shift+Enter 换行）'}
+          placeholder={streaming ? 'Waiting for a reply…' : 'Your AI coach（Enter Send，Shift+Enter new line）'}
           style={{ resize: 'none', fontSize: 13 }}
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
           <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
-            ⏎ 发送 · ⇧⏎ 换行
+            ⏎ Send · ⇧⏎ new line
           </span>
           <Btn size="sm" onClick={() => void handleSend()} disabled={streaming || composerValue.trim().length === 0}>
-            发送 ↵
+            Send ↵
           </Btn>
         </div>
       </div>
@@ -327,7 +327,7 @@ function PersistedTurn({ message }: { message: TrainingChatMessage }) {
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
             <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
-              {formatTime(message.createdAt)} · 教练
+              {formatTime(message.createdAt)} · coach
             </div>
           </div>
         )}
@@ -357,7 +357,7 @@ function DraftTurn({ draft }: { draft: DraftAssistant }) {
           </div>
         ) : (
           <div className="track-blink" style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 1 }}>
-            ● 教练正在思考…
+            ● Coach is thinking…
           </div>
         )}
       </div>
@@ -373,13 +373,13 @@ function DraftTurn({ draft }: { draft: DraftAssistant }) {
 function summarizePersistedToolCall(tc: PersistedToolCall): string | undefined {
   if (tc.name === 'regenerate_day') {
     const di = tc.arguments?.dayIndex;
-    if (typeof di === 'number') return `第 ${di} 天已重新生成`;
-    return '已重新生成训练';
+    if (typeof di === 'number') return `Day  ${di} daysRegenerate`;
+    return 'RegenerateTraining';
   }
   if (tc.name === 'update_workout_field') {
     const v = tc.arguments?.value;
-    if (typeof v === 'string') return `状态已设为：${STATUS_ZH[v] ?? v}`;
-    return '已更新训练状态';
+    if (typeof v === 'string') return `Status：${STATUS_ZH[v] ?? v}`;
+    return 'UpdatingTrainingStatus';
   }
   return undefined;
 }
@@ -395,15 +395,15 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
-    case 'pro_required': return 'AI 教练对话是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
-    case 'max_required': return 'AI 教练对话是 Max 会员功能。当前账号是免费版、Plus，或 Max 已过期，所以暂时不能使用；升级或兑换 Max 后即可解锁。';
-    case 'quota_exceeded': return '本月 AI 对话额度已用完。';
-    case 'llm_not_configured': return 'AI 模型尚未配置，请联系管理员。';
-    case 'persist_user_message_failed': return '保存用户消息失败，请重试。';
-    case 'persist_assistant_message_failed': return '保存助手回复失败，请重试。';
-    case 'plan_request_corrupt': return '该计划记录已损坏，无法继续对话。';
-    case 'not_found': return '计划不存在或不属于当前账号。';
+    case 'pro_required': return 'AI CoachCoach chat is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
+    case 'max_required': return 'AI CoachCoach chat is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
+    case 'quota_exceeded': return 'month AI chat。';
+    case 'llm_not_configured': return 'AI Modelnot yetConfiguration，Please Manage 。';
+    case 'persist_user_message_failed': return 'SaveusersmessageFailed，Please Retry。';
+    case 'persist_assistant_message_failed': return 'SavereplyFailed，Please Retry。';
+    case 'plan_request_corrupt': return 'planRecords，NoneContinuechat。';
+    case 'not_found': return 'Plan not foundorcurrent Account。';
     case 'chat_failed':
-    default: return code || '对话失败，请稍后重试。';
+    default: return code || 'Chat failed. Please try again later.。';
   }
 }

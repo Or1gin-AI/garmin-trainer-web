@@ -8,9 +8,9 @@ import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('invalid') && m.includes('token')) return '链接无效或已过期，请重新发起找回密码';
-  if (m.includes('expired')) return '链接已过期，请重新发起找回密码';
-  if (m.includes('short')) return '密码至少 8 位';
+  if (m.includes('invalid') && m.includes('token')) return 'This link is invalid or expired. Request a new password reset.';
+  if (m.includes('expired')) return 'This link has expired. Request a new password reset.';
+  if (m.includes('short')) return 'Password must be at least 8 characters';
   return message;
 }
 
@@ -34,11 +34,11 @@ function Inner() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Banner kind="error" code="ERR">
-          {error || '链接缺少 token，请回到「找回密码」页面重新发起。'}
+          {error || 'This link is missing a token. Return to the password reset page and try again.'}
         </Banner>
         <div style={{ textAlign: 'center' }}>
           <Link href="/forgot-password" className="track-link" style={{ fontSize: 13 }}>
-            重新发起找回密码 →
+            Request a new password reset →
           </Link>
         </div>
       </div>
@@ -48,9 +48,9 @@ function Inner() {
   if (done) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Banner kind="ok" code="DONE">密码已重置，请用新密码登录。</Banner>
+        <Banner kind="ok" code="DONE">Password reset. Sign in with your new password.</Banner>
         <Link href="/sign-in" style={{ textDecoration: 'none' }}>
-          <Btn style={{ width: '100%' }}>去登录 →</Btn>
+          <Btn style={{ width: '100%' }}>Go to sign in →</Btn>
         </Link>
       </div>
     );
@@ -60,11 +60,11 @@ function Inner() {
     e.preventDefault();
     setError(null);
     if (password !== confirm) {
-      setError('两次输入的密码不一致');
+      setError('Passwords do not match');
       return;
     }
     if (password.length < 8) {
-      setError('密码至少 8 位');
+      setError('Password must be at least 8 characters');
       return;
     }
     setLoading(true);
@@ -74,7 +74,7 @@ function Inner() {
     });
     setLoading(false);
     if (err) {
-      setError(humanizeError(err.message ?? '重置失败'));
+      setError(humanizeError(err.message ?? 'Reset failed'));
       return;
     }
     setDone(true);
@@ -102,7 +102,7 @@ function Inner() {
       </Field>
       {error && <Banner kind="error" code="ERR">{error}</Banner>}
       <Btn type="submit" disabled={loading}>
-        {loading ? '重置中…' : '重置密码 →'}
+        {loading ? 'Resetting…' : 'Reset password →'}
       </Btn>
     </form>
   );
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
       }}>
         <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>PWD.RESET</div>
         <h1 style={{ margin: '6px 0 22px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>
-          重置密码
+          Reset password
         </h1>
         <Suspense fallback={<div className="track-blink" style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }}>LOADING…</div>}>
           <Inner />

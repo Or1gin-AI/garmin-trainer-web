@@ -10,12 +10,12 @@ import {
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleString('zh-CN');
+  return new Date(d).toLocaleString('en-US');
 }
 
 function fmtTime(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function elapsed(start: string | null, end: string | null): string {
@@ -111,19 +111,19 @@ export default function DashboardPage() {
     <>
       <PageHero
         eyebrow="SYNC.CONSOLE"
-        title="同步控制台"
+        title="Sync console"
         sub={
           me?.plan.canAutoSync
-            ? <>Plus 用户每 2 小时增量同步一次；Max 额外解锁 AI 训练计划和教练对话。</>
-            : <>Garmin 同步是 Plus 功能。升级 Plus 后可手动触发并开启自动同步；升级 Max 后再解锁 AI。</>
+            ? <>Plus users get incremental sync every 2 hours; Max also unlocks AI training plans and coach chat.</>
+            : <>Garmin sync is a Plus feature. Upgrade to Plus to trigger sync manually and enable automatic sync; upgrade to Max to unlock AI.</>
         }
         actions={
           <>
             <Btn variant="ghost" onClick={() => refresh().catch(() => {})}>
-              <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>刷新
+              <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>Refresh
             </Btn>
             <Btn onClick={triggerSync} disabled={busy || !ready || !me?.plan.canAutoSync}>
-              {busy ? '触发中…' : '触发增量同步 →'}
+              {busy ? 'Triggering…' : 'Trigger sync →'}
             </Btn>
           </>
         }
@@ -132,8 +132,8 @@ export default function DashboardPage() {
       {!ready && (
         <div style={{ marginBottom: 20 }}>
           <Banner kind="warn" code="ACCT.MISSING">
-            请先在「Garmin 账号」页面登录并验证国区与国际区两套账号，才能开始同步。
-            <Link href="/garmin" className="track-link" style={{ marginLeft: 8 }}>前往配置 →</Link>
+            Sign in and verify both CN and International Garmin accounts on the Garmin Accounts page before syncing.
+            <Link href="/garmin" className="track-link" style={{ marginLeft: 8 }}>Go to Configuration →</Link>
           </Banner>
         </div>
       )}
@@ -146,33 +146,33 @@ export default function DashboardPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
         <StatTile
-          label="国区会话"
+          label="CNsession"
           value={cnReady ? 'OK' : '—'}
           unit="CN"
-          delta={cnAcc?.lastValidatedAt ? new Date(cnAcc.lastValidatedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) : null}
+          delta={cnAcc?.lastValidatedAt ? new Date(cnAcc.lastValidatedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : null}
           tone={cnReady ? 'ok' : undefined}
           accent={cnReady ? T.lime : T.border}
           mono={false}
         />
         <StatTile
-          label="国际区会话"
+          label="Internationalsession"
           value={globalReady ? 'OK' : '—'}
           unit="INTL"
-          delta={intlAcc?.lastValidatedAt ? new Date(intlAcc.lastValidatedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) : null}
+          delta={intlAcc?.lastValidatedAt ? new Date(intlAcc.lastValidatedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : null}
           tone={globalReady ? 'ok' : undefined}
           accent={globalReady ? T.lime : T.border}
           mono={false}
         />
         <StatTile
-          label="累计上传"
+          label="Total uploaded"
           value={totalUploaded.toLocaleString()}
           unit="ACT"
           accent={T.cyan}
         />
         <StatTile
-          label="最近自动"
+          label="Latest automatic"
           value={me?.plan.lastAutoSyncAt
-            ? new Date(me.plan.lastAutoSyncAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            ? new Date(me.plan.lastAutoSyncAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
             : '—'}
           unit={me?.plan.lastAutoSyncAt ? 'TIME' : ''}
           delta={me?.plan.canAutoSync ? 'AUTO' : 'OFF'}
@@ -186,12 +186,12 @@ export default function DashboardPage() {
           <Card hot glow style={{ padding: 22 }}>
             <CardHeader
               eyebrow="ACTIVE.JOB"
-              title={`JOB.${current.id.slice(0, 8).toUpperCase()} · ${current.status === 'queued' ? '排队中' : '同步中'}`}
+              title={`JOB.${current.id.slice(0, 8).toUpperCase()} · ${current.status === 'queued' ? 'Queued' : 'Sync'}`}
               right={<StatusBadge kind={STATUS_MAP[current.status]} />}
             />
             <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
               {[
-                ['MODE', current.mode === 'history' ? '历史回填' : '增量同步'],
+                ['MODE', current.mode === 'history' ? 'Historical backfill' : 'Sync'],
                 ['TRIGGER', current.trigger === 'cron' ? 'AUTO' : 'MANUAL'],
                 ['STARTED', fmtTime(current.startedAt ?? current.queuedAt)],
                 ['ELAPSED', elapsed(current.startedAt ?? current.queuedAt, null)],
@@ -242,12 +242,12 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <Card style={{ padding: 22 }}>
-            <CardHeader eyebrow="IDLE" title="没有正在进行的同步" />
+            <CardHeader eyebrow="IDLE" title="No sync in progress" />
             <p style={{ marginTop: 12, color: T.inkDim, fontSize: 13, lineHeight: 1.65 }}>
               {ready ? (
-                <>点击右上角「触发增量同步」立刻执行一次 Garmin 双向同步。</>
+                <>Click “Trigger sync” to run a two-way Garmin sync now.</>
               ) : (
-                <>完成两区 Garmin 登录后即可开始同步。</>
+                <>Complete Garmin sign-in for both regions to start syncing.</>
               )}
             </p>
             <div style={{ marginTop: 18, fontFamily: T.mono, fontSize: 11, color: T.inkFaint, lineHeight: 1.8 }}>
@@ -259,11 +259,11 @@ export default function DashboardPage() {
         )}
 
         <Card style={{ padding: 22 }}>
-          <CardHeader eyebrow="GARMIN.ACCOUNTS" title="Garmin 账号" />
+          <CardHeader eyebrow="GARMIN.ACCOUNTS" title="Garmin Account" />
           <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { code: 'CN', label: '国区', host: 'sso.garmin.cn', acc: cnAcc },
-              { code: 'INTL', label: '国际区', host: 'sso.garmin.com', acc: intlAcc },
+              { code: 'CN', label: 'CN', host: 'sso.garmin.cn', acc: cnAcc },
+              { code: 'INTL', label: 'International', host: 'sso.garmin.com', acc: intlAcc },
             ].map((r) => {
               const ok = r.acc?.hasSession ?? false;
               return (
@@ -285,17 +285,17 @@ export default function DashboardPage() {
           </div>
           <div style={{ marginTop: 14 }}>
             <Link href="/garmin" style={{ textDecoration: 'none' }}>
-              <Btn variant="ghost" size="sm">管理账号 →</Btn>
+              <Btn variant="ghost" size="sm">Manage Account →</Btn>
             </Link>
           </div>
         </Card>
       </div>
 
-      <SectionLabel>JOBS.LOG · 近 {jobs.length} 条</SectionLabel>
+      <SectionLabel>JOBS.LOG ·  {jobs.length} </SectionLabel>
       <Card>
         {jobs.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
-            暂无同步记录
+            No sync records yet
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>

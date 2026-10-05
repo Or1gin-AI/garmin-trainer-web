@@ -38,19 +38,19 @@ export default function ForgotPasswordPage() {
         padding: '36px 32px',
       }}>
         <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>PWD.RESET</div>
-        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>找回密码</h1>
+        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Reset password</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
-          想起来了？
-          <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>返回登录</Link>
+          Remembered it?
+          <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>Back to sign in</Link>
         </p>
 
         {done ? (
           <>
             <Banner kind="ok" code="SENT">
-              如果该邮箱已注册，我们已经发送了一封重置邮件，请查收（包括垃圾邮件）。链接 1 小时内有效。
+              If that email is registered, we sent a password-reset email. Check your inbox and spam folder. The link is valid for one hour.
             </Banner>
             <div style={{ marginTop: 18, textAlign: 'center' }}>
-              <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← 回到登录</Link>
+              <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← Back to sign in</Link>
             </div>
           </>
         ) : (
@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
               />
             </Field>
             <Btn type="submit" disabled={loading || !email}>
-              {loading ? '发送中…' : '发送重置邮件 →'}
+              {loading ? 'Sending…' : 'Send reset email →'}
             </Btn>
           </form>
         )}

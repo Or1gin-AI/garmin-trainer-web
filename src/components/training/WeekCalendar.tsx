@@ -37,9 +37,9 @@ export interface WeekCalendarProps {
 
 const STATUS_DOT: Record<WorkoutStatus, { color: string; label: string } | null> = {
   planned: null,
-  completed: { color: T.green, label: '完成' },
-  skipped: { color: T.amber, label: '跳过' },
-  regenerating: { color: T.cyan, label: '更新' },
+  completed: { color: T.green, label: 'Completed' },
+  skipped: { color: T.amber, label: 'Skipped' },
+  regenerating: { color: T.cyan, label: 'Updating' },
 };
 
 function formatMD(d: string): string {
@@ -48,10 +48,10 @@ function formatMD(d: string): string {
   return `${Number(m[2])}/${Number(m[3])}`;
 }
 
-const WEEKDAY_ZH = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const WEEKDAY_ZH = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function usableTarget(value: string | undefined): string | null {
-  return value && value !== '不适用' ? value : null;
+  return value && value !== 'N/A' ? value : null;
 }
 
 function primaryTarget(w: CalendarCellWorkout): string | null {
@@ -70,7 +70,7 @@ function intensityRank(value: CalendarCellWorkout['intensity']): number {
 }
 
 function formatWorkoutLine(item: CalendarCellWorkout, index: number, total: number): string {
-  const prefix = total > 1 ? `训练 ${index + 1} · ` : '';
+  const prefix = total > 1 ? `Training ${index + 1} · ` : '';
   const minutes =
     item.durationMinutes !== null &&
     item.durationMinutes !== undefined &&
@@ -237,7 +237,7 @@ export function WeekCalendar({
                     letterSpacing: 1.2,
                   }}
                 >
-                  …等待
+                  …Waiting
                 </span>
               )}
             </div>
@@ -264,7 +264,7 @@ export function WeekCalendar({
                   className="track-blink"
                   style={{ fontFamily: T.mono, color: T.inkFaint }}
                 >
-                  …生成中
+                  …Generate
                 </span>
               ) : (
                 ''
@@ -311,7 +311,7 @@ export function WeekCalendar({
                   <span style={{ flexShrink: 0 }}>{totalDuration}min</span>
                 )}
                 {totalLoad > 0 && (
-                  <span style={{ flexShrink: 0, color: T.lime }}>负荷 {totalLoad}</span>
+                  <span style={{ flexShrink: 0, color: T.lime }}>Load {totalLoad}</span>
                 )}
               </div>
             )}
