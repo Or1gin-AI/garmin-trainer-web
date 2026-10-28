@@ -19,7 +19,6 @@ const NAV: NavItem[] = [
   { href: '/profile', label: 'Athlete Profile' },
   { href: '/dashboard', label: 'Sync' },
   { href: '/garmin', label: 'Garmin' },
-  { href: '/subscription', label: 'Plan' },
 ];
 
 function daysUntil(iso: string | null): number | null {
@@ -157,11 +156,10 @@ export default function AppLayout({
                 <TierBadge tier={me.plan.plan === 'max' ? 'max' : 'plus'} />
               </span>
             ) : (
-              <Link href="/subscription" style={{
+              <span style={{
                 padding: '3px 9px', borderRadius: 999, border: `1px solid ${T.border}`,
                 color: T.inkDim, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-                textDecoration: 'none',
-              }}>{planBadge(me?.plan ?? null)}</Link>
+              }}>{planBadge(me?.plan ?? null)}</span>
             )}
             <span title={displayName} style={{
               width: 30, height: 30, borderRadius: 999, flexShrink: 0,

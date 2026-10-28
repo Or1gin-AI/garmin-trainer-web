@@ -395,8 +395,8 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
-    case 'pro_required': return 'AI Coach chat is a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
-    case 'max_required': return 'AI Coach chat is a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
+    case 'pro_required': return 'AI Coach chat is a Max feature. It isn't enabled for this account yet — contact the admin to turn it on.';
+    case 'max_required': return 'AI Coach chat is a Max feature. It isn't enabled for this account yet — contact the admin to turn it on.';
     case 'quota_exceeded': return 'You’ve used all of this month’s AI chat messages.';
     case 'llm_not_configured': return 'No AI model is configured yet. Please contact an admin.';
     case 'persist_user_message_failed': return 'Couldn’t save your message. Please try again.';

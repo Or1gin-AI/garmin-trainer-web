@@ -140,7 +140,7 @@ export default function DashboardPage() {
         sub={
           me?.plan.canAutoSync
             ? 'Activities flow both ways between Garmin China and Garmin International. Automatic sync runs every 2 hours — or trigger one now.'
-            : 'Keep Garmin China and Garmin International in sync. Upgrade to Plus to enable sync and run it automatically every 2 hours.'
+            : 'Keep Garmin China and Garmin International in sync. Sync isn’t enabled for this account yet — contact the admin to turn it on.'
         }
         actions={
           <>

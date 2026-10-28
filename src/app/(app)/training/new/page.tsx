@@ -53,9 +53,9 @@ interface StreamedWorkoutRaw {
 function mapTrainingError(code: string): string {
   switch (code) {
     case 'pro_required':
-      return 'AI training plans (including advanced plans) are a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
+      return 'AI training plans (including advanced plans) are a Max feature. It isn't enabled for this account yet — contact the admin to turn it on.';
     case 'max_required':
-      return 'AI training plans (including advanced plans) are a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
+      return 'AI training plans (including advanced plans) are a Max feature. It isn't enabled for this account yet — contact the admin to turn it on.';
     case 'quota_exceeded':
       return 'You’ve used all of this month’s AI plan generations.';
     default:
@@ -607,7 +607,7 @@ export default function NewTrainingPlanPage() {
       <PageHero
         eyebrow="New plan"
         title="Create Training Plan"
-        sub="AI training plans are a Max feature. You can fill out the form without Max — you’ll be prompted to upgrade when you click Generate."
+        sub="Tell the AI coach your sport, goal and schedule. It reads your Garmin history and builds a week of structured sessions, streaming each step live."
       />
 
       {error && (
