@@ -14,7 +14,7 @@ export interface CoachPanelProps {
   status?: { label: string; anim?: boolean; tone?: 'lime' | 'green' | 'amber' | 'cyan' };
   /** Optional title (default: "AI Coach"). */
   title?: string;
-  /** Eyebrow (default: "AI Live process"). */
+  /** Eyebrow (default: "Live AI activity"). */
   eyebrow?: string;
   /** Optional footer slot (e.g. cancel button). */
   footer?: ReactNode;
@@ -25,7 +25,7 @@ export function CoachPanel({
   summaryText,
   status,
   title = 'AI Coach',
-  eyebrow = 'AI Live process',
+  eyebrow = 'Live AI activity',
   footer,
 }: CoachPanelProps) {
   const toneColor =

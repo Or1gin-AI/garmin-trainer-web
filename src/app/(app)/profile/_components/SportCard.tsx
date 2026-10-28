@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { AthleticProfileSport, AthleticSport } from '@/lib/api';
-import { Card, CardHeader, StatusBadge, T } from '@/components/track';
+import { Card, CardHeader, Pill, T } from '@/components/track';
 
 interface Props {
   sport: AthleticSport;
@@ -21,9 +21,9 @@ export function SportCard({ sport, profile }: Props) {
     return (
       <Card style={{ padding: 22, minHeight: 245 }}>
         <CardHeader
-          eyebrow={`SPORT.${meta.code}`}
+          eyebrow={meta.code}
           title={meta.label}
-          right={<StatusBadge kind="planned" size="sm" />}
+          right={<Pill color={T.inkFaint} size="sm">No data yet</Pill>}
         />
         <div style={{
           marginTop: 34,
@@ -34,10 +34,10 @@ export function SportCard({ sport, profile }: Props) {
           fontSize: 13,
           lineHeight: 1.7,
         }}>
-          Insufficient data. Continue syncing Garmin activities to generate this sport profile.
+          Not enough data yet. Keep syncing Garmin activities to build this sport profile.
         </div>
         <div style={{ marginTop: 16, fontFamily: T.mono, fontSize: 10, color: T.inkGhost, letterSpacing: 1.4 }}>
-          ACTIVITY.COUNT {count.toLocaleString()} · READ.ONLY
+          {count.toLocaleString('en-US')} activities analyzed
         </div>
       </Card>
     );
@@ -46,7 +46,7 @@ export function SportCard({ sport, profile }: Props) {
   return (
     <Card hot={profile.confidence === 'high'} accent={meta.color} style={{ padding: 22, minHeight: 245 }}>
       <CardHeader
-        eyebrow={`SPORT.${meta.code}`}
+        eyebrow={meta.code}
         title={meta.label}
         right={<ConfidenceBadge confidence={profile.confidence} />}
       />
@@ -65,9 +65,9 @@ export function SportCard({ sport, profile }: Props) {
         paddingTop: 14,
         borderTop: `1px solid ${T.border}`,
       }}>
-        <Fact label="ACT" value={profile.activityCountUsed.toLocaleString()} />
-        <Fact label="LAST" value={fmtDate(profile.lastActivityAt)} />
-        <Fact label="UPD" value={fmtDate(profile.updatedAt)} />
+        <Fact label="Activities" value={profile.activityCountUsed.toLocaleString('en-US')} />
+        <Fact label="Last activity" value={fmtDate(profile.lastActivityAt)} />
+        <Fact label="Updated" value={fmtDate(profile.updatedAt)} />
       </div>
     </Card>
   );
@@ -79,10 +79,10 @@ function RunningStats({ profile }: { profile: AthleticProfileSport }) {
     <MetricGrid>
       <Metric label="VDOT" value={fmtDecimal(profile.primaryMetric ?? snapshotNumber(snap, 'vdot', 'vo2Max'))} tone={T.lime} />
       <Metric label="Easy pace" value={fmtPaceKm(snapshotNumber(snap, 'easyPaceSecPerKm'))} />
-      <Metric label="Long run" value={fmtPaceKm(snapshotNumber(snap, 'longPaceSecPerKm'))} />
+      <Metric label="Long-run pace" value={fmtPaceKm(snapshotNumber(snap, 'longPaceSecPerKm'))} />
       <Metric label="Threshold pace" value={fmtPaceKm(snapshotNumber(snap, 'thresholdPaceSecPerKm'))} />
-      <Metric label="VO2 Pace" value={fmtPaceKm(snapshotNumber(snap, 'vo2PaceSecPerKm'))} />
-      <Metric label="intervalsPace" value={fmtPaceKm(snapshotNumber(snap, 'intervalPaceSecPerKm'))} />
+      <Metric label="VO2max pace" value={fmtPaceKm(snapshotNumber(snap, 'vo2PaceSecPerKm'))} />
+      <Metric label="Interval pace" value={fmtPaceKm(snapshotNumber(snap, 'intervalPaceSecPerKm'))} />
     </MetricGrid>
   );
 }
@@ -96,7 +96,7 @@ function SwimmingStats({ profile }: { profile: AthleticProfileSport }) {
       <Metric label="Endurance pace" value={fmtPace100(snapshotNumber(snap, 'endurancePaceSecPer100m'))} />
       <Metric label="Aerobic pace" value={fmtPace100(snapshotNumber(snap, 'aerobicPaceSecPer100m'))} />
       <Metric label="Threshold pace" value={fmtPace100(snapshotNumber(snap, 'thresholdPaceSecPer100m'))} />
-      <Metric label="VO2 Pace" value={fmtPace100(snapshotNumber(snap, 'vo2PaceSecPer100m'))} />
+      <Metric label="VO2max pace" value={fmtPace100(snapshotNumber(snap, 'vo2PaceSecPer100m'))} />
     </MetricGrid>
   );
 }
@@ -198,7 +198,7 @@ function ConfidenceBadge({ confidence }: { confidence: AthleticProfileSport['con
       textTransform: 'uppercase',
       whiteSpace: 'nowrap',
     }}>
-      CONF.{confidence}
+      {confidence} confidence
     </span>
   );
 }

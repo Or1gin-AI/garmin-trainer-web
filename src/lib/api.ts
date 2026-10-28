@@ -326,7 +326,7 @@ export const SPORT_LABELS: Record<Sport, string> = {
   swimming: '🏊 Swimming',
   rest: '💤 Rest',
   strength: '💪 Strength',
-  mobility: '🧘 activityRecovery',
+  mobility: '🧘 Mobility',
 };
 
 export interface TrainingPlanSummary {

@@ -48,9 +48,9 @@ export default function ProfilePage() {
   return (
     <>
       <PageHero
-        eyebrow="ATHLETE.PROFILE"
+        eyebrow="Performance"
         title="Athletic Profile"
-        sub="Read-only profile showing the saved performance snapshot and structured activity metrics."
+        sub="A read-only view of your saved performance snapshot and the activity metrics behind it."
         actions={
           <Btn variant="ghost" onClick={() => void load()} disabled={loading}>
             <span style={{ fontFamily: T.mono, marginRight: 6 }}>↻</span>
@@ -61,7 +61,7 @@ export default function ProfilePage() {
 
       {error && (
         <div style={{ marginBottom: 20 }}>
-          <Banner kind="error" code="PROFILE.ERR">{error}</Banner>
+          <Banner kind="error" code="ERR">{error}</Banner>
         </div>
       )}
 
@@ -79,17 +79,17 @@ export default function ProfilePage() {
             gap: 14,
             marginBottom: 28,
           }}>
-            <StatTile label="Available sports" value={`${availableCount}/3`} unit="SPORT" accent={availableCount > 0 ? T.lime : T.borderStrong} />
-            <StatTile label="Activities" value={activityCount.toLocaleString()} unit="ACT" accent={T.amber} />
+            <StatTile label="Available sports" value={`${availableCount}/3`} accent={availableCount > 0 ? T.lime : T.borderStrong} />
+            <StatTile label="Activities" value={activityCount.toLocaleString('en-US')} accent={T.amber} />
             <StatTile label="Last updated" value={latestUpdate.short} unit={latestUpdate.unit} accent={T.lime} />
           </div>
 
           <SectionLabel right={
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkGhost, letterSpacing: 1.4 }}>
-              LAST.ACTIVITY {latestActivity.full}
+            <span style={{ fontSize: 12, color: T.inkFaint }}>
+              Last activity {latestActivity.full}
             </span>
           }>
-            SPORT.CAPABILITY
+            Sport capability
           </SectionLabel>
 
           <div style={{
@@ -107,7 +107,7 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          <SectionLabel>ACTIVITY.INPUTS</SectionLabel>
+          <SectionLabel>Activity inputs</SectionLabel>
           <ActivityList activities={data.activities} />
         </>
       )}

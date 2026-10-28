@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 const API_URL = process.env.NODE_ENV === 'production'
   ? ''
   : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-const BIND_LIMIT_NOTICE = 'After successful linking，oneRegion 7 dayswithinonlyonetimes Garmin Account。Please ConfirmThis isAccountSign in。';
+const BIND_LIMIT_NOTICE = 'Each region can only be linked to one Garmin account every 7 days. Make sure this is your own account before signing in.';
 
 type Tone = 'info' | 'warning' | 'danger' | 'success';
 type SsoMessage = {
@@ -40,7 +40,7 @@ export default function GarminConnectPage() {
     setTone(t);
   }, []);
 
-  const invalidRegionError = !region ? 'Invalid region. Go back and choose again.' : null;
+  const invalidRegionError = !region ? 'Invalid region. Go back and choose a region.' : null;
 
   useEffect(() => {
     if (!region) return;
@@ -100,7 +100,7 @@ export default function GarminConnectPage() {
     const submitTicket = async (ticket: string, serviceUrl: string | null) => {
       if (submitted.current) return;
       submitted.current = true;
-      setStatusMessage('Sign-in successful. Linking to the server…', 'success');
+      setStatusMessage('Signed in. Linking your account…', 'success');
       try {
         const res = await fetch(`${API_URL}/api/garmin/callback/${region}`, {
           method: 'POST',
@@ -120,7 +120,7 @@ export default function GarminConnectPage() {
           throw new Error(
             data.error ||
               (res.status === 401
-                ? 'Sign in，Please new Sign inConnect Garmin'
+                ? 'Your session has expired. Please sign in again, then reconnect Garmin.'
                 : 'Linking failed. Please try again.'),
           );
         }
@@ -148,7 +148,7 @@ export default function GarminConnectPage() {
 
       if (typeof parsed.gauthInitHeight === 'number') {
         iframe.style.height = `${Number(parsed.gauthInitHeight) + 20}px`;
-        setStatusMessage('The official Garmin sign-in form is loaded. Complete sign-in below.');
+        setStatusMessage('Garmin sign-in form loaded. Sign in below.');
         return;
       }
       if (typeof parsed.gauthHeight === 'number') {
@@ -156,7 +156,7 @@ export default function GarminConnectPage() {
         return;
       }
       if (parsed.openLiteBox) {
-        setStatusMessage('Garmin opened an additional verification step. Continue below.', 'warning');
+        setStatusMessage('Garmin needs an extra verification step. Continue below.', 'warning');
         return;
       }
 
@@ -174,19 +174,19 @@ export default function GarminConnectPage() {
         // SUCCESS-without-ticket branch only fires when redirectAfter* is set,
         // and that path also does top.location.href which would have
         // navigated us away anyway.
-        setStatusMessage('Garmin returned successfully but no ticket was provided. Refresh and try again.', 'danger');
+        setStatusMessage('Garmin reported success but didn’t return a sign-in ticket. Refresh and try again.', 'danger');
         return;
       }
       if (status === 'FAIL') {
-        setStatusMessage('Account or password is incorrect. Re-enter it below.', 'danger');
+        setStatusMessage('Incorrect email or password. Please try again below.', 'danger');
         return;
       }
       if (status === 'ACCOUNT_LOCKED') {
-        setStatusMessage('The Garmin account is temporarily locked. Try again later.', 'danger');
+        setStatusMessage('This Garmin account is temporarily locked. Please try again later.', 'danger');
         return;
       }
       if (status === 'ACCOUNT_DISABLED') {
-        setStatusMessage('The Garmin account is unavailable. Confirm its status on the official Garmin page.', 'danger');
+        setStatusMessage('This Garmin account is unavailable. Check its status on the Garmin website.', 'danger');
         return;
       }
     };
@@ -205,7 +205,7 @@ export default function GarminConnectPage() {
     success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
   }[tone];
 
-  const regionLabel = region === 'cn' ? 'CN (garmin.cn)' : region === 'global' ? 'International (garmin.com)' : '';
+  const regionLabel = region === 'cn' ? 'Garmin China (garmin.cn)' : region === 'global' ? 'Garmin International (garmin.com)' : '';
   const displayError = invalidRegionError || error;
 
   return (
@@ -215,12 +215,12 @@ export default function GarminConnectPage() {
           <Link href="/garmin" className="text-sm text-zinc-500 hover:text-zinc-900">
             ← Back
           </Link>
-          <h1 className="text-2xl font-bold mt-2">Connect  {regionLabel} Garmin</h1>
+          <h1 className="text-2xl font-bold mt-2">Connect {regionLabel}</h1>
           <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-            The sign-in form below is rendered by Garmin at <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> 。
+            The sign-in form below is served directly by Garmin from <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>.
           </p>
           <p className="text-sm text-red-600 mt-1 font-medium leading-relaxed">
-            Your Garmin password is submitted directly to <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span>，we 。we to Garmin BackonetimesSign in OAuth 。
+            Your Garmin password goes straight to <span className="font-mono">sso.garmin.{region === 'cn' ? 'cn' : 'com'}</span> and never touches our servers. We only receive a one-time sign-in ticket from Garmin, which we exchange for an OAuth token.
           </p>
         </header>
 
@@ -233,7 +233,7 @@ export default function GarminConnectPage() {
             {displayError}
             <div className="mt-3">
               <Link href="/garmin" className="text-emerald-600 hover:underline">
-                Go back and retry
+                Go back and try again
               </Link>
             </div>
           </div>

@@ -11,10 +11,10 @@ import {
   type TrainingPlanSummary,
 } from '@/lib/api';
 import {
-  T, Btn, Card, SectionLabel, StatusBadge, PageHero, Banner,
+  T, Btn, Card, SectionLabel, StatusBadge, PageHero, Banner, Pill, LABEL,
   type StatusKind,
 } from '@/components/track';
-import { formatWeekStartShort, planShortId } from '@/lib/format';
+import { formatWeekRange, weekRelation } from '@/lib/format';
 
 const PLAN_LIMIT = 10;
 
@@ -25,15 +25,15 @@ const STATUS_MAP: Record<PlanStatus, StatusKind> = {
   archived: 'archived',
 };
 
-function summaryPreview(s: string | null): string {
-  if (!s) return '—';
-  const trimmed = s.replace(/\s+/g, ' ').trim();
-  const knownTranslations: Record<string, string> = {
-    '本周共安排4次训练日，包含1次高强度课（阈值跑）和1次长距离有氧跑（周日LSD）。当前疲劳状态为高风险，最新刺激为节奏跑，且7天负荷呈上升趋势。': 'Four training days are scheduled this week, including one high-intensity threshold workout and one long aerobic run on Sunday. Current fatigue risk is high, with the latest stimulus being a tempo run and the 7-day load trending upward.',
-    '本周训练计划共4天，包含3次跑步（2次有氧跑、1次恢复跑）和4天休息，未安排长距离或质量课。当前疲劳正常，近期无可靠活动数据，本周以轻松有氧跑为主，帮助建立心肺基础。': 'Four training days are scheduled this week, including three runs (two aerobic runs and one recovery run) with four rest days. No long or quality workout is planned. Fatigue is normal, and the week emphasizes easy aerobic running to build an aerobic base.',
-  };
-  if (knownTranslations[trimmed]) return knownTranslations[trimmed];
-  return trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
+const RELATION_PILL = {
+  current: { label: 'This week', color: T.lime },
+  upcoming: { label: 'Upcoming', color: T.cyan },
+  past: { label: 'Past week', color: T.inkFaint },
+} as const;
+
+function summaryText(s: string | null): string {
+  if (!s) return 'No summary yet.';
+  return s.replace(/\s+/g, ' ').trim();
 }
 
 export default function TrainingListPage() {
@@ -54,14 +54,19 @@ export default function TrainingListPage() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  const active = (plans ?? []).filter((p) => p.status !== 'archived');
+  const nonArchived = (plans ?? []).filter((p) => p.status !== 'archived');
   const archived = (plans ?? []).filter((p) => p.status === 'archived');
+  const featured =
+    nonArchived.find((p) => p.status === 'ready' && weekRelation(p.weekStartDate) === 'current')
+    ?? nonArchived.find((p) => p.status === 'ready' && weekRelation(p.weekStartDate) === 'upcoming')
+    ?? null;
+  const others = nonArchived.filter((p) => p !== featured);
   const planCount = plans?.length ?? 0;
   const limitReached = plans !== null && planCount >= PLAN_LIMIT;
 
   async function handleDelete(plan: TrainingPlanSummary) {
     const ok = window.confirm(
-      'Delete this local training plan? If it has been uploaded to Garmin, delete the remote copy from CN/International on the details page first.',
+      'Delete this training plan? If it was uploaded to Garmin, remove it from Garmin on the plan page first.',
     );
     if (!ok) return;
     setDeletingPlanId(plan.id);
@@ -74,7 +79,7 @@ export default function TrainingListPage() {
       const detail = err.detail as { error?: string; activeCount?: number } | undefined;
       setError(
         detail?.error === 'garmin_plan_uploaded'
-          ? `This plan still has ${detail.activeCount ?? 0} Garmin remote copies. Delete them from Garmin on the details page before deleting the local plan.`
+          ? `This plan still has ${detail.activeCount ?? 0} workout(s) on your Garmin calendar. Remove them from Garmin on the plan page first.`
           : err.message,
       );
     } finally {
@@ -85,9 +90,9 @@ export default function TrainingListPage() {
   return (
     <>
       <PageHero
-        eyebrow="Training plans"
+        eyebrow="AI Coach"
         title="Training Plans"
-        sub={`AI-generated weekly plans based on your goals and Garmin history. ${planCount}/${PLAN_LIMIT} plans.`}
+        sub="Weekly plans built from your goals and Garmin history. Every session comes with clear targets, a structured breakdown and rules for adapting on the fly."
         actions={
           limitReached ? (
             <Btn disabled>Plan limit reached</Btn>
@@ -107,32 +112,42 @@ export default function TrainingListPage() {
 
       {limitReached && (
         <div style={{ marginBottom: 20 }}>
-          <Banner kind="warn" code="LIMIT">You can keep at most {PLAN_LIMIT} training plans. Delete an old plan before creating another.</Banner>
+          <Banner kind="warn" code="LIMIT">You can keep up to {PLAN_LIMIT} training plans. Delete an old one to create another.</Banner>
         </div>
       )}
 
       {plans === null && !error && (
-        <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // Loading…
+        <div style={{ fontSize: 14, color: T.inkFaint }} className="track-blink">
+          Loading plans…
         </div>
       )}
 
       {plans && plans.length === 0 && (
-        <Card style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, marginBottom: 8 }}>NO PLANS</div>
-          <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 18px' }}>You have no training plans yet.</p>
+        <Card style={{ padding: 48, textAlign: 'center' }}>
+          <div style={{ ...LABEL, color: T.lime, marginBottom: 10 }}>No plans yet</div>
+          <p style={{ color: T.inkDim, fontSize: 15, margin: '0 0 20px' }}>Tell the AI coach your goal and it will build your first week.</p>
           <Link href="/training/new" style={{ textDecoration: 'none' }}>
             <Btn>Create your first plan</Btn>
           </Link>
         </Card>
       )}
 
-      {active.length > 0 && (
+      {featured && (
+        <FeaturedPlan
+          plan={featured}
+          opening={openingPlanId === featured.id}
+          onOpen={() => setOpeningPlanId(featured.id)}
+        />
+      )}
+
+      {others.length > 0 && (
         <>
-          <SectionLabel>Active plans</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-            {active.map((p) => (
-              <PlanRow
+          <SectionLabel right={<span style={{ fontSize: 12, color: T.inkFaint }}>{planCount} of {PLAN_LIMIT} plans used</span>}>
+            {featured ? 'Other plans' : 'Your plans'}
+          </SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14, marginBottom: 28 }}>
+            {others.map((p) => (
+              <PlanCard
                 key={p.id}
                 plan={p}
                 deleting={deletingPlanId === p.id}
@@ -148,9 +163,9 @@ export default function TrainingListPage() {
       {archived.length > 0 && (
         <>
           <SectionLabel>Archived</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
             {archived.map((p) => (
-              <PlanRow
+              <PlanCard
                 key={p.id}
                 plan={p}
                 archived
@@ -167,7 +182,58 @@ export default function TrainingListPage() {
   );
 }
 
-function PlanRow({
+function FeaturedPlan({
+  plan,
+  opening,
+  onOpen,
+}: {
+  plan: TrainingPlanSummary;
+  opening: boolean;
+  onOpen: () => void;
+}) {
+  const router = useRouter();
+  const rel = weekRelation(plan.weekStartDate);
+  const pill = rel ? RELATION_PILL[rel] : null;
+
+  function open() {
+    if (opening) return;
+    onOpen();
+    router.push(`/training/${plan.id}`);
+  }
+
+  return (
+    <Card
+      hover
+      onClick={open}
+      style={{
+        padding: 0,
+        marginBottom: 32,
+        background: 'linear-gradient(135deg, rgba(198,255,58,0.11), rgba(18,22,20,0.96) 48%), #121614',
+        borderColor: 'rgba(198,255,58,0.28)',
+      }}
+    >
+      <div style={{ padding: '26px 28px', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0, flex: '1 1 420px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            {pill && <Pill color={pill.color} solid={rel === 'current'}>{pill.label}</Pill>}
+            <StatusBadge kind={STATUS_MAP[plan.status]} />
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 750, letterSpacing: '-0.02em', color: T.ink, marginBottom: 10 }}>
+            {formatWeekRange(plan.weekStartDate)}
+          </div>
+          <p style={{ margin: 0, fontSize: 15, color: T.inkDim, lineHeight: 1.65, maxWidth: 820 }}>
+            {summaryText(plan.summary)}
+          </p>
+        </div>
+        <Btn onClick={(e) => { e.stopPropagation(); open(); }} disabled={opening}>
+          {opening ? 'Opening…' : 'Open this week →'}
+        </Btn>
+      </div>
+    </Card>
+  );
+}
+
+function PlanCard({
   plan,
   archived,
   deleting,
@@ -183,6 +249,8 @@ function PlanRow({
   onDelete: () => void;
 }) {
   const router = useRouter();
+  const rel = weekRelation(plan.weekStartDate);
+  const pill = rel ? RELATION_PILL[rel] : null;
 
   function openPlan() {
     if (opening || deleting) return;
@@ -196,59 +264,53 @@ function PlanRow({
       onClick={openPlan}
       style={{
         padding: 20,
-        opacity: archived ? 0.55 : 1,
+        opacity: archived ? 0.6 : 1,
         cursor: opening || deleting ? 'wait' : 'pointer',
         borderColor: opening ? T.lime : undefined,
-        boxShadow: opening ? `0 0 22px ${T.limeGlow}` : undefined,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
       }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) auto', gap: 18, alignItems: 'center' }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.lime, letterSpacing: 1.5, fontWeight: 600 }}>
-              {planShortId(plan.id)}
-            </span>
-            {opening ? <StatusBadge kind="running" size="sm" /> : <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />}
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: T.ink }}>
-            {formatWeekStartShort(plan.weekStartDate)}
-          </div>
-          <div style={{ marginTop: 6, fontSize: 13, color: T.inkDim, lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {opening ? 'Opening plan…' : summaryPreview(plan.summary)}
-          </div>
-        </div>
-
-        <div>
-          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, letterSpacing: 1.5, marginBottom: 6 }}>CREATED</div>
-          <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim }}>
-            {new Date(plan.createdAt).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Btn
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPlan();
-            }}
-            disabled={opening || deleting}
-          >
-            {opening ? 'Opening…' : 'Details'}
-          </Btn>
-          <Btn
-            variant="danger"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            disabled={deleting || opening}
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </Btn>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {opening ? <StatusBadge kind="running" size="sm" /> : <StatusBadge kind={STATUS_MAP[plan.status]} size="sm" />}
+        {pill && <Pill color={pill.color} size="sm">{pill.label}</Pill>}
+      </div>
+      <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.01em', color: T.ink }}>
+        {formatWeekRange(plan.weekStartDate)}
+      </div>
+      <div style={{
+        fontSize: 14, color: T.inkDim, lineHeight: 1.6, flex: 1,
+        overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+      }}>
+        {opening ? 'Opening plan…' : summaryText(plan.summary)}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+        <span style={{ flex: 1, fontSize: 12, color: T.inkFaint }}>
+          Created {new Date(plan.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
+        <Btn
+          variant="danger"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          disabled={deleting || opening}
+        >
+          {deleting ? 'Deleting…' : 'Delete'}
+        </Btn>
+        <Btn
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            openPlan();
+          }}
+          disabled={opening || deleting}
+        >
+          {opening ? 'Opening…' : 'View plan'}
+        </Btn>
       </div>
     </Card>
   );

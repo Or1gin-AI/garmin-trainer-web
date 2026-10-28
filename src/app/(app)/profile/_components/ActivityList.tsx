@@ -36,7 +36,7 @@ export function ActivityList({
   if (activities.length === 0) {
     return (
       <Card style={{ padding: 22 }}>
-        <CardHeader eyebrow="ACTIVITY.METRICS" title="activities included in the calculation" />
+        <CardHeader eyebrow="Activity metrics" title="Activities used in your profile" />
         <p style={{ margin: '16px 0 0', color: T.inkDim, fontSize: 13 }}>
           No structured activity data yet.
         </p>
@@ -47,8 +47,8 @@ export function ActivityList({
   return (
     <Card style={{ padding: 22 }}>
       <CardHeader
-        eyebrow="ACTIVITY.METRICS"
-        title="activities included in the calculation"
+        eyebrow="Activity metrics"
+        title="Activities used in your profile"
         right={
           <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
             {safePage + 1}/{pageCount} · {activities.length} ACT

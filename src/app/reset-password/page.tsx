@@ -8,8 +8,8 @@ import { T, Btn, Field, Banner, TrackInput } from '@/components/track';
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('invalid') && m.includes('token')) return 'This link is invalid or expired. Request a new password reset.';
-  if (m.includes('expired')) return 'This link has expired. Request a new password reset.';
+  if (m.includes('invalid') && m.includes('token')) return 'This link is invalid or has expired. Please request a new one.';
+  if (m.includes('expired')) return 'This link has expired. Please request a new one.';
   if (m.includes('short')) return 'Password must be at least 8 characters';
   return message;
 }
@@ -34,11 +34,11 @@ function Inner() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Banner kind="error" code="ERR">
-          {error || 'This link is missing a token. Return to the password reset page and try again.'}
+          {error || 'This reset link is incomplete. Please request a new one.'}
         </Banner>
         <div style={{ textAlign: 'center' }}>
           <Link href="/forgot-password" className="track-link" style={{ fontSize: 13 }}>
-            Request a new password reset →
+            Request a new reset link →
           </Link>
         </div>
       </div>
@@ -48,7 +48,7 @@ function Inner() {
   if (done) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Banner kind="ok" code="DONE">Password reset. Sign in with your new password.</Banner>
+        <Banner kind="ok" code="DONE">Your password has been reset. Sign in with your new password.</Banner>
         <Link href="/sign-in" style={{ textDecoration: 'none' }}>
           <Btn style={{ width: '100%' }}>Go to sign in →</Btn>
         </Link>
@@ -82,7 +82,7 @@ function Inner() {
 
   return (
     <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Field label="NEW.PASSWORD">
+      <Field label="New password">
         <TrackInput
           type="password"
           required
@@ -91,7 +91,7 @@ function Inner() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </Field>
-      <Field label="CONFIRM.PASSWORD">
+      <Field label="Confirm password">
         <TrackInput
           type="password"
           required
@@ -119,9 +119,9 @@ export default function ResetPasswordPage() {
         background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
         padding: '36px 32px',
       }}>
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>PWD.RESET</div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>Password reset</div>
         <h1 style={{ margin: '6px 0 22px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>
-          Reset password
+          Reset Password
         </h1>
         <Suspense fallback={<div className="track-blink" style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }}>LOADING…</div>}>
           <Inner />

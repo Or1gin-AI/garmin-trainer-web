@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0e0c;
+  --background: #0a0d0b;
   --foreground: #f3f5ef;
-  --track-border: rgba(255, 255, 255, 0.08);
-  --track-border-strong: rgba(255, 255, 255, 0.16);
+  --track-border: rgba(255, 255, 255, 0.07);
+  --track-border-strong: rgba(255, 255, 255, 0.14);
   --track-lime: #c6ff3a;
   --track-ink: #f3f5ef;
-  --track-ink-faint: rgba(243, 245, 239, 0.38);
-  --font-app-sans: 'Noto Sans SC', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-app-mono: 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  --track-ink-faint: rgba(243, 245, 239, 0.44);
+  --font-app-sans: Inter, 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-app-mono: 'SF Mono', 'SFMono-Regular', ui-monospace, 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
 @theme inline {
@@ -24,6 +24,7 @@ html, body { margin: 0; padding: 0; }
 
 body {
   background: var(--background);
+  font-feature-settings: 'cv11', 'ss01';
   color: var(--foreground);
   font-family: var(--font-app-sans);
   -webkit-font-smoothing: antialiased;
@@ -43,9 +44,9 @@ body {
   color: var(--track-ink);
   font-family: var(--font-app-sans);
   border: 1px solid var(--track-border);
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 13px;
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 14px;
   outline: none;
   transition: border-color 0.12s, background 0.12s;
   width: 100%;
@@ -54,6 +55,7 @@ body {
 .track-input:focus {
   border-color: var(--track-lime);
   background: rgba(198, 255, 58, 0.04);
+  box-shadow: 0 0 0 3px rgba(198, 255, 58, 0.12);
 }
 .track-input-mono {
   font-family: var(--font-app-mono);
@@ -70,21 +72,37 @@ body {
 .track-row { transition: background 0.12s; }
 .track-row:hover { background: rgba(255, 255, 255, 0.02); }
 
-.track-card-hover { transition: border-color 0.12s, background 0.12s; cursor: pointer; }
+.track-card-hover { transition: border-color 0.15s, background 0.15s, transform 0.15s; cursor: pointer; }
 .track-card-hover:hover {
-  border-color: var(--track-border-strong);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--track-border-strong) !important;
+  background: #151a17 !important;
+  transform: translateY(-1px);
 }
 
+.track-btn:not(:disabled):hover { filter: brightness(1.08); }
+.track-btn:not(:disabled):active { transform: translateY(1px); }
+
+.track-day { transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+.track-day:not(:disabled):hover { border-color: var(--track-border-strong) !important; transform: translateY(-1px); }
+
+.track-nav-link { transition: color 0.12s, background 0.12s; }
+.track-nav-link:hover { color: var(--track-ink) !important; background: rgba(255, 255, 255, 0.05); }
+
+.track-scroll-x { scrollbar-width: none; }
+.track-scroll-x::-webkit-scrollbar { display: none; }
+
 .track-page {
-  background: var(--background);
+  background-color: var(--background);
   min-height: 100vh;
   color: var(--track-ink);
   background-image:
-    linear-gradient(var(--track-border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--track-border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: -1px -1px;
+    radial-gradient(1200px 520px at 15% -10%, rgba(198, 255, 58, 0.07), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(95, 216, 255, 0.05), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: auto, auto, 56px 56px, 56px 56px;
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+  background-attachment: fixed;
 }
 
 /* Markdown content inside chat bubbles */

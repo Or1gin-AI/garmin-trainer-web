@@ -13,13 +13,13 @@ const PROMO_FREE_MAX_END = new Date('2026-06-15T23:59:59Z');
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('username') && (m.includes('taken') || m.includes('exists') || m.includes('already'))) {
-    return 'usernameAlready taken. Please choose another.';
+    return 'That username is taken. Please choose another.';
   }
   if (m.includes('email') && (m.includes('exists') || m.includes('already') || m.includes('taken'))) {
     return 'That email is already registered. Sign in or reset your password.';
   }
   if (m.includes('username') && m.includes('invalid')) {
-    return 'usernameUse letters, numbers, _ - ，2-30 ';
+    return 'Username must be 2–30 characters: letters, numbers, _ or -';
   }
   if (m.includes('password') && m.includes('short')) return 'Password must be at least 8 characters';
   return message;
@@ -49,7 +49,7 @@ function SignUpForm() {
     setError(null);
 
     if (!NAME_RE.test(username)) {
-      setError('usernameUse letters, numbers, _ - ，2-30 ');
+      setError('Username must be 2–30 characters: letters, numbers, _ or -');
       return;
     }
     if (password !== confirm) {
@@ -114,11 +114,11 @@ function SignUpForm() {
             fontSize: 12, color: T.ink, lineHeight: 1.6,
           }}>
             <span style={{ color: T.lime, fontFamily: T.mono, letterSpacing: 0.5 }}>Limited-time offer · </span>
-            Sign up to get Free <span style={{ color: T.lime, fontWeight: 700 }}>Max</span> membership through 2026-06-15
+            Sign up now and get free <span style={{ color: T.lime, fontWeight: 700 }}>Max</span> membership through June 15, 2026
           </div>
         )}
 
-        <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Sign-up account</h1>
+        <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Create Account</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
           Already have an account?
           <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>Sign in</Link>
@@ -130,7 +130,7 @@ function SignUpForm() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="2-30  · letters / numbers / _ -"
+              placeholder="2–30 characters · letters, numbers, _ -"
             />
           </Field>
 
@@ -154,7 +154,7 @@ function SignUpForm() {
             />
           </Field>
 
-          <Field label="CONFIRM.PASSWORD">
+          <Field label="Confirm password">
             <TrackInput
               type="password"
               required

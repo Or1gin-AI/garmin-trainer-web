@@ -37,8 +37,8 @@ export default function ForgotPasswordPage() {
         background: T.panelSolid, border: `1px solid ${T.border}`, borderRadius: 14,
         padding: '36px 32px',
       }}>
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>PWD.RESET</div>
-        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Reset password</h1>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>Password reset</div>
+        <h1 style={{ margin: '6px 0 6px', fontSize: 24, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Reset Password</h1>
         <p style={{ fontSize: 13, color: T.inkDim, margin: '0 0 22px' }}>
           Remembered it?
           <Link href="/sign-in" className="track-link" style={{ marginLeft: 6 }}>Back to sign in</Link>
@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
         {done ? (
           <>
             <Banner kind="ok" code="SENT">
-              If that email is registered, we sent a password-reset email. Check your inbox and spam folder. The link is valid for one hour.
+              If that email is registered, we’ve sent a password reset link. Check your inbox and spam folder. The link expires in one hour.
             </Banner>
             <div style={{ marginTop: 18, textAlign: 'center' }}>
               <Link href="/sign-in" className="track-link" style={{ fontSize: 13 }}>← Back to sign in</Link>
@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
               />
             </Field>
             <Btn type="submit" disabled={loading || !email}>
-              {loading ? 'Sending…' : 'Send reset email →'}
+              {loading ? 'Sending…' : 'Send reset link →'}
             </Btn>
           </form>
         )}

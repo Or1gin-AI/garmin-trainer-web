@@ -53,13 +53,13 @@ interface StreamedWorkoutRaw {
 function mapTrainingError(code: string): string {
   switch (code) {
     case 'pro_required':
-      return 'AI TrainingAI training plan generation, including advanced plans, is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
+      return 'AI training plans (including advanced plans) are a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
     case 'max_required':
-      return 'AI TrainingAI training plan generation, including advanced plans, is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
+      return 'AI training plans (including advanced plans) are a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
     case 'quota_exceeded':
-      return 'This month’s AI plan generation limit has been reached.';
+      return 'You’ve used all of this month’s AI plan generations.';
     default:
-      return code || 'Generation failed. Please try again later.';
+      return code || 'Plan generation failed. Please try again later.';
   }
 }
 
@@ -153,18 +153,18 @@ function clampOptionalNumber(value: number | '', min: number, max: number): numb
 
 function buildPayload(f: FormState): TrainingPlanRequest | { error: string } {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.weekStartDate)) {
-    return { error: 'Please select a Monday' };
+    return { error: 'Please pick a Monday as the start date' };
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.weekStartDate)!;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   if (d.getDay() !== 1) return { error: 'The start date must be a Monday' };
-  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: 'Training days per weekneed 1–7' };
+  if (f.daysPerWeek < 1 || f.daysPerWeek > 7) return { error: 'Training days per week must be between 1 and 7' };
   if (!f.sportRunning && !f.sportCycling && !f.sportSwimming) return { error: 'Select at least one sport' };
   if (f.weeklyMaxMinutes !== '' && (f.weeklyMaxMinutes < 15 || f.weeklyMaxMinutes > 1200)) {
-    return { error: 'Weekly duration limitneed 15–1200 minutes' };
+    return { error: 'Weekly time limit must be between 15 and 1200 minutes' };
   }
   if (f.dailyPreferredMinutes !== '' && (f.dailyPreferredMinutes < 15 || f.dailyPreferredMinutes > 1200)) {
-    return { error: 'Preferred daily durationneed 15–1200 minutes' };
+    return { error: 'Preferred daily duration must be between 15 and 1200 minutes' };
   }
 
   const sportPriorities: Sport[] | undefined =
@@ -246,53 +246,53 @@ type TrainingMode = {
 
 const TRAINING_MODE_GROUPS: Record<TrainingModeSport, { title: string; modes: TrainingMode[] }> = {
   running: {
-    title: 'RunningTrainingMode',
+    title: 'Running workout types',
     modes: [
-      { name: 'Recovery run', phrase: 'onetimesRecovery run', kind: 'Base' },
-      { name: 'Easy aerobic run', phrase: 'Schedule an aerobic run', kind: 'Base' },
-      { name: 'LSD Long run', phrase: 'onetimes LSD Long run', kind: 'Base' },
-      { name: 'Tempo Tempo run', phrase: 'onetimesTempo run', kind: 'Specialized' },
-      { name: 'Threshold run', phrase: 'onetimesThreshold run', kind: 'Specialized' },
+      { name: 'Recovery run', phrase: 'Schedule a recovery run', kind: 'Base' },
+      { name: 'Easy aerobic run', phrase: 'Schedule an easy aerobic run', kind: 'Base' },
+      { name: 'LSD long run', phrase: 'Schedule an LSD long run', kind: 'Base' },
+      { name: 'Tempo run', phrase: 'Schedule a tempo run', kind: 'Specialized' },
+      { name: 'Threshold run', phrase: 'Schedule a threshold run', kind: 'Specialized' },
       { name: 'Short intervals 400/800m', phrase: 'Schedule 400/800 m intervals', kind: 'Advanced' },
-      { name: 'Reverse pyramid intervals', phrase: 'Schedule reverse pyramid intervals', kind: 'Advanced' },
+      { name: 'Reverse pyramid intervals', phrase: 'Schedule a reverse pyramid', kind: 'Advanced' },
       { name: 'VO2max intervals', phrase: 'Schedule a running VO2max session', kind: 'Advanced' },
-      { name: 'Uphill sprints', phrase: 'onetimesUphill sprints', kind: 'Advanced' },
-      { name: 'Strides Strides', phrase: 'onetimesStrides', kind: 'Advanced' },
-      { name: 'Progression run', phrase: 'onetimesProgression run', kind: 'Specialized' },
-      { name: 'Race-pace workout', phrase: 'onetimesRace-pace workout', kind: 'Specialized' },
+      { name: 'Hill sprints', phrase: 'Schedule hill sprints', kind: 'Advanced' },
+      { name: 'Strides', phrase: 'Schedule strides', kind: 'Advanced' },
+      { name: 'Progression run', phrase: 'Schedule a progression run', kind: 'Specialized' },
+      { name: 'Race-pace workout', phrase: 'Schedule a race-pace workout', kind: 'Specialized' },
       { name: 'Double threshold AM/PM', phrase: 'Schedule a double-threshold session', kind: 'Advanced' },
     ],
   },
   cycling: {
-    title: 'CyclingTrainingMode',
+    title: 'Cycling workout types',
     modes: [
-      { name: 'Recovery ride', phrase: 'onetimesRecovery ride', kind: 'Base' },
-      { name: 'Z2 Endurance ride', phrase: 'onetimes Z2 Endurance ride', kind: 'Base' },
-      { name: 'Long runEndurance ride', phrase: 'Schedule a long ride', kind: 'Base' },
-      { name: 'Tempo ', phrase: 'Schedule a tempo ride', kind: 'Specialized' },
-      { name: 'Sweet-spot ride', phrase: 'onetimesSweet-spot ride', kind: 'Specialized' },
-      { name: 'Threshold ride', phrase: 'onetimesThreshold ride', kind: 'Specialized' },
-      { name: 'VO2max ', phrase: 'Schedule a cycling VO2max session', kind: 'Advanced' },
-      { name: 'NoneVO2max / 30-15', phrase: 'onetimes 30/15', kind: 'Advanced' },
+      { name: 'Recovery ride', phrase: 'Schedule a recovery ride', kind: 'Base' },
+      { name: 'Z2 endurance ride', phrase: 'Schedule a Z2 endurance ride', kind: 'Base' },
+      { name: 'Long endurance ride', phrase: 'Schedule a long ride', kind: 'Base' },
+      { name: 'Tempo ride', phrase: 'Schedule a tempo ride', kind: 'Specialized' },
+      { name: 'Sweet-spot ride', phrase: 'Schedule a sweet-spot ride', kind: 'Specialized' },
+      { name: 'Threshold ride', phrase: 'Schedule a threshold ride', kind: 'Specialized' },
+      { name: 'VO2max ride', phrase: 'Schedule a cycling VO2max session', kind: 'Advanced' },
+      { name: 'Anaerobic capacity / 30-15', phrase: 'Schedule a 30/15 session', kind: 'Advanced' },
       { name: 'Sprint ride', phrase: 'Schedule a sprint ride', kind: 'Advanced' },
-      { name: 'Cadence technique ride', phrase: 'onetimesCadence technique ride', kind: 'Base' },
+      { name: 'Cadence technique ride', phrase: 'Schedule a cadence technique ride', kind: 'Base' },
       { name: 'Climbing workout', phrase: 'Schedule a climbing ride', kind: 'Advanced' },
-      { name: 'Over-under / Criss-cross', phrase: 'onetimes over-under', kind: 'Advanced' },
+      { name: 'Over-under / Criss-cross', phrase: 'Schedule an over-under session', kind: 'Advanced' },
     ],
   },
   swimming: {
-    title: 'SwimmingTrainingMode',
+    title: 'Swimming workout types',
     modes: [
-      { name: 'Recovery swim', phrase: 'onetimesRecovery swim', kind: 'Base' },
-      { name: 'Technique swim', phrase: 'onetimesTechnique swim', kind: 'Base' },
-      { name: 'Aerobic swim', phrase: 'onetimesAerobic swim', kind: 'Base' },
-      { name: 'Long-set endurance swim', phrase: 'onetimesLong-set endurance swim', kind: 'Base' },
-      { name: 'CSS / Threshold swim', phrase: 'onetimes CSS Threshold swim', kind: 'Specialized' },
-      { name: 'VO2max ', phrase: 'Schedule a swimming VO2max session', kind: 'Advanced' },
-      { name: 'Sprint swim', phrase: 'Schedule 50 m sprints', kind: 'Advanced' },
-      { name: 'Pull-focused workout', phrase: 'onetimesPull-focused workout', kind: 'Specialized' },
-      { name: 'Kick-focused workout', phrase: 'onetimesKick-focused workout', kind: 'Specialized' },
-      { name: 'Open-water workout', phrase: 'onetimesOpen-water workout', kind: 'Advanced' },
+      { name: 'Recovery swim', phrase: 'Schedule a recovery swim', kind: 'Base' },
+      { name: 'Technique swim', phrase: 'Schedule a technique swim', kind: 'Base' },
+      { name: 'Aerobic swim', phrase: 'Schedule an aerobic swim', kind: 'Base' },
+      { name: 'Long-set endurance swim', phrase: 'Schedule a long-set endurance swim', kind: 'Base' },
+      { name: 'CSS / threshold swim', phrase: 'Schedule a CSS threshold swim', kind: 'Specialized' },
+      { name: 'VO2max swim', phrase: 'Schedule a swimming VO2max session', kind: 'Advanced' },
+      { name: 'Sprint swim', phrase: 'Schedule 50 m sprint repeats', kind: 'Advanced' },
+      { name: 'Pull-focused workout', phrase: 'Schedule a pull-focused workout', kind: 'Specialized' },
+      { name: 'Kick-focused workout', phrase: 'Schedule a kick-focused workout', kind: 'Specialized' },
+      { name: 'Open-water workout', phrase: 'Schedule an open-water workout', kind: 'Advanced' },
     ],
   },
 };
@@ -443,7 +443,7 @@ export default function NewTrainingPlanPage() {
             ? (data.message as string)
             : data && typeof data.error === 'string'
               ? (data.error as string)
-              : 'GenerateFailed';
+              : 'Plan generation failed';
         fatalRef.current = mapTrainingError(msg);
         abortRef.current?.abort();
         return;
@@ -487,9 +487,9 @@ export default function NewTrainingPlanPage() {
           'training_plan_limit_reached'
       ) {
         const limit = (errObj as Error & { detail?: { limit?: number } }).detail?.limit ?? 10;
-        fatalRef.current = `You can keep at most ${limit} training plans at once. Delete an old plan before creating a new one.`;
+        fatalRef.current = `You can keep up to ${limit} training plans. Delete an old plan before creating a new one.`;
       } else if (!ctrl.signal.aborted) {
-        fatalRef.current = errObj.message || 'GenerateFailed';
+        fatalRef.current = errObj.message || 'Plan generation failed';
       }
     }
 
@@ -504,7 +504,7 @@ export default function NewTrainingPlanPage() {
         router.push(`/training/${planIdRef.current}`);
       }, 900);
     } else {
-      setError('GenerateCompleted，Get toplan ID。Please tolistView 。');
+      setError('The plan was generated, but we couldn’t get its ID. Please check your training plan list.');
       setView('form');
     }
   }
@@ -523,29 +523,29 @@ export default function NewTrainingPlanPage() {
   if (view !== 'form') {
     const allDone = workouts.size >= (days?.length ?? 0) && (days?.length ?? 0) > 0;
     const statusLabel = view === 'finishing'
-      ? 'Ready. Redirecting…'
+      ? 'Done. Opening your plan…'
       : allDone
-        ? 'All sessions are ready'
+        ? 'All workouts are ready'
         : 'Generating…';
     const statusTone = view === 'finishing' || allDone ? 'green' as const : 'cyan' as const;
     return (
       <>
         <div style={{ marginBottom: 18 }}>
           <span style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 1.2 }}>
-            // Generatein progress… Cancel to return to the form
+            // Generating… cancel to return to the form
           </span>
         </div>
 
         <PageHero
-          eyebrow="AI Working"
-          title="GenerateThis week’s plan"
-          sub="AI CoachReading your Garmin data, arranging the schedule, and configuring each workout. The process is fully visible ↓"
+          eyebrow="AI at work"
+          title="Building This Week’s Plan"
+          sub="The AI Coach is reading your Garmin data, laying out the week and configuring each workout. Follow along below ↓"
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
           <Card style={{ padding: 22 }}>
             <CardHeader
-              eyebrow="This week’s plan"
+              eyebrow="This week"
               title="Monday → Sunday"
               right={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -558,7 +558,7 @@ export default function NewTrainingPlanPage() {
                     className={view === 'staging' && !allDone ? 'track-blink' : ''}
                     style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.2 }}
                   >
-                    ● {workouts.size}/{days?.length ?? 7} Generated
+                    ● {workouts.size}/{days?.length ?? 7} generated
                   </span>
                 </div>
               }
@@ -582,11 +582,11 @@ export default function NewTrainingPlanPage() {
             events={eventsArray}
             summaryText={summary}
             status={{ label: statusLabel, anim: view === 'staging' && !allDone, tone: statusTone }}
-            eyebrow="AI Live process"
+            eyebrow="Live AI activity"
             title="AI Coach"
             footer={
               view === 'staging' ? (
-                <Btn variant="ghost" size="sm" onClick={handleCancel}>Canceland go back</Btn>
+                <Btn variant="ghost" size="sm" onClick={handleCancel}>Cancel and go back</Btn>
               ) : null
             }
           />
@@ -600,14 +600,14 @@ export default function NewTrainingPlanPage() {
     <>
       <div style={{ marginBottom: 18 }}>
         <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← Backlist
+          ← Back to plans
         </Link>
       </div>
 
       <PageHero
         eyebrow="New plan"
-        title="Create training plan"
-        sub="AI TrainingTraining plan generation is a Max feature. You can browse and fill out the form without Max; clicking Generate will prompt you to upgrade."
+        title="Create Training Plan"
+        sub="AI training plans are a Max feature. You can fill out the form without Max — you’ll be prompted to upgrade when you click Generate."
       />
 
       {error && (
@@ -618,7 +618,7 @@ export default function NewTrainingPlanPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 18 }}>
         <Card style={{ padding: 26 }}>
-          <CardHeader eyebrow="Basic settings" title="Basic settings" />
+          <CardHeader eyebrow="Setup" title="Plan settings" />
           <form onSubmit={handleSubmit} style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <Field label="Sports" full>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -648,11 +648,11 @@ export default function NewTrainingPlanPage() {
                 value={form.goal}
                 onChange={(e) => setField('goal', e.target.value)}
                 maxLength={500}
-                placeholder="Half-marathon PB / first completed marathon / improve endurance"
+                placeholder="Half-marathon PB / finish first marathon / build endurance"
               />
             </Field>
 
-            <Field label="GoalDistance">
+            <Field label="Goal distance">
               <TrackInput
                 mono
                 value={form.goalDistance}
@@ -662,7 +662,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="Monday date">
+            <Field label="Week starting (Monday)">
               <TrackInput
                 type="date"
                 value={form.weekStartDate}
@@ -671,7 +671,7 @@ export default function NewTrainingPlanPage() {
               />
             </Field>
 
-            <Field label="Race date(optional)">
+            <Field label="Race date (optional)">
               <TrackInput
                 type="date"
                 value={form.raceDate}
@@ -693,7 +693,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="Preferred rest days">
+            <Field label="Preferred rest day">
               <TrackSelect
                 value={form.preferredRestDay}
                 onChange={(e) => setField('preferredRestDay', e.target.value)}
@@ -710,9 +710,9 @@ export default function NewTrainingPlanPage() {
                 onChange={(e) => setField('sportPriority', e.target.value as SportPriorityChoice)}
               >
                 <option value="auto">Auto</option>
-                <option value="running">Runningpreferred</option>
-                <option value="cycling">Cyclingpreferred</option>
-                <option value="swimming">Swimmingpreferred</option>
+                <option value="running">Running first</option>
+                <option value="cycling">Cycling first</option>
+                <option value="swimming">Swimming first</option>
               </TrackSelect>
             </Field>
 
@@ -741,7 +741,7 @@ export default function NewTrainingPlanPage() {
               </div>
             </Field>
 
-            <Field label="Weekly high-intensity limit">
+            <Field label="Max hard sessions per week">
               <TrackInput
                 type="number"
                 min={0}
@@ -754,11 +754,11 @@ export default function NewTrainingPlanPage() {
                     v === '' ? '' : Math.max(0, Math.min(7, Number(v))),
                   );
                 }}
-                placeholder="Leave blank = Auto"
+                placeholder="Leave blank for auto"
               />
             </Field>
 
-            <Field label="Preferred daily duration">
+            <Field label="Preferred daily minutes">
               <TrackInput
                 type="number"
                 min={15}
@@ -770,11 +770,11 @@ export default function NewTrainingPlanPage() {
                 onBlur={() => {
                   setField('dailyPreferredMinutes', clampOptionalNumber(form.dailyPreferredMinutes, 15, 1200));
                 }}
-                placeholder="：75"
+                placeholder="e.g. 75"
               />
             </Field>
 
-            <Field label="Weekly duration limit">
+            <Field label="Weekly time limit (min)">
               <TrackInput
                 type="number"
                 min={15}
@@ -786,25 +786,25 @@ export default function NewTrainingPlanPage() {
                 onBlur={() => {
                   setField('weeklyMaxMinutes', clampOptionalNumber(form.weeklyMaxMinutes, 15, 1200));
                 }}
-                placeholder="Default 1200"
+                placeholder="Default: 1200"
               />
             </Field>
 
-            <Field label="Available time(optional)">
+            <Field label="Available time (optional)">
               <TrackInput
                 value={form.availableTime}
                 onChange={(e) => setField('availableTime', e.target.value)}
                 maxLength={200}
-                placeholder="60 minutes on weekdays / 90+ minutes on weekends"
+                placeholder="60 min on weekdays / 90+ min on weekends"
               />
             </Field>
 
-            <Field label="Preferred time">
+            <Field label="Preferred time of day">
               <TrackInput
                 value={form.preferredTrainingWindows}
                 onChange={(e) => setField('preferredTrainingWindows', e.target.value)}
                 maxLength={200}
-                placeholder="Morning, Evening"
+                placeholder="Morning, evening"
               />
             </Field>
 
@@ -818,11 +818,11 @@ export default function NewTrainingPlanPage() {
                     if (!e.target.checked) setField('allowDoubleDays', false);
                   }}
                 />
-                Allowed VO2max、Advanced workouts such as short intervals, VO2max, sprints, hills, and race-specific sessions
+                Allow advanced workouts: VO2max, short intervals, anaerobic, sprints, hills/climbing and race-specific sessions
               </label>
             </Field>
 
-            <Field label="Multiple sessions / double days" full>
+            <Field label="Double days" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
@@ -830,28 +830,28 @@ export default function NewTrainingPlanPage() {
                   disabled={!form.allowAdvancedWorkouts}
                   onChange={(e) => setField('allowDoubleDays', e.target.checked)}
                 />
-                Allowedonedays，threshold；inAdvanced trainingOn
+                Allow two sessions in one day, including double threshold (requires advanced training)
               </label>
             </Field>
 
-            <Field label="Generate strictly to requirements" full>
+            <Field label="Follow my schedule strictly" full>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.inkDim, fontSize: 13 }}>
                 <input
                   type="checkbox"
                   checked={form.forceRequestedSchedule}
                   onChange={(e) => setField('forceRequestedSchedule', e.target.checked)}
                 />
-                DefaultOn：Generate according to the training days, duration, and intensity preferences entered; show capacity and recovery issues as warnings only
+                On by default: build the plan exactly from your training days, durations and intensity preferences; capacity and recovery concerns are shown as warnings only
               </label>
             </Field>
 
-            <Field label="Injury constraints" full>
+            <Field label="Injuries & limitations" full>
               <TrackTextarea
                 value={form.injuries}
                 onChange={(e) => setField('injuries', e.target.value)}
                 maxLength={500}
                 rows={2}
-                placeholder="Example: sensitive left knee cartilage; avoid extensive downhill running"
+                placeholder="e.g. sensitive left knee cartilage; avoid long downhill runs"
               />
             </Field>
 
@@ -870,25 +870,25 @@ export default function NewTrainingPlanPage() {
                 <Btn variant="ghost" type="button">Back</Btn>
               </Link>
               <Btn type="submit">
-                Generateplan →
+                Generate plan →
               </Btn>
             </div>
           </form>
         </Card>
 
         <Card style={{ padding: 22, alignSelf: 'start' }}>
-          <CardHeader eyebrow="AI Preview" title="AI willEnter " />
+          <CardHeader eyebrow="AI preview" title="What the AI will use" />
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <Row k="Monday date" v={form.weekStartDate} c={T.lime} />
+            <Row k="Week of" v={form.weekStartDate} c={T.lime} />
             <Row k="Days per week" v={`${form.daysPerWeek} days`} />
             <Row k="Sports" v={selectedSports.length ? selectedSports.map((s) => SPORT_META[s.k].label).join(' · ') : '—'} c={T.cyan} />
             <Row k="Primary sport" v={form.sportPriority === 'auto' ? 'Auto' : SPORT_META[form.sportPriority as SportKind].label} />
             <Row k="Primary metric" v={form.targetMetricPreference === 'auto' ? 'Auto' : form.targetMetricPreference === 'heart_rate' ? 'Heart rate first' : 'Pace first'} />
-            <Row k="High intensity" v={form.maxHardSessionsPerWeek === '' ? 'Auto' : `${form.maxHardSessionsPerWeek} sessions/week`} />
-            <Row k="Weekly duration" v={form.weeklyMaxMinutes === '' ? 'Default 1200 minutes' : `${form.weeklyMaxMinutes} minutes`} />
-            <Row k="Advanced workouts" v={form.allowAdvancedWorkouts ? 'Allowed' : 'Close'} />
-            <Row k="Double days" v={form.allowDoubleDays ? 'Allowed' : 'Close'} />
-            <Row k="Strict mode" v={form.forceRequestedSchedule ? 'On' : 'Close'} c={form.forceRequestedSchedule ? T.amber : undefined} />
+            <Row k="High intensity" v={form.maxHardSessionsPerWeek === '' ? 'Auto' : `${form.maxHardSessionsPerWeek}/week`} />
+            <Row k="Weekly time" v={form.weeklyMaxMinutes === '' ? '1200 min (default)' : `${form.weeklyMaxMinutes} min`} />
+            <Row k="Advanced workouts" v={form.allowAdvancedWorkouts ? 'Allowed' : 'Off'} />
+            <Row k="Double days" v={form.allowDoubleDays ? 'Allowed' : 'Off'} />
+            <Row k="Strict mode" v={form.forceRequestedSchedule ? 'On' : 'Off'} c={form.forceRequestedSchedule ? T.amber : undefined} />
           </div>
           <div style={{
             marginTop: 16, padding: 12, fontFamily: T.mono, fontSize: 11,
@@ -896,7 +896,7 @@ export default function NewTrainingPlanPage() {
             border: `1px solid ${T.border}`, borderRadius: 6,
           }}>
             <span style={{ color: T.cyan }}>● </span>
-            After clicking Generate, the AI Coach view will show data loading, schedule planning, parameterization, and validation step by step.
+            Once you click Generate, the AI Coach panel shows each step live: loading your data, planning the schedule, setting targets and validating the plan.
           </div>
         </Card>
       </div>
@@ -931,8 +931,8 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
         fontSize: 12,
         lineHeight: 1.6,
       }}>
-        ifneedTraining，caninNotesdirectly，For example「Schedule a running VO2max session」or「weekneedonetimes over-under」。
-        Advanced workoutssuggestionsOnbelow「Advanced training」，DurationplansuggestionsOn「onedaysDouble days」。
+        Want a specific workout? Just ask for it in Notes, e.g. “Schedule a running VO2max session” or “Include one over-under this week”.
+        For advanced workouts, also enable “Advanced training” below; for high-volume plans, enable “Double days”.
       </div>
 
       {selectedSports.map((sport) => {
@@ -971,7 +971,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
             >
               <span>{group.title}</span>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.1 }}>
-                {group.modes.length} types · {isOpen ? 'Click to collapse' : 'Click to expand'}
+                {group.modes.length} types · {isOpen ? 'Hide' : 'Show'}
               </span>
             </summary>
             <div style={{
@@ -991,7 +991,7 @@ function TrainingModeGuide({ selectedSports }: { selectedSports: TrainingModeSpo
                     background: 'rgba(255,255,255,0.025)',
                     minWidth: 0,
                   }}
-                  title={`Notes example: ${mode.phrase}`}
+                  title={`Example for Notes: ${mode.phrase}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ color: T.ink, fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>

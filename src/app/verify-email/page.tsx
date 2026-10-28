@@ -48,10 +48,10 @@ function VerifyEmailInner() {
 
         {verified ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>EMAIL.VERIFIED</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Email verified</h1>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.green, letterSpacing: 1.5 }}>Email verified</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Email Verified</h1>
             <Banner kind="ok" code="OK">
-              {session ? 'Taking you to the dashboard…' : 'You can now sign in to Garmin Trainer.'}
+              {session ? 'Taking you to Garmin Trainer…' : 'You can now sign in to Garmin Trainer.'}
             </Banner>
             {!session && (
               <Link href="/sign-in" style={{ textDecoration: 'none' }}>
@@ -61,15 +61,15 @@ function VerifyEmailInner() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>VERIFY.PENDING</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Check your email</h1>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.5 }}>Verification pending</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Check Your Email</h1>
             <p style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.65, margin: 0 }}>
-              We sent a {email
+              We sent a verification email to {email
                 ? <span style={{ fontFamily: T.mono, color: T.ink }}>{email}</span>
-                : 'your email'} We sent a verification email. Click “Verify email” in the message to complete sign-up. The link is valid for one hour.
+                : 'your inbox'}. Click “Verify email” in the message to finish signing up. The link expires in one hour.
             </p>
             <p style={{ fontFamily: T.mono, fontSize: 11, color: T.inkFaint, letterSpacing: 0.5, margin: 0 }}>
-              {'// Did not receive it? Check your spam folder or resend it below.'}
+              {'// Didn’t get it? Check your spam folder or resend it below.'}
             </p>
             {email && (
               <Btn

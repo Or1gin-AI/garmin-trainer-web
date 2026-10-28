@@ -40,10 +40,10 @@ const PLANS: {
     period: '/month',
     desc: 'Automatic Garmin data sync',
     features: [
-      ' 2 hoursAutoSyncactivities',
-      'historyactivity',
-      'SyncFailedAutoRetry',
-      'supportsCN + International',
+      'Automatic activity sync every 2 hours',
+      'Full activity history backfill',
+      'Automatic retry on failed syncs',
+      'Garmin China + Garmin International',
     ],
     href: PAY_URLS.pro,
   },
@@ -51,13 +51,13 @@ const PLANS: {
     name: 'MAX',
     price: '¥15',
     period: '/month',
-    desc: 'AI Trainingplan + AllSync',
+    desc: 'AI training plans + everything in Plus',
     features: [
-      ' Plus AllSyncfeature',
-      'AI GenerateweekTrainingplan',
-      'AI Coach chat, workout changes, and Q&A',
-      'TrainingplanExport（PDF / Word / Excel）',
-      'one-clickpublishplanto Garmin Calendar',
+      'All Plus sync features',
+      'Personalized weekly training plans from AI',
+      'Chat with the AI Coach to adjust workouts and get answers',
+      'Export training plans (PDF / Word / Excel)',
+      'One-click upload to your Garmin calendar',
     ],
     href: PAY_URLS.max,
     hot: true,
@@ -103,7 +103,7 @@ export default function SubscriptionPage() {
         '/api/redemption/redeem',
         { code: code.trim() },
       );
-      setSuccess(`RedeemSuccess， ${redeemedPlanLabel(r.subscriptionPlan)}，Expires ${fmtDate(r.expiresAt)}`);
+      setSuccess(`Code redeemed. ${redeemedPlanLabel(r.subscriptionPlan)} is active until ${fmtDate(r.expiresAt)}.`);
       setCode('');
       await refresh();
     } catch (e) {
@@ -124,7 +124,7 @@ export default function SubscriptionPage() {
 
   function confirmExternalPurchase(planName: 'PLUS' | 'MAX'): boolean {
     return window.confirm(
-      `You are about to buy ${planName} membership in the store. After payment, copy the code and return to the Subscription page to redeem. Continue?`,
+      `You’re about to buy ${planName} in our external store. After paying, copy your code and come back to this page to redeem it. Continue?`,
     );
   }
 
@@ -156,10 +156,10 @@ export default function SubscriptionPage() {
               color: T.bg, background: T.lime, padding: '3px 8px', borderRadius: 3,
             }}>LIMITED</span>
             <span style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>
-              Limited-time offer: Free Max for everyone until {fmtDate(promoUntil)}
+              Limited-time offer: Max is free for everyone until {fmtDate(promoUntil)}
             </span>
             <span style={{ fontSize: 12, color: T.inkDim }}>
-              Sign up for AI Coach and automatic sync, then invite 2 friends to get 1 extra month of Max.
+              Enjoy the AI Coach and automatic sync, and invite 2 friends to earn an extra month of Max.
             </span>
           </div>
         </div>
@@ -186,16 +186,16 @@ export default function SubscriptionPage() {
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 12, color: T.inkDim, letterSpacing: 1 }}>
                 {isPaid ? (
-                  <>Expires {fmtDate(me?.plan.expiresAt ?? null)}{planDays != null && <> · <span style={{ color: T.amber }}>remaining {planDays} days</span></>}</>
+                  <>Expires {fmtDate(me?.plan.expiresAt ?? null)}{planDays != null && planDays < 3650 && <> · <span style={{ color: T.amber }}>{planDays} {planDays === 1 ? 'day' : 'days'} left</span></>}</>
                 ) : (
-                  'Free · Manual sync only'
+                  'Free · manual sync only'
                 )}
               </span>
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              <Mini k="AutoSync" v={canAutoSync && autoSync ? 'Enabled' : 'Plus'} c={canAutoSync && autoSync ? T.lime : T.amber} />
+              <Mini k="Auto sync" v={canAutoSync && autoSync ? 'On' : canAutoSync ? 'Off' : 'Plus & Max'} c={canAutoSync && autoSync ? T.lime : T.amber} />
               <Mini k="AI Coach" v={canUseAi ? 'Unlocked' : 'Max only'} c={canUseAi ? T.lime : T.inkFaint} />
-              <Mini k="Region" v="CN + International" c={T.ink} />
+              <Mini k="Regions" v="CN + Intl" c={T.ink} />
             </div>
           </div>
           {canAutoSync && (
@@ -221,7 +221,7 @@ export default function SubscriptionPage() {
                 }} />
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2, color: autoSync ? T.lime : T.inkDim }}>
-                Automatic sync · Every 2 hours
+                Auto sync · every 2 hours
               </span>
             </label>
           )}
@@ -290,9 +290,9 @@ export default function SubscriptionPage() {
             <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>How to buy</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                { step: '1', text: 'Click Buy above to complete payment on the store' },
-                { step: '2', text: 'After successful payment, the page will display a code' },
-                { step: '3', text: 'Copy the code and paste it into Redeem on the right' },
+                { step: '1', text: 'Click a Buy button above and complete payment in the store' },
+                { step: '2', text: 'Once payment succeeds, your redemption code is shown' },
+                { step: '3', text: 'Copy the code and paste it into the redeem box on the right' },
               ].map((s) => (
                 <div key={s.step} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{
@@ -310,7 +310,7 @@ export default function SubscriptionPage() {
               fontSize: 12, color: T.inkDim, lineHeight: 1.6,
             }}>
               Code format: <span style={{ fontFamily: T.mono, color: T.lime }}>XXXX-XXXX-XXXX-XXXX</span>. Codes are case-insensitive.
-              Membership activates immediately after redemption and lasts 30 days. Repeat redemptions add time.
+              Membership starts as soon as you redeem and lasts 30 days. Redeeming more codes extends it.
             </div>
           </div>
           <div>
@@ -334,7 +334,7 @@ export default function SubscriptionPage() {
       {/* Referral */}
       {refStats && refStats.referralCode && (
         <Card style={{ padding: 24, marginBottom: 28 }}>
-          <CardHeader eyebrow="REFERRAL" title="Invite 2 friends, get 1 extra month of Max" />
+          <CardHeader eyebrow="REFERRAL" title="Invite 2 friends, get a month of Max" />
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <div style={{ fontSize: 13, color: T.inkDim, marginBottom: 8 }}>Your personal invite link</div>
@@ -366,8 +366,8 @@ export default function SubscriptionPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-              <Mini k="Invited" v={`${refStats.completedCount} / ${refStats.maxDays / 15} people`} c={refStats.completedCount > 0 ? T.lime : T.inkFaint} />
-              <Mini k="Earned" v={`${refStats.daysEarned} / ${refStats.maxDays} days Max`} c={refStats.daysEarned > 0 ? T.lime : T.inkFaint} />
+              <Mini k="Invited" v={`${refStats.completedCount} / ${refStats.maxDays / 15} friends`} c={refStats.completedCount > 0 ? T.lime : T.inkFaint} />
+              <Mini k="Earned" v={`${refStats.daysEarned} / ${refStats.maxDays} days of Max`} c={refStats.daysEarned > 0 ? T.lime : T.inkFaint} />
             </div>
 
             <div style={{
@@ -375,7 +375,7 @@ export default function SubscriptionPage() {
               background: 'rgba(198,255,58,0.06)', border: `1px solid ${T.lime}20`,
               fontSize: 12, color: T.inkDim, lineHeight: 1.6,
             }}>
-              For each friend who signs up through your link and completes email verification, you immediately earn <span style={{ color: T.lime, fontFamily: T.mono }}>15 days Max</span>. Invite 2 friends to earn 1 full month of Max (total limit {refStats.maxDays} days).
+              For every friend who signs up with your link and verifies their email, you instantly earn <span style={{ color: T.lime, fontFamily: T.mono }}>15 days of Max</span>. Invite 2 friends for a full month (up to {refStats.maxDays} days in total).
             </div>
           </div>
         </Card>

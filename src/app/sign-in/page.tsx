@@ -24,9 +24,9 @@ function isEmailNotVerified(err: SignInError): boolean {
 
 function humanizeError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('invalid') && m.includes('password')) return 'Accountor password is incorrect';
+  if (m.includes('invalid') && m.includes('password')) return 'Incorrect username, email or password';
   if (m.includes('not found') || m.includes('no user')) return 'Account not found';
-  if (m.includes('unauthorized')) return 'Accountor password is incorrect';
+  if (m.includes('unauthorized')) return 'Incorrect username, email or password';
   return message;
 }
 
@@ -57,7 +57,7 @@ export default function SignInPage() {
         setUnverifiedEmail(identifier);
         return;
       }
-      setError(humanizeError(err.message ?? 'Sign inFailed'));
+      setError(humanizeError(err.message ?? 'Sign-in failed'));
       return;
     }
     router.push('/garmin');
@@ -95,16 +95,16 @@ export default function SignInPage() {
               <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: -0.3 }}>Garmin Trainer</span>
             </div>
             <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.1, margin: '24px 0 14px', color: T.ink }}>
-              Your AI coachis ready
+              Your AI coach is ready
             </h1>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-              { icon: '⌚', title: 'Automatic Garmin data sync', desc: 'Automatically pull your activities from CN and International accounts' },
-              { icon: '🧠', title: 'AI personalized training plans', desc: 'AI builds a weekly plan from your Garmin data' },
-              { icon: '💬', title: 'AI personal coach', desc: 'Understand your real fitness status, chat, ask questions, and adjust workouts' },
-              { icon: '📊', title: 'One-click export and publishing', desc: 'Export PDF / Excel or publish directly to Garmin Calendar' },
+              { icon: '⌚', title: 'Automatic Garmin sync', desc: 'Pull activities from your Garmin China and Garmin International accounts automatically' },
+              { icon: '🧠', title: 'Personalized training plans', desc: 'AI builds a weekly plan from your Garmin data' },
+              { icon: '💬', title: 'AI Coach', desc: 'Understand your current fitness, ask questions and adjust workouts in chat' },
+              { icon: '📊', title: 'One-click export', desc: 'Export to PDF or Excel, or upload straight to your Garmin calendar' },
             ].map((f) => (
               <div key={f.title} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>{f.icon}</span>
@@ -118,7 +118,7 @@ export default function SignInPage() {
         </div>
 
         <form onSubmit={onSubmit} style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
-          <h2 style={{ margin: '0', fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>Sign in</h2>
+          <h2 style={{ margin: '0', fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: T.ink }}>Sign In</h2>
 
           <Field label="USERNAME / EMAIL">
             <TrackInput
@@ -181,7 +181,7 @@ export default function SignInPage() {
 
           <p style={{ fontSize: 13, color: T.inkDim, margin: 0, textAlign: 'center' }}>
             Don’t have an account?
-            <Link href="/sign-up" className="track-link" style={{ marginLeft: 6 }}>Sign up now</Link>
+            <Link href="/sign-up" className="track-link" style={{ marginLeft: 6 }}>Sign up</Link>
           </p>
         </form>
       </div>

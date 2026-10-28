@@ -43,10 +43,10 @@ export function ActionsMenu({
   const statusText = garmin.status
     ? uploaded
       ? failed > 0
-        ? `${regionMeta.label}Uploaded ${scheduled} workout,${failed} need`
-        : `${regionMeta.label}Uploaded ${scheduled} `
-      : `${regionMeta.label}Not uploaded yet`
-    : 'Reading…';
+        ? `${regionMeta.name}: ${scheduled} uploaded, ${failed} need attention`
+        : `${regionMeta.name}: ${scheduled} ${scheduled === 1 ? 'workout' : 'workouts'} uploaded`
+      : `${regionMeta.name}: not uploaded yet`
+    : 'Checking status…';
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -98,11 +98,11 @@ export function ActionsMenu({
             <div style={{ fontSize: 12, color: T.inkDim, marginBottom: 8 }}>{statusText}</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <Btn size="sm" onClick={garmin.push} disabled={!planReady || garmin.busy !== null}>
-                {garmin.busy === 'push' ? 'Uploading…' : uploaded ? 'Upload again' : 'Upload'}
+                {garmin.busy === 'push' ? 'Uploading…' : uploaded ? 'Upload again' : 'Upload to Garmin'}
               </Btn>
               {uploaded && (
                 <Btn variant="danger" size="sm" onClick={() => { garmin.setConfirmDelete(true); setOpen(false); }} disabled={garmin.busy !== null}>
-                  Deleteremote
+                  Remove from Garmin
                 </Btn>
               )}
             </div>
@@ -110,7 +110,7 @@ export function ActionsMenu({
 
           <div style={{ padding: '14px 16px' }}>
             <Btn variant="danger" size="sm" onClick={() => { onDeletePlan(); setOpen(false); }} style={{ width: '100%' }}>
-              Deleteplan
+              Delete plan
             </Btn>
           </div>
         </Card>

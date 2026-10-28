@@ -9,10 +9,18 @@ import {
   type GarminRegion,
 } from '@/lib/api';
 
-export const GARMIN_REGIONS: Array<{ key: GarminRegion; label: string; code: string; host: string }> = [
-  { key: 'cn', label: 'CN', code: 'CN', host: 'garmin.cn' },
-  { key: 'global', label: 'International', code: 'INTL', host: 'garmin.com' },
+export const GARMIN_REGIONS: Array<{ key: GarminRegion; label: string; name: string; code: string; host: string }> = [
+  { key: 'cn', label: 'CN', name: 'Garmin China', code: 'CN', host: 'garmin.cn' },
+  { key: 'global', label: 'International', name: 'Garmin International', code: 'INTL', host: 'garmin.com' },
 ];
+
+function garminRegionName(region: GarminRegion): string {
+  return GARMIN_REGIONS.find((r) => r.key === region)?.name ?? region;
+}
+
+function workoutCount(n: number): string {
+  return `${n} ${n === 1 ? 'workout' : 'workouts'}`;
+}
 
 export function garminRegionLabel(region: GarminRegion): string {
   return GARMIN_REGIONS.find((r) => r.key === region)?.label ?? region;
@@ -42,7 +50,7 @@ export function useGarminPublish(planId: string) {
 
   async function push() {
     if (!planId || busy) return;
-    const label = garminRegionLabel(region);
+    const label = garminRegionName(region);
     setBusy('push');
     setNotice(null);
     setError(null);
@@ -51,12 +59,12 @@ export function useGarminPublish(planId: string) {
       setStatus(result.status);
       setNotice(
         result.blockedByCleanup
-          ? `${label}old has ${result.failed} DeleteFailed，Upload，。`
+          ? `Couldn’t remove ${workoutCount(result.failed)} from a previous upload to ${label}. Upload stopped to avoid duplicates.`
           : result.failed > 0
-          ? `Uploaded ${result.pushed} workouts to${label}，${result.failed} workout failed and can be retried.`
+          ? `Uploaded ${workoutCount(result.pushed)} to ${label}. ${workoutCount(result.failed)} failed — you can retry.`
           : result.deletedBeforePush > 0
-            ? `${label}old  ${result.deletedBeforePush} workout,Upload again ${result.pushed} workout.`
-            : `Uploaded ${result.pushed} workouts to${label} Garmin。`,
+            ? `Replaced ${workoutCount(result.deletedBeforePush)} on ${label} and uploaded ${workoutCount(result.pushed)}.`
+            : `Uploaded ${workoutCount(result.pushed)} to ${label}.`,
       );
     } catch (e) {
       setError((e as Error).message);
@@ -67,7 +75,7 @@ export function useGarminPublish(planId: string) {
 
   async function remove() {
     if (!planId || busy) return;
-    const label = garminRegionLabel(region);
+    const label = garminRegionName(region);
     setBusy('delete');
     setNotice(null);
     setError(null);
@@ -77,8 +85,8 @@ export function useGarminPublish(planId: string) {
       setConfirmDelete(false);
       setNotice(
         result.failed > 0
-          ? `Removed from${label}Delete ${result.deleted} workout,${result.failed} workout failed and can be retried.`
-          : `Removed from${label} Garmin Delete ${result.deleted} workout.`,
+          ? `Removed ${workoutCount(result.deleted)} from ${label}. ${workoutCount(result.failed)} failed — you can retry.`
+          : `Removed ${workoutCount(result.deleted)} from ${label}.`,
       );
     } catch (e) {
       setError((e as Error).message);

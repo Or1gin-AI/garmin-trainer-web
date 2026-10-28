@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
 import { api, type MeResponse, type GarminAccountSummary } from '@/lib/api';
-import { BrandIcon, T } from '@/components/track';
+import { BrandIcon, T, TierBadge } from '@/components/track';
 
 interface NavItem {
   href: string;
@@ -14,12 +14,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { href: '/garmin', label: 'Connections' },
-  { href: '/dashboard', label: 'Sync' },
   { href: '/training', label: 'Training' },
-  { href: '/profile', label: 'Athletic Profile' },
   { href: '/calendar', label: 'Calendar' },
-  { href: '/subscription', label: 'Subscription' },
+  { href: '/profile', label: 'Athlete Profile' },
+  { href: '/dashboard', label: 'Sync' },
+  { href: '/garmin', label: 'Garmin' },
+  { href: '/subscription', label: 'Plan' },
 ];
 
 function daysUntil(iso: string | null): number | null {
@@ -65,9 +65,9 @@ export default function AppLayout({
     return (
       <main className="track-page" style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: T.inkDim, fontFamily: T.mono, fontSize: 12, letterSpacing: 1.5,
+        color: T.inkDim, fontFamily: T.sans, fontSize: 14,
       }}>
-        <span className="track-blink">LOADING…</span>
+        <span className="track-blink">Loading…</span>
       </main>
     );
   }
@@ -83,92 +83,105 @@ export default function AppLayout({
     || session.user.name
     || session.user.email;
 
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+  const garminState = cnOk && intlOk ? 'both' : cnOk || intlOk ? 'one' : 'none';
+  const garminColor = garminState === 'both' ? T.green : garminState === 'one' ? T.amber : T.inkFaint;
+  const garminText = garminState === 'both'
+    ? 'Garmin CN + Intl linked'
+    : cnOk ? 'Garmin CN linked' : intlOk ? 'Garmin Intl linked' : 'Garmin not linked';
+
   return (
     <div className="track-page" style={{ paddingBottom: 80 }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 10,
-        background: 'rgba(11,14,12,0.86)', backdropFilter: 'blur(14px)',
+        background: 'rgba(10,13,11,0.82)', backdropFilter: 'saturate(140%) blur(16px)',
         borderBottom: `1px solid ${T.border}`,
       }}>
         <div style={{
-          maxWidth: T.pageMaxW, margin: '0 auto', padding: '0 28px',
-          height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
+          maxWidth: T.pageMaxW, margin: '0 auto', padding: '0 24px',
+          minHeight: 64, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
         }}>
-          <Link href="/garmin" style={{
-            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: T.ink,
+          <Link href="/training" style={{
+            display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: T.ink, flexShrink: 0,
           }}>
-            <BrandIcon size={34} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3, lineHeight: 1 }}>GARMIN TRAINER</div>
-              <div style={{ fontSize: 10, color: T.inkFaint, fontFamily: T.mono, marginTop: 2, letterSpacing: 1 }}>
-                CN account <span style={{ color: cnOk ? T.green : T.inkFaint }}>{cnOk ? 'Connected' : 'Not connected'}</span>
-                {' '}·{' '}
-                International account <span style={{ color: intlOk ? T.green : T.inkFaint }}>{intlOk ? 'Connected' : 'Not connected'}</span>
-              </div>
-            </div>
+            <BrandIcon size={30} />
+            <span style={{ fontSize: 16, fontWeight: 750, letterSpacing: '-0.01em' }}>
+              Garmin <span style={{ color: T.lime }}>Trainer</span>
+            </span>
           </Link>
 
           <nav
             aria-label="Main menu"
+            className="track-scroll-x"
             style={{
               display: 'flex',
               gap: 2,
               alignItems: 'center',
               overflowX: 'auto',
-              scrollbarWidth: 'none',
               minWidth: 0,
+              flex: '1 1 auto',
+              order: 0,
             }}
           >
             {nav.map((n) => {
               const active = pathname === n.href || pathname?.startsWith(n.href + '/');
               return (
-                <Link key={n.href} href={n.href} style={{
-                  padding: '7px 14px',
-                  borderRadius: 6,
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  background: active ? T.lime : 'transparent',
-                  color: active ? T.bg : T.inkDim,
+                <Link key={n.href} href={n.href} className={active ? undefined : 'track-nav-link'} style={{
+                  padding: '8px 13px',
+                  borderRadius: 9,
+                  fontSize: 14,
+                  fontWeight: active ? 650 : 500,
+                  background: active ? 'rgba(198,255,58,0.12)' : 'transparent',
+                  color: active ? T.lime : T.inkDim,
                   textDecoration: 'none', fontFamily: T.sans,
                   display: 'flex', alignItems: 'center',
                   whiteSpace: 'nowrap',
-                  boxShadow: active ? `0 0 16px ${T.limeGlow}` : 'none',
                 }}>
-                  <span>{n.label}</span>
+                  {n.label}
                 </Link>
               );
             })}
           </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12, color: T.inkFaint }}>
-            {me?.plan.isPaidActive ? (
-              <span style={{
-                padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.amber}40`,
-                color: T.amber, fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, fontWeight: 600,
-              }}>★ {planBadge(me?.plan ?? null)}{paidDays != null ? ` · ${paidDays}D` : ''}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: T.inkFaint, flexShrink: 0, marginLeft: 'auto' }}>
+            <Link href="/garmin" title={garminText} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none',
+              color: T.inkDim, fontSize: 12, fontWeight: 500,
+              padding: '5px 10px', borderRadius: 999, border: `1px solid ${T.border}`,
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: 999, background: garminColor, boxShadow: garminState === 'none' ? 'none' : `0 0 8px ${garminColor}` }} />
+              {garminState === 'both' ? 'CN + Intl' : cnOk ? 'CN' : intlOk ? 'Intl' : 'Link Garmin'}
+            </Link>
+            {me?.plan.isPaidActive && me.plan.plan !== 'free' ? (
+              <span title={paidDays != null && paidDays < 3650 ? `${paidDays} days left` : 'Active'}>
+                <TierBadge tier={me.plan.plan === 'max' ? 'max' : 'plus'} />
+              </span>
             ) : (
               <Link href="/subscription" style={{
-                padding: '3px 8px', borderRadius: 4, border: `1px solid ${T.border}`,
-                color: T.inkDim, fontFamily: T.mono, fontSize: 10, letterSpacing: 1.5, fontWeight: 600,
+                padding: '3px 9px', borderRadius: 999, border: `1px solid ${T.border}`,
+                color: T.inkDim, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
                 textDecoration: 'none',
-              }}>FREE</Link>
+              }}>{planBadge(me?.plan ?? null)}</Link>
             )}
-            <span style={{ fontFamily: T.mono, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayName}
-            </span>
+            <span title={displayName} style={{
+              width: 30, height: 30, borderRadius: 999, flexShrink: 0,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: T.panelRaised, border: `1px solid ${T.borderStrong}`,
+              color: T.ink, fontSize: 13, fontWeight: 700,
+            }}>{initial}</span>
             <button
               onClick={async () => {
                 await signOut();
                 router.push('/sign-in');
               }}
               className="track-link"
-              style={{ background: 'transparent', border: 'none', fontFamily: T.sans, fontSize: 12, padding: 0 }}
+              style={{ background: 'transparent', border: 'none', fontFamily: T.sans, fontSize: 13, padding: 0, color: T.inkDim }}
             >Sign out</button>
           </div>
         </div>
       </header>
       <main style={{
-        maxWidth: T.pageMaxW, margin: '0 auto', padding: '32px 28px',
+        maxWidth: T.pageMaxW, margin: '0 auto', padding: '36px 24px',
       }}>{children}</main>
     </div>
   );

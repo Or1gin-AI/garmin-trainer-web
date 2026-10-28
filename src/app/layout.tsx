@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://garmin-trainer.uk'),
   title: 'Garmin Trainer',
-  description: 'Sync CN Garmin activities to International',
+  description: 'AI-coached weekly training plans built from your Garmin data.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Garmin Trainer',
-    description: 'Sync CN Garmin activities to International',
+    description: 'AI-coached weekly training plans built from your Garmin data.',
     images: [{ url: '/brand-icon.png', width: 512, height: 512, alt: 'Garmin Trainer' }],
   },
   twitter: {
     card: 'summary',
     title: 'Garmin Trainer',
-    description: 'Sync CN Garmin activities to International',
+    description: 'AI-coached weekly training plans built from your Garmin data.',
     images: ['/brand-icon.png'],
   },
 };
@@ -30,7 +30,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full">{children}</body>
     </html>
   );

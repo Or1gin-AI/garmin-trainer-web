@@ -13,14 +13,14 @@ import { ToolCallStack, applyToolEvent } from '@/components/training/ToolCallSta
 import type { ToolEventUi } from '@/components/training/ToolCallCard';
 
 const TOOL_LABELS: Record<string, string> = {
-  regenerate_day: 'RegenerateTraining',
-  update_workout_field: 'UpdatingTrainingStatus',
+  regenerate_day: 'Regenerate workout',
+  update_workout_field: 'Update workout status',
 };
 
 const STATUS_ZH: Record<string, string> = {
-  completed: 'Completed',
-  skipped: 'Skipped',
-  planned: 'Planned',
+  completed: 'completed',
+  skipped: 'skipped',
+  planned: 'planned',
 };
 
 interface PersistedToolCall {
@@ -217,7 +217,7 @@ export function ChatPanel({
       }}>
         <div>
           <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5 }}>AI Coach</div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>Coach chat</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: T.ink }}>Chat with your coach</div>
         </div>
         {streaming ? (
           <span className="track-blink" style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.2 }}>
@@ -234,7 +234,7 @@ export function ChatPanel({
       >
         {items.length === 0 && (
           <p style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.6, margin: 0 }}>
-            canThis week’s planquestion，For example：「Why WednesdayisThreshold run」「， LSD 」。
+            Ask anything about this week’s plan, e.g. “Why is Wednesday a threshold run?” or “My legs are sore — can I swap in an LSD run?”
           </p>
         )}
         {items.map((item) => (
@@ -272,12 +272,12 @@ export function ChatPanel({
               void handleSend();
             }
           }}
-          placeholder={streaming ? 'Waiting for a reply…' : 'Your AI coach（Enter Send，Shift+Enter new line）'}
+          placeholder={streaming ? 'Waiting for a reply…' : 'Ask your AI Coach (Enter to send, Shift+Enter for a new line)'}
           style={{ resize: 'none', fontSize: 13 }}
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
           <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1 }}>
-            ⏎ Send · ⇧⏎ new line
+            ⏎ send · ⇧⏎ new line
           </span>
           <Btn size="sm" onClick={() => void handleSend()} disabled={streaming || composerValue.trim().length === 0}>
             Send ↵
@@ -373,13 +373,13 @@ function DraftTurn({ draft }: { draft: DraftAssistant }) {
 function summarizePersistedToolCall(tc: PersistedToolCall): string | undefined {
   if (tc.name === 'regenerate_day') {
     const di = tc.arguments?.dayIndex;
-    if (typeof di === 'number') return `Day  ${di} daysRegenerate`;
-    return 'RegenerateTraining';
+    if (typeof di === 'number') return `Day ${di} regenerated`;
+    return 'Workout regenerated';
   }
   if (tc.name === 'update_workout_field') {
     const v = tc.arguments?.value;
-    if (typeof v === 'string') return `Status：${STATUS_ZH[v] ?? v}`;
-    return 'UpdatingTrainingStatus';
+    if (typeof v === 'string') return `Status set to ${STATUS_ZH[v] ?? v}`;
+    return 'Workout status updated';
   }
   return undefined;
 }
@@ -395,15 +395,15 @@ function formatTime(iso: string): string {
 
 function mapErrorCode(code: string): string {
   switch (code) {
-    case 'pro_required': return 'AI CoachCoach chat is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
-    case 'max_required': return 'AI CoachCoach chat is a Max membership feature. This account is Free, Plus, or has an expired Max plan. Upgrade or redeem Max to unlock it.';
-    case 'quota_exceeded': return 'month AI chat。';
-    case 'llm_not_configured': return 'AI Modelnot yetConfiguration，Please Manage 。';
-    case 'persist_user_message_failed': return 'SaveusersmessageFailed，Please Retry。';
-    case 'persist_assistant_message_failed': return 'SavereplyFailed，Please Retry。';
-    case 'plan_request_corrupt': return 'planRecords，NoneContinuechat。';
-    case 'not_found': return 'Plan not foundorcurrent Account。';
+    case 'pro_required': return 'AI Coach chat is a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
+    case 'max_required': return 'AI Coach chat is a Max feature. Your account is on Free or Plus, or your Max membership has expired. Upgrade or redeem a Max code to unlock it.';
+    case 'quota_exceeded': return 'You’ve used all of this month’s AI chat messages.';
+    case 'llm_not_configured': return 'No AI model is configured yet. Please contact an admin.';
+    case 'persist_user_message_failed': return 'Couldn’t save your message. Please try again.';
+    case 'persist_assistant_message_failed': return 'Couldn’t save the coach’s reply. Please try again.';
+    case 'plan_request_corrupt': return 'This plan’s data is corrupted, so the chat can’t continue.';
+    case 'not_found': return 'Plan not found, or it doesn’t belong to your account.';
     case 'chat_failed':
-    default: return code || 'Chat failed. Please try again later.。';
+    default: return code || 'Chat failed. Please try again later.';
   }
 }

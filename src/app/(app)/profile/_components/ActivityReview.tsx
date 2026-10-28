@@ -14,8 +14,8 @@ import { Btn, T } from '@/components/track';
 
 const SEVERITY_LABEL: Record<ActivityReviewSeverity, string> = {
   high: 'Needs attention',
-  medium: 'Adjustment suggested',
-  low: 'Can improve',
+  medium: 'Worth adjusting',
+  low: 'Room to improve',
   opportunity: 'Opportunity',
 };
 
@@ -68,7 +68,7 @@ export function ActivityReview({
       setReview(r);
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
-        setError('AI review is a Max membership feature.');
+        setError('AI activity reviews are a Max feature.');
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -89,7 +89,7 @@ export function ActivityReview({
     return (
       <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Btn onClick={onGenerate} disabled={generating} size="sm">
-          {generating ? 'REVIEW.GENERATING…' : 'Generate AI review'}
+          {generating ? 'Generating review…' : 'Generate AI review'}
         </Btn>
         {error && (
           <span style={{ fontSize: 12, color: T.red, fontFamily: T.mono }}>
@@ -124,7 +124,7 @@ export function ActivityReview({
             size="sm"
             onClick={() => setShowRaw((v) => !v)}
           >
-            {showRaw ? 'Hide data' : 'Raw data'}
+            {showRaw ? 'Hide raw data' : 'Show raw data'}
           </Btn>
         </span>
       </div>
@@ -134,7 +134,7 @@ export function ActivityReview({
 
       {review.highlights.length === 0 ? (
         <p style={{ margin: 0, fontSize: 12, color: T.inkDim }}>
-          No rule-based recommendations for this activity.
+          No recommendations for this activity.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

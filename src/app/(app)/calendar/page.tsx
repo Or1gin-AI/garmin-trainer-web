@@ -14,10 +14,12 @@ import {
   type TrainingPlanSummary,
 } from '@/lib/api';
 import {
-  T, Btn, Card, PageHero, SectionLabel, Banner, StatusBadge,
+  T, Btn, Card, PageHero, SectionLabel, Banner, Pill, LABEL, SPORT, type SportKind,
 } from '@/components/track';
+import { formatWeekRange } from '@/lib/format';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function dateOnly(d: Date): string {
   const y = d.getFullYear();
@@ -46,7 +48,7 @@ function monthEnd(d: Date): Date {
 }
 
 function monthLabel(d: Date): string {
-  return `${d.getFullYear()}year ${d.getMonth() + 1}month`;
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function monthGrid(d: Date): Array<string | null> {
@@ -60,43 +62,38 @@ function monthGrid(d: Date): Array<string | null> {
   return out;
 }
 
-function formatMD(date: string): string {
+function formatLongDate(date: string): string {
   const d = parseDate(date);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
 }
 
 function sportLabel(sport: string): string {
-  if (sport === 'running') return 'Running';
-  if (sport === 'cycling') return 'Cycling';
-  if (sport === 'swimming') return 'Swimming';
-  if (sport === 'rest') return 'Rest';
-  if (sport === 'strength') return 'Strength';
-  if (sport === 'mobility') return 'Recovery';
-  return 'Sport';
+  return SPORT[sport as SportKind]?.label ?? 'Activity';
 }
 
 function regionLabel(region: string | null): string {
   if (region === 'cn') return 'CN';
-  if (region === 'global') return 'International';
+  if (region === 'global') return 'Intl';
   return 'Garmin';
 }
 
 function metricText(e: TrainingCalendarEvent): string[] {
   const out: string[] = [];
-  if (e.distanceKm != null && e.distanceKm > 0) out.push(`${Number(e.distanceKm).toFixed(1)}km`);
-  if (e.durationMinutes != null && e.durationMinutes > 0) out.push(`${e.durationMinutes}min`);
+  if (e.durationMinutes != null && e.durationMinutes > 0) out.push(`${e.durationMinutes} min`);
+  if (e.distanceKm != null && e.distanceKm > 0) out.push(`${Number(e.distanceKm).toFixed(1)} km`);
   if (e.kind === 'garmin_activity') {
     const avgHr = e.metrics.averageHr;
     const load = e.metrics.trainingLoad;
     const power = e.metrics.averagePower;
-    if (typeof avgHr === 'number') out.push(`${Math.round(avgHr)}bpm`);
+    if (typeof avgHr === 'number') out.push(`${Math.round(avgHr)} bpm`);
     if (typeof power === 'number') out.push(`${Math.round(power)}W`);
     if (typeof load === 'number') out.push(`Load ${Math.round(load)}`);
     return out;
   }
-  if (e.targetPower && e.targetPower !== 'N/A') out.push(e.targetPower);
-  else if (e.targetHeartRate && e.targetHeartRate !== 'N/A') out.push(e.targetHeartRate);
-  else if (e.targetPace && e.targetPace !== 'N/A') out.push(e.targetPace);
+  const ok = (v: string | null | undefined) => !!v && !/^(n\/?a|不适用)$/i.test(v.trim());
+  if (ok(e.targetPower)) out.push(e.targetPower!);
+  else if (ok(e.targetHeartRate)) out.push(e.targetHeartRate!);
+  else if (ok(e.targetPace)) out.push(e.targetPace!);
   return out;
 }
 
@@ -105,11 +102,6 @@ function eventAccent(e: TrainingCalendarEvent): string {
   if (e.intensity === 'high') return T.red;
   if (e.intensity === 'medium') return T.amber;
   return T.lime;
-}
-
-function formatWeekStart(d: string): string {
-  const date = parseDate(d);
-  return `${date.getMonth() + 1}/${date.getDate()} ${WEEKDAYS[date.getDay()]}`;
 }
 
 function eventTime(e: TrainingCalendarEvent): string | null {
@@ -195,10 +187,10 @@ export default function CalendarPage() {
   const canNext = dateOnly(nextMonth) <= range.to;
 
   async function clearActivePlan() {
-    if (!window.confirm('ConfirmRemove the current training plan from the calendar?')) return;
+    if (!window.confirm('Remove the current training plan from your calendar?')) return;
     try {
       await clearCalendarTrainingPlan();
-      setNotice('The current calendar plan was removed.');
+      setNotice('The plan was removed from your calendar.');
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -206,14 +198,14 @@ export default function CalendarPage() {
   }
 
   async function applyPlan(plan: TrainingPlanSummary) {
-    const ok = window.confirm('ConfirmApply this training plan to the calendar? It will repeat the 7-day schedule for the next 30 days and replace the current plan.');
+    const ok = window.confirm('Put this plan on your calendar? Its 7-day schedule repeats across the next 30 days and replaces the current plan.');
     if (!ok) return;
     setBusyPlanId(plan.id);
     setError(null);
     setNotice(null);
     try {
       await importPlanToCalendar(plan.id);
-      setNotice('Applied to the calendar for the next 30 days.');
+      setNotice('Plan added to your calendar for the next 30 days.');
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -225,22 +217,21 @@ export default function CalendarPage() {
   return (
     <>
       <PageHero
-        eyebrow="Personal calendar"
-        title="TrainingCalendar"
-        sub={`${range.from} to ${range.to} · onetimesView onemonth`}
+        eyebrow="Schedule"
+        title="Training Calendar"
+        sub="Your active plan laid out day by day, alongside the activities you actually recorded on Garmin."
         actions={
           <>
             {data?.calendar.activePlan ? (
               <>
-                <StatusBadge kind="ready" />
+                <Btn variant="danger" size="sm" onClick={clearActivePlan}>Remove from calendar</Btn>
                 <Link href={`/training/${data.calendar.activePlan.id}`} style={{ textDecoration: 'none' }}>
-                  <Btn variant="ghost" size="sm">Current plan</Btn>
+                  <Btn size="sm">Open active plan</Btn>
                 </Link>
-                <Btn variant="ghost" size="sm" onClick={clearActivePlan}>Remove plan</Btn>
               </>
             ) : (
               <Link href="/training/new" style={{ textDecoration: 'none' }}>
-                <Btn variant="ghost" size="sm">New plan</Btn>
+                <Btn size="sm">+ New plan</Btn>
               </Link>
             )}
           </>
@@ -253,24 +244,25 @@ export default function CalendarPage() {
         <div style={{ marginBottom: 18 }}>
           <Banner kind="warn" code="GARMIN">
             {activitySourceErrors
-              .map((source) => `${regionLabel(source.region)}activityRead failed. Please reconnect Garmin.`)
-              .join('；')}
+              .map((source) => `Couldn't load activities from Garmin ${regionLabel(source.region)}.`)
+              .join(' ')}{' '}
+            <Link href="/garmin" className="track-link">Reconnect Garmin →</Link>
           </Banner>
         </div>
       )}
 
       {loading && (
-        <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-          // Loading calendar…
+        <div style={{ fontSize: 14, color: T.inkFaint }} className="track-blink">
+          Loading calendar…
         </div>
       )}
 
       {!loading && (
         <>
-          <SectionLabel>Apply training plan</SectionLabel>
-          <Card style={{ padding: 16, marginBottom: 22 }}>
+          <SectionLabel>Plan on your calendar</SectionLabel>
+          <Card style={{ padding: 16, marginBottom: 28 }}>
             {plans.length === 0 ? (
-              <div style={{ color: T.inkFaint, fontSize: 13 }}>No plan is available to apply.</div>
+              <div style={{ color: T.inkFaint, fontSize: 14 }}>No ready plans yet. Create one from the Training page.</div>
             ) : (
               <div style={{ display: 'grid', gap: 10 }}>
                 {plans.map((p) => {
@@ -283,18 +275,19 @@ export default function CalendarPage() {
                         gridTemplateColumns: 'minmax(0, 1fr) auto',
                         alignItems: 'center',
                         gap: 12,
-                        border: `1px solid ${active ? T.lime : T.border}`,
-                        borderRadius: 8,
-                        padding: 12,
-                        background: active ? 'rgba(198,255,58,0.04)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${active ? `${T.lime}66` : T.border}`,
+                        borderRadius: 12,
+                        padding: '12px 14px',
+                        background: active ? 'rgba(198,255,58,0.06)' : 'rgba(255,255,255,0.02)',
                       }}
                     >
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontFamily: T.mono, fontSize: 10, color: active ? T.lime : T.inkFaint, letterSpacing: 1.2, marginBottom: 4 }}>
-                          {formatWeekStart(p.weekStartDate)} · 30-day loop
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ color: T.ink, fontSize: 14, fontWeight: 700 }}>Week of {formatWeekRange(p.weekStartDate)}</span>
+                          {active && <Pill color={T.lime} size="sm">Active</Pill>}
                         </div>
-                        <div style={{ color: T.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.summary ?? 'Trainingplan'}
+                        <div style={{ color: T.inkDim, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.summary ?? 'Training plan'}
                         </div>
                       </div>
                       <Btn
@@ -303,7 +296,7 @@ export default function CalendarPage() {
                         onClick={() => applyPlan(p)}
                         disabled={active || busyPlanId === p.id}
                       >
-                        {active ? 'Applied' : busyPlanId === p.id ? 'Applying…' : 'Apply for the next 30 days'}
+                        {active ? '✓ On calendar' : busyPlanId === p.id ? 'Adding…' : 'Use this plan'}
                       </Btn>
                     </div>
                   );
@@ -315,35 +308,40 @@ export default function CalendarPage() {
           <SectionLabel
             right={
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(prevMonth)} disabled={!canPrev}>Previous month</Btn>
-                <div style={{ fontFamily: T.mono, fontSize: 12, color: T.ink }}>{monthLabel(visibleMonth)}</div>
-                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(nextMonth)} disabled={!canNext}>Next month</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(prevMonth)} disabled={!canPrev} aria-label="Previous month">←</Btn>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, minWidth: 130, textAlign: 'center' }}>{monthLabel(visibleMonth)}</div>
+                <Btn variant="ghost" size="sm" onClick={() => setVisibleMonth(nextMonth)} disabled={!canNext} aria-label="Next month">→</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => { setVisibleMonth(monthStart(today)); setSelectedDate(dateOnly(today)); }}>Today</Btn>
               </div>
             }
           >
-            Month view
+            <span style={{ display: 'inline-flex', gap: 14, textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+              <Legend color={T.lime} label="Easy" />
+              <Legend color={T.amber} label="Moderate" />
+              <Legend color={T.red} label="Hard" />
+              <Legend color={T.cyan} label="Garmin activity" />
+            </span>
           </SectionLabel>
           <div style={{ overflowX: 'auto', marginBottom: 24, paddingBottom: 6 }}>
-            <div style={{ minWidth: 980 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(132px, 1fr))', gap: 10, marginBottom: 10 }}>
+            <div style={{ minWidth: 900 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(120px, 1fr))', gap: 8, marginBottom: 8 }}>
                 {WEEKDAYS.map((day) => (
-                  <div key={day} style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2, padding: '0 4px' }}>
-                    {day}
+                  <div key={day} style={{ ...LABEL, padding: '0 6px' }}>
+                    {day.slice(0, 3)}
                   </div>
                 ))}
               </div>
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(7, minmax(132px, 1fr))',
-                  gap: 10,
+                  gridTemplateColumns: 'repeat(7, minmax(120px, 1fr))',
+                  gap: 8,
                 }}
               >
                 {gridDays.map((day, i) => {
                   if (!day) {
-                    return <div key={`blank-${i}`} style={{ minHeight: 172 }} />;
+                    return <div key={`blank-${i}`} style={{ minHeight: 132 }} />;
                   }
-                  const d = parseDate(day);
                   const isToday = day === dateOnly(today);
                   const selected = day === selectedDate;
                   const inRange = day >= range.from && day <= range.to;
@@ -357,33 +355,32 @@ export default function CalendarPage() {
                       type="button"
                       onClick={() => inRange && setSelectedDate(day)}
                       disabled={!inRange}
+                      className="track-day"
                       style={{
                         all: 'unset',
                         boxSizing: 'border-box',
-                        minHeight: 172,
-                        padding: 12,
-                        borderRadius: 8,
-                        border: `1px solid ${selected ? T.lime : isToday ? T.cyan : T.border}`,
-                        background: selected ? 'rgba(198,255,58,0.06)' : 'rgba(255,255,255,0.02)',
+                        minHeight: 132,
+                        padding: 10,
+                        borderRadius: 12,
+                        border: `1px solid ${selected ? `${T.lime}aa` : T.border}`,
+                        background: selected ? 'rgba(198,255,58,0.07)' : plannedCount > 0 || activityCount > 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.012)',
                         cursor: inRange ? 'pointer' : 'not-allowed',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 8,
+                        gap: 6,
                         opacity: inRange ? 1 : 0.32,
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
-                        <span style={{ fontFamily: T.mono, fontSize: 11, color: selected ? T.lime : T.inkFaint, letterSpacing: 1.1 }}>
-                          {formatMD(day)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
+                        <span style={{
+                          fontSize: 13, fontWeight: 700, minWidth: 24, height: 24, borderRadius: 999,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          color: isToday ? T.bg : selected ? T.lime : T.inkDim,
+                          background: isToday ? T.lime : 'transparent',
+                        }}>
+                          {parseDate(day).getDate()}
                         </span>
-                        <span style={{ fontFamily: T.mono, fontSize: 10, color: isToday ? T.cyan : T.inkFaint }}>
-                          {WEEKDAYS[d.getDay()]}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {plannedCount > 0 && <MiniBadge color={T.lime}>plan {plannedCount}</MiniBadge>}
-                        {activityCount > 0 && <MiniBadge color={T.cyan}>Records {activityCount}</MiniBadge>}
-                        {hasEvaluation && <MiniBadge color={T.amber}>Review</MiniBadge>}
+                        {hasEvaluation && <MiniBadge color={T.amber}>Reviewed</MiniBadge>}
                       </div>
                       <div style={{ display: 'grid', gap: 6 }}>
                         {list.slice(0, 4).map((e) => (
@@ -395,17 +392,17 @@ export default function CalendarPage() {
                               minWidth: 0,
                             }}
                           >
-                            <div style={{ fontSize: 11, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {e.kind === 'garmin_activity' ? 'Records' : e.sessionLabel ?? 'plan'} · {e.title}
+                            <div style={{ fontSize: 12, fontWeight: 600, color: e.sport === 'rest' ? T.inkFaint : T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {e.title}
                             </div>
-                            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: 11, color: T.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {metricText(e).slice(0, 2).join(' · ')}
                             </div>
                           </div>
                         ))}
                         {list.length > 4 && (
-                          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint }}>
-                            +{list.length - 4}
+                          <div style={{ fontSize: 11, color: T.inkFaint }}>
+                            +{list.length - 4} more
                           </div>
                         )}
                       </div>
@@ -416,12 +413,12 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <SectionLabel>{selectedDate} TrainingDetails</SectionLabel>
+          <SectionLabel>{formatLongDate(selectedDate)}</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, marginBottom: 24 }}>
             <div style={{ display: 'grid', gap: 10 }}>
               {selectedPlanEvents.length === 0 ? (
-                <Card style={{ padding: 24, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
-                  This onedaysNo planTraining。
+                <Card style={{ padding: 24, color: T.inkFaint, fontSize: 14, textAlign: 'center' }}>
+                  No planned session on this day.
                 </Card>
               ) : (
                 selectedPlanEvents.map((e) => <EventDetail key={e.id} event={e} />)
@@ -429,13 +426,13 @@ export default function CalendarPage() {
             </div>
             <div style={{ display: 'grid', gap: 10 }}>
               {selectedActivityEvents.length === 0 ? (
-                <Card style={{ padding: 24, color: T.inkFaint, fontSize: 13, textAlign: 'center' }}>
-                  This onedaysNo  Garmin activities。
+                <Card style={{ padding: 24, color: T.inkFaint, fontSize: 14, textAlign: 'center' }}>
+                  No Garmin activities recorded on this day.
                 </Card>
               ) : (
                 <Card style={{ padding: 18 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: 1.3, marginBottom: 10 }}>
-                    GARMIN.ACTIVITIES
+                  <div style={{ ...LABEL, color: T.cyan, marginBottom: 10 }}>
+                    Recorded on Garmin
                   </div>
                   <div style={{ display: 'grid', gap: 8 }}>
                     {selectedActivityEvents.map((event) => (
@@ -450,7 +447,7 @@ export default function CalendarPage() {
           {/* Evaluations — auto-generated by the backend */}
           {selectedEvaluations.length > 0 && (
             <>
-              <SectionLabel>{selectedDate} TrainingReview</SectionLabel>
+              <SectionLabel>Session review</SectionLabel>
               <div style={{ display: 'grid', gap: 10, marginBottom: 24 }}>
                 {selectedEvaluations.map((evaluation) => (
                   <EvaluationResultCard key={evaluation.id} evaluation={evaluation} />
@@ -465,12 +462,12 @@ export default function CalendarPage() {
 }
 
 const VERDICT_ZH: Record<string, { label: string; color: string }> = {
-  matched: { label: 'Trainingmatched', color: T.lime },
-  under_done: { label: 'Traininginsufficient', color: T.amber },
-  over_done: { label: 'Trainingtoo much', color: T.amber },
-  different_sport: { label: 'Sportmatch', color: T.cyan },
-  missed: { label: 'Trainingmissing', color: T.red },
-  rest_day_active: { label: 'Restdaily activity', color: T.cyan },
+  matched: { label: 'On target', color: T.lime },
+  under_done: { label: 'Under target', color: T.amber },
+  over_done: { label: 'Over target', color: T.amber },
+  different_sport: { label: 'Different sport', color: T.cyan },
+  missed: { label: 'Missed', color: T.red },
+  rest_day_active: { label: 'Active on rest day', color: T.cyan },
 };
 
 function scoreColor(score: number): string {
@@ -500,18 +497,18 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
           background: ready ? T.limeGlow : evaluation.status === 'failed' ? T.redSoft : T.amberSoft,
         }}
       >
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: statusColor, letterSpacing: 1.2, marginBottom: 6 }}>
-          EVALUATION.{evaluation.status.toUpperCase()}
+        <div style={{ ...LABEL, color: statusColor, marginBottom: 6 }}>
+          Review · {evaluation.status}
         </div>
-        <div style={{ color: T.ink, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-          {result?.title ?? 'TrainingReview'}
+        <div style={{ color: T.ink, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+          {result?.title ?? 'Session review'}
         </div>
         <div style={{ color: T.inkDim, fontSize: 12, lineHeight: 1.6 }}>
-          {result?.summary ?? 'Review submitted. Waiting for generation.'}
+          {result?.summary ?? 'Review in progress…'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          <MiniBadge color={T.lime}>plan {result?.plannedWorkoutCount ?? evaluation.plannedWorkoutIds.length}</MiniBadge>
-          <MiniBadge color={T.cyan}>Sport {result?.activityCount ?? evaluation.activityRefs.length}</MiniBadge>
+          <MiniBadge color={T.lime}>{result?.plannedWorkoutCount ?? evaluation.plannedWorkoutIds.length} planned</MiniBadge>
+          <MiniBadge color={T.cyan}>{result?.activityCount ?? evaluation.activityRefs.length} recorded</MiniBadge>
         </div>
       </div>
     );
@@ -526,9 +523,9 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
     <div
       style={{
         border: `1px solid ${sColor}40`,
-        borderRadius: 8,
-        padding: 14,
-        background: sc >= 70 ? T.limeGlow : sc >= 40 ? T.amberSoft : T.redSoft,
+        borderRadius: 14,
+        padding: 18,
+        background: T.panelSolid,
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
@@ -537,31 +534,23 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
       {/* Header: score + verdict */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: `2px solid ${sColor}`,
+          width: 52, height: 52, borderRadius: '50%',
+          border: `3px solid ${sColor}`, background: `${sColor}14`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: T.mono, fontSize: 14, fontWeight: 800, color: sColor,
+          fontSize: 18, fontWeight: 800, color: sColor, flexShrink: 0,
         }}>
           {sc}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ color: T.ink, fontSize: 14, fontWeight: 700 }}>
+          <div style={{ color: T.ink, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
             {r.title}
           </div>
-          {v && (
-            <span style={{
-              fontFamily: T.mono, fontSize: 9, color: v.color,
-              border: `1px solid ${v.color}40`, borderRadius: 4,
-              padding: '1px 5px', marginTop: 2, display: 'inline-block',
-            }}>
-              {v.label}
-            </span>
-          )}
+          {v && <Pill color={v.color} size="sm">{v.label}</Pill>}
         </div>
       </div>
 
       {/* Summary */}
-      <div style={{ color: T.inkDim, fontSize: 12, lineHeight: 1.6 }}>
+      <div style={{ color: T.inkDim, fontSize: 14, lineHeight: 1.6 }}>
         {r.summary}
       </div>
 
@@ -571,13 +560,13 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
           <MiniStat label="Sport match" value={r.adherence.sportMatched ? '✓' : '✗'} color={r.adherence.sportMatched ? T.lime : T.red} />
           <MiniStat label="Duration" value={ratioText(r.adherence.durationRatio)} color={ratioStatColor(r.adherence.durationRatio)} />
           <MiniStat label="Distance" value={ratioText(r.adherence.distanceRatio)} color={ratioStatColor(r.adherence.distanceRatio)} />
-          <MiniStat label="intensity" value={r.adherence.intensityMatched == null ? '—' : r.adherence.intensityMatched ? '✓' : '✗'} color={r.adherence.intensityMatched ? T.lime : r.adherence.intensityMatched === false ? T.amber : T.inkFaint} />
+          <MiniStat label="Intensity" value={r.adherence.intensityMatched == null ? '—' : r.adherence.intensityMatched ? '✓' : '✗'} color={r.adherence.intensityMatched ? T.lime : r.adherence.intensityMatched === false ? T.amber : T.inkFaint} />
         </div>
       )}
 
       {/* Load */}
       {r.load && r.load.comment && (
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkDim }}>
+        <div style={{ fontSize: 13, color: T.inkDim }}>
           ⚡ {r.load.comment}
         </div>
       )}
@@ -622,8 +611,8 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
 
       {/* Counts */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        <MiniBadge color={T.lime}>plan {r.plannedWorkoutCount}</MiniBadge>
-        <MiniBadge color={T.cyan}>Sport {r.activityCount}</MiniBadge>
+        <MiniBadge color={T.lime}>{r.plannedWorkoutCount} planned</MiniBadge>
+        <MiniBadge color={T.cyan}>{r.activityCount} recorded</MiniBadge>
       </div>
     </div>
   );
@@ -632,8 +621,8 @@ function EvaluationResultCard({ evaluation }: { evaluation: TrainingEvaluationSu
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 9, color: T.inkFaint, marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color }}>{value}</div>
+      <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -649,7 +638,7 @@ function BulletList({ items, color }: { items: string[]; color: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {items.map((item, i) => (
-        <div key={i} style={{ fontSize: 11, color: T.inkDim, lineHeight: 1.5 }}>
+        <div key={i} style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.55 }}>
           <span style={{ color, marginRight: 4 }}>●</span>
           {item}
         </div>
@@ -661,16 +650,25 @@ function BulletList({ items, color }: { items: string[]; color: string }) {
 function MiniBadge({ color, children }: { color: string; children: ReactNode }) {
   return (
     <span style={{
-      fontFamily: T.mono,
-      fontSize: 9,
+      fontSize: 10,
+      fontWeight: 600,
       color,
       border: `1px solid ${color}40`,
-      borderRadius: 4,
-      padding: '2px 5px',
-      background: 'rgba(255,255,255,0.03)',
+      borderRadius: 999,
+      padding: '1px 7px',
+      background: `${color}12`,
       whiteSpace: 'nowrap',
     }}>
       {children}
+    </span>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkFaint }}>
+      <span style={{ width: 10, height: 3, borderRadius: 2, background: color }} />
+      {label}
     </span>
   );
 }
@@ -681,21 +679,21 @@ function ActivityReadOnlyRow({ event }: { event: TrainingCalendarEvent }) {
     <div
       style={{
         border: `1px solid ${T.border}`,
-        borderRadius: 8,
-        padding: 10,
+        borderRadius: 10,
+        padding: 12,
         background: 'rgba(255,255,255,0.02)',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-        <div style={{ color: T.ink, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ color: T.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {event.title}
         </div>
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 12, color: T.cyan, whiteSpace: 'nowrap' }}>
           {eventTime(event) ?? regionLabel(event.region)}
         </div>
       </div>
-      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
-        {regionLabel(event.region)} · {sportLabel(event.sport)}{metrics.length ? ` · ${metrics.join(' · ')}` : ''}
+      <div style={{ fontSize: 12, color: T.inkFaint }}>
+        Garmin {regionLabel(event.region)} · {sportLabel(event.sport)}{metrics.length ? ` · ${metrics.join(' · ')}` : ''}
       </div>
     </div>
   );
@@ -704,39 +702,39 @@ function ActivityReadOnlyRow({ event }: { event: TrainingCalendarEvent }) {
 function EventDetail({ event }: { event: TrainingCalendarEvent }) {
   const metrics = metricText(event);
   return (
-    <Card style={{ padding: 18, borderColor: `${eventAccent(event)}60` }}>
+    <Card style={{ padding: 20 }} accent={eventAccent(event)}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 10, color: eventAccent(event), letterSpacing: 1.3, marginBottom: 5 }}>
-            PLAN · {sportLabel(event.sport)}
+          <div style={{ ...LABEL, color: eventAccent(event), marginBottom: 6 }}>
+            Planned · {sportLabel(event.sport)}
           </div>
-          <h2 style={{ margin: 0, color: T.ink, fontSize: 18, fontWeight: 700 }}>
+          <h2 style={{ margin: 0, color: T.ink, fontSize: 20, fontWeight: 700 }}>
             {event.title}
           </h2>
         </div>
         {event.planId && (
           <Link href={`/training/${event.planId}`} style={{ textDecoration: 'none' }}>
-            <Btn variant="ghost" size="sm">Plan details</Btn>
+            <Btn variant="ghost" size="sm">View in plan →</Btn>
           </Link>
         )}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: event.workoutStructure || event.targets?.length ? 12 : 0 }}>
         {metrics.map((m) => (
-          <span key={m} style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim, border: `1px solid ${T.border}`, borderRadius: 4, padding: '4px 7px' }}>
+          <span key={m} style={{ fontSize: 12, fontWeight: 600, color: T.ink, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}`, borderRadius: 999, padding: '4px 10px' }}>
             {m}
           </span>
         ))}
       </div>
       {event.workoutStructure && (
-        <p style={{ margin: '0 0 10px', color: T.ink, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+        <p style={{ margin: '0 0 12px', color: T.inkDim, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
           {event.workoutStructure}
         </p>
       )}
       {event.targets && event.targets.length > 0 && (
-        <div style={{ display: 'grid', gap: 5 }}>
+        <div style={{ display: 'grid', gap: 6 }}>
           {event.targets.map((t) => (
-            <div key={t} style={{ fontFamily: T.mono, fontSize: 11, color: T.inkDim }}>
-              {t}
+            <div key={t} style={{ fontSize: 13, color: T.ink, display: 'flex', gap: 8 }}>
+              <span style={{ color: T.lime }}>✓</span>{t}
             </div>
           ))}
         </div>

@@ -67,7 +67,7 @@ export function ToolCallCard({ ev }: { ev: ToolEventUi }) {
           {ev.displayName}
           {ev.phase === 'start' && (
             <span style={{ color: T.inkFaint, marginLeft: 6, fontWeight: 400 }}>
-              · In progress…
+              · running…
             </span>
           )}
           {ev.phase === 'done' && ev.durationMs != null && (

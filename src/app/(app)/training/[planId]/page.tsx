@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ApiError,
   deleteTrainingPlan,
@@ -18,7 +18,7 @@ import {
 } from '@/lib/api';
 import { streamSse, type SseEvent } from '@/lib/sse';
 import {
-  T, Btn, Card, StatTile, StatusBadge, PageHero, Banner,
+  T, Btn, Card, StatTile, StatusBadge, PageHero, Banner, Pill, LABEL,
   type StatusKind,
 } from '@/components/track';
 import { WorkoutCard } from './_components/WorkoutCard';
@@ -29,9 +29,9 @@ import {
   type CalendarDay,
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
-import { formatWeekStart } from '@/lib/format';
+import { formatMinutes, formatWeekRange, weekRelation } from '@/lib/format';
 import { readPlanEstimatedTrainingLoad, sumWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
-import { useGarminPublish, garminRegionLabel, GARMIN_REGIONS } from './_components/useGarminPublish';
+import { useGarminPublish, GARMIN_REGIONS } from './_components/useGarminPublish';
 import { ConfirmDialog } from './_components/ConfirmDialog';
 
 const STATUS_MAP: Record<PlanStatus, StatusKind> = {
@@ -40,6 +40,13 @@ const STATUS_MAP: Record<PlanStatus, StatusKind> = {
   failed: 'failed',
   archived: 'archived',
 };
+
+const EXPORT_FORMATS = [
+  { key: 'intervals_icu', label: 'Intervals.icu' },
+  { key: 'pdf', label: 'PDF' },
+  { key: 'word', label: 'Word' },
+  { key: 'excel', label: 'Excel' },
+] as const;
 
 function todayDayIndex(weekStartDate: string): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartDate);
@@ -52,6 +59,17 @@ function todayDayIndex(weekStartDate: string): number | null {
   if (diff < 0 || diff > 6) return null;
   return diff + 1;
 }
+
+/** Split a paragraph of coach guidance into short bullet points. */
+function toBullets(text: string | null | undefined): string[] {
+  if (!text) return [];
+  return text
+    .split(/(?<=[.!?。！？；;])\s+|(?<=[。！？；;])|\n+/)
+    .map((s) => s.trim().replace(/^[-•·]\s*/, ''))
+    .filter((s) => s.length > 1);
+}
+
+type PlanRequest = { goal?: string | null; daysPerWeek?: number | null; raceDate?: string | null; goalDistance?: string | null };
 
 export default function TrainingPlanDetailPage() {
   const router = useRouter();
@@ -112,8 +130,10 @@ export default function TrainingPlanDetailPage() {
   useEffect(() => {
     if (!detail || selectedDay != null) return;
     const today = todayDayIndex(detail.plan.weekStartDate);
-    const first = detail.workouts[0]?.dayIndex ?? 1;
-    setSelectedDay(today ?? first);
+    const firstTraining = [...detail.workouts]
+      .sort((a, b) => a.dayIndex - b.dayIndex)
+      .find((w) => w.sport !== 'rest')?.dayIndex;
+    setSelectedDay(today ?? firstTraining ?? detail.workouts[0]?.dayIndex ?? 1);
   }, [detail, selectedDay]);
 
   function highlight(dayIndex: number) {
@@ -192,7 +212,7 @@ export default function TrainingPlanDetailPage() {
       const d = err.detail as { error?: string; activeCount?: number } | undefined;
       setError(
         d?.error === 'garmin_plan_uploaded'
-          ? `This plan still has ${d.activeCount ?? 0}  Garmin remote copy. Delete the remote copy from CN/International Garmin before deleting the local plan.`
+          ? `This plan still has ${d.activeCount ?? 0} workout(s) on your Garmin calendar. Remove them from Garmin before deleting the plan.`
           : err.message,
       );
       setConfirmLocalDelete(false);
@@ -230,33 +250,36 @@ export default function TrainingPlanDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ fontFamily: T.mono, fontSize: 12, color: T.inkFaint, letterSpacing: 1.5 }} className="track-blink">
-        Loading…
+      <div style={{ fontSize: 14, color: T.inkFaint }} className="track-blink">
+        Loading plan…
       </div>
     );
   }
   if (notFound) {
     return (
-      <Card style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontFamily: T.mono, fontSize: 11, color: T.red, letterSpacing: 1.5, marginBottom: 8 }}>404 · Not found</div>
-        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: T.ink }}>Plan not found</h2>
-        <p style={{ color: T.inkDim, fontSize: 13, margin: '0 0 18px' }}>This plan may have been deleted or does not belong to the current account.</p>
+      <Card style={{ padding: 48, textAlign: 'center' }}>
+        <div style={{ ...LABEL, color: T.red, marginBottom: 10 }}>Not found</div>
+        <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: T.ink }}>Plan not found</h2>
+        <p style={{ color: T.inkDim, fontSize: 14, margin: '0 0 20px' }}>This plan may have been deleted, or it belongs to another account.</p>
         <Link href="/training" style={{ textDecoration: 'none' }}>
-          <Btn>Backlist</Btn>
+          <Btn>Back to plans</Btn>
         </Link>
       </Card>
     );
   }
   if (!detail) {
     return (
-      <Banner kind="error" code="ERR">{error ?? 'Loading failed'}</Banner>
+      <Banner kind="error" code="ERR">{error ?? 'Could not load this plan.'}</Banner>
     );
   }
 
   const { plan, workouts } = detail;
+  const request = (plan.request ?? {}) as PlanRequest;
   const ordered = [...workouts].sort((a, b) => a.dayIndex - b.dayIndex || (a.slotIndex ?? 1) - (b.slotIndex ?? 1));
-  const completed = ordered.filter((w) => w.status === 'completed').length;
+  const sessions = ordered.filter((w) => w.sport !== 'rest');
+  const completed = sessions.filter((w) => w.status === 'completed').length;
   const totalMin = ordered.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
+  const hardCount = sessions.filter((w) => w.intensity === 'high').length;
   const estimatedTrainingLoad =
     readPlanEstimatedTrainingLoad(plan.modelMeta) ?? sumWorkoutEstimatedTrainingLoad(ordered);
   const trainingDayCount = new Set(
@@ -265,33 +288,55 @@ export default function TrainingPlanDetailPage() {
       .map((w) => w.dayIndex),
   ).size;
   const selected = selectedDay != null ? ordered.filter((w) => w.dayIndex === selectedDay) : [];
+  const rel = weekRelation(plan.weekStartDate);
 
   const uploaded = garmin.status?.uploaded ?? false;
   const garminRegion = GARMIN_REGIONS.find((r) => r.key === garmin.region) ?? GARMIN_REGIONS[0];
 
-  const EXPORT_FORMATS = [
-    { key: 'intervals_icu', label: 'Intervals.icu Calendar' },
-    { key: 'word', label: 'Word document' },
-    { key: 'pdf', label: 'PDF' },
-    { key: 'excel', label: 'Excel spreadsheet' },
-  ] as const;
+  const monitoring = toBullets(plan.monitoring);
+  const rules = toBullets(plan.adjustmentRules);
+
+  const subParts = [
+    request.goal ? `Goal: ${request.goal}` : null,
+    request.daysPerWeek ? `${request.daysPerWeek} days per week` : null,
+    `Created ${new Date(plan.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+  ].filter(Boolean);
+
+  const popoverStyle = {
+    position: 'absolute' as const,
+    top: 'calc(100% + 8px)',
+    right: 0,
+    width: 300,
+    padding: 16,
+    zIndex: 50,
+    background: T.panelRaised,
+    border: `1px solid ${T.borderHot}`,
+    boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+  };
 
   return (
     <>
-      <div style={{ marginBottom: 18 }}>
-        <Link href="/training" className="track-link" style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2 }}>
-          ← Backlist
+      <div style={{ marginBottom: 16 }}>
+        <Link href="/training" className="track-link" style={{ fontSize: 13, fontWeight: 500 }}>
+          ← All plans
         </Link>
       </div>
 
       <PageHero
-        title={formatWeekStart(plan.weekStartDate)}
-        sub={`Create  ${new Date(plan.createdAt).toLocaleString('en-US')}`}
+        eyebrow={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            Weekly plan
+            {rel === 'current' && <Pill color={T.lime} size="sm" solid style={{ letterSpacing: 0, textTransform: 'none' }}>This week</Pill>}
+            {rel === 'upcoming' && <Pill color={T.cyan} size="sm" style={{ letterSpacing: 0, textTransform: 'none' }}>Upcoming</Pill>}
+          </span>
+        }
+        title={formatWeekRange(plan.weekStartDate)}
+        sub={subParts.join(' · ')}
         actions={
           <>
             <StatusBadge kind={STATUS_MAP[plan.status]} />
             <Link href="/calendar" style={{ textDecoration: 'none' }}>
-              <Btn variant="ok" size="sm">Apply in Calendar</Btn>
+              <Btn variant="ghost" size="sm">View calendar</Btn>
             </Link>
             <div ref={actionPanelRef} style={{ position: 'relative', display: 'flex', gap: 8 }}>
               <Btn
@@ -299,31 +344,18 @@ export default function TrainingPlanDetailPage() {
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'export' ? null : 'export'))}
               >
-                Export
+                Export ▾
               </Btn>
               <Btn
-                variant={openActionPanel === 'garmin' ? 'ok' : 'ghost'}
                 size="sm"
                 onClick={() => setOpenActionPanel((v) => (v === 'garmin' ? null : 'garmin'))}
               >
-                Upload Garmin
+                {uploaded ? '✓ On Garmin' : 'Send to Garmin'}
               </Btn>
 
               {openActionPanel === 'export' && (
-                <Card style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  right: 110,
-                  width: 280,
-                  padding: 16,
-                  zIndex: 50,
-                  background: '#101410',
-                  border: `1px solid ${T.borderHot}`,
-                  boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
-                }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
-                    Choose export format
-                  </div>
+                <Card style={{ ...popoverStyle, right: 120, width: 260 }}>
+                  <div style={{ ...LABEL, marginBottom: 10 }}>Export as</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
                     {EXPORT_FORMATS.map((f) => (
                       <Btn
@@ -334,7 +366,6 @@ export default function TrainingPlanDetailPage() {
                           window.location.href = trainingPlanExportUrl(planId, f.key);
                           setOpenActionPanel(null);
                         }}
-                        style={{ justifyContent: 'center' }}
                       >
                         {f.label}
                       </Btn>
@@ -344,20 +375,8 @@ export default function TrainingPlanDetailPage() {
               )}
 
               {openActionPanel === 'garmin' && (
-                <Card style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  right: 0,
-                  width: 310,
-                  padding: 16,
-                  zIndex: 50,
-                  background: '#101410',
-                  border: `1px solid ${T.borderHot}`,
-                  boxShadow: '0 18px 50px rgba(0,0,0,0.72)',
-                }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.lime, letterSpacing: 1.5, marginBottom: 10 }}>
-                    Choose upload region
-                  </div>
+                <Card style={popoverStyle}>
+                  <div style={{ ...LABEL, marginBottom: 10 }}>Upload workouts to</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
                     {GARMIN_REGIONS.map((r) => (
                       <Btn
@@ -367,17 +386,17 @@ export default function TrainingPlanDetailPage() {
                         onClick={() => garmin.setRegion(r.key)}
                         disabled={garmin.busy !== null}
                       >
-                        {r.label}
+                        {r.name}
                       </Btn>
                     ))}
                   </div>
-                  <div style={{ fontSize: 12, color: T.inkDim, lineHeight: 1.55, marginBottom: 12 }}>
-                    Current goal: <span style={{ color: T.ink }}>{garminRegion.label}</span>
+                  <div style={{ fontSize: 13, color: T.inkDim, lineHeight: 1.55, marginBottom: 14 }}>
+                    Structured workouts are added to your {garminRegion.name} calendar and sync to your watch.
                     {garmin.status && (
-                      <>
-                        {' '}· {uploaded ? `Uploaded ${garmin.status.scheduled} ` : 'Not uploaded yet'}
-                        {garmin.status.failed > 0 ? ` · Failed ${garmin.status.failed} ` : ''}
-                      </>
+                      <div style={{ marginTop: 6, color: uploaded ? T.green : T.inkFaint }}>
+                        {uploaded ? `${garmin.status.scheduled} workout(s) on Garmin` : 'Not uploaded yet'}
+                        {garmin.status.failed > 0 ? ` · ${garmin.status.failed} failed` : ''}
+                      </div>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -402,7 +421,7 @@ export default function TrainingPlanDetailPage() {
                         }}
                         disabled={garmin.busy !== null}
                       >
-                        Deleteremote
+                        Remove
                       </Btn>
                     )}
                   </div>
@@ -421,16 +440,16 @@ export default function TrainingPlanDetailPage() {
 
       {garmin.notice && (
         <div style={{ marginBottom: 20 }}>
-          <Banner kind="ok" code="GARMIN">{garmin.notice}</Banner>
+          <Banner kind="ok" code="Garmin">{garmin.notice}</Banner>
         </div>
       )}
 
       {garmin.confirmDelete && (
         <ConfirmDialog
-          eyebrow="GARMIN.DELETE"
-          title={`from ${garminRegionLabel(garmin.region)} Garmin Delete this plan?`}
-          description={`willDelete${garminRegionLabel(garmin.region)} Garmin Calendarcreated by Garmin Trainer ${garmin.status?.activeCount ?? 0} Training，Delete workout 。The local training plan will not be deleted.`}
-          confirmLabel={garmin.busy === 'delete' ? 'Deleteing…' : 'ConfirmDelete'}
+          eyebrow="Garmin"
+          title={`Remove this plan from ${garminRegion.name}?`}
+          description={`This removes the ${garmin.status?.activeCount ?? 0} workout(s) Garmin Trainer added to your ${garminRegion.name} calendar. Your plan here is kept.`}
+          confirmLabel={garmin.busy === 'delete' ? 'Removing…' : 'Remove from Garmin'}
           confirmVariant="danger"
           busy={garmin.busy === 'delete'}
           onCancel={() => garmin.setConfirmDelete(false)}
@@ -440,10 +459,10 @@ export default function TrainingPlanDetailPage() {
 
       {confirmLocalDelete && (
         <ConfirmDialog
-          eyebrow="PLAN.DELETE"
-          title="Delete this local training plan?"
-          description="This deletes the local plan, training schedule, and chat records.ifThis plan still has Garmin remote，systemDelete，Please from CN/International Garmin Delete。"
-          confirmLabel={localDeleteBusy ? 'Deleteing…' : 'ConfirmDelete'}
+          eyebrow="Delete plan"
+          title="Delete this training plan?"
+          description="This deletes the plan, its workouts and the coach conversation. If the plan was uploaded to Garmin, remove it from Garmin first."
+          confirmLabel={localDeleteBusy ? 'Deleting…' : 'Delete plan'}
           confirmVariant="danger"
           busy={localDeleteBusy}
           onCancel={() => setConfirmLocalDelete(false)}
@@ -451,18 +470,59 @@ export default function TrainingPlanDetailPage() {
         />
       )}
 
-      {/* Two-column layout: main content + AI coach sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
-        {/* Left: main content */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
-            <StatTile label="Completed" value={`${completed}`} unit={`/ ${ordered.length}`} accent={T.lime} delta={ordered.length > 0 ? `${Math.round((completed / ordered.length) * 100)}%` : undefined} tone="ok" />
-            <StatTile label="Weekly duration" value={String(totalMin)} unit="minutes" accent={T.cyan} />
-            <StatTile label="Training days" value={`${trainingDayCount}`} unit="days" accent={T.amber} />
-            <StatTile label="Estimated training load" value={estimatedTrainingLoad == null ? '—' : String(estimatedTrainingLoad)} unit="Garmin" accent={T.lime} />
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <StatTile
+          label="Sessions done"
+          value={`${completed}`}
+          unit={`/ ${sessions.length}`}
+          accent={T.lime}
+          delta={sessions.length > 0 ? `${Math.round((completed / sessions.length) * 100)}%` : undefined}
+          tone="ok"
+        />
+        <StatTile label="Training time" value={formatMinutes(totalMin)} accent={T.cyan} hint="Total planned this week" />
+        <StatTile label="Training days" value={`${trainingDayCount}`} unit="days" accent={T.amber} hint={`${7 - trainingDayCount} rest or recovery days`} />
+        <StatTile label="Hard sessions" value={`${hardCount}`} accent={T.red} hint="Threshold, intervals, VO₂max" />
+        {estimatedTrainingLoad != null && (
+          <StatTile label="Est. training load" value={String(estimatedTrainingLoad)} accent={T.violet} hint="Garmin acute load units" />
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0, flex: '999 1 640px' }}>
+          {(plan.summary || monitoring.length > 0 || rules.length > 0) && (
+            <Card style={{ padding: 22, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <span aria-hidden="true" style={{
+                  width: 28, height: 28, borderRadius: 999, background: T.limeGlow, color: T.lime,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800,
+                }}>✦</span>
+                <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Coach&apos;s overview</div>
+              </div>
+              {plan.summary && (
+                <p style={{ margin: '0 0 16px', fontSize: 15, color: T.ink, lineHeight: 1.7 }}>{plan.summary}</p>
+              )}
+              {(monitoring.length > 0 || rules.length > 0) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                  {monitoring.length > 0 && (
+                    <GuidanceBox title="What to watch" color={T.cyan} icon="◉">
+                      {monitoring}
+                    </GuidanceBox>
+                  )}
+                  {rules.length > 0 && (
+                    <GuidanceBox title="When to adjust" color={T.amber} icon="⇅">
+                      {rules}
+                    </GuidanceBox>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
 
           <Card style={{ padding: 18, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Week at a glance</div>
+              <div style={{ fontSize: 12, color: T.inkFaint }}>Select a day to see the full session</div>
+            </div>
             <WeekCalendar
               days={calendarDays}
               workouts={calendarWorkouts}
@@ -489,15 +549,18 @@ export default function TrainingPlanDetailPage() {
                 ))}
               </div>
             ) : (
-              <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 13 }}>
-                Select a day in the calendar above to view details.
+              <Card style={{ padding: 32, textAlign: 'center', color: T.inkFaint, fontSize: 14 }}>
+                Select a day above to see the session details.
               </Card>
             )}
           </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Btn variant="danger" size="sm" onClick={() => setConfirmLocalDelete(true)}>Delete plan</Btn>
+          </div>
         </div>
 
-        {/* Right: AI coach sidebar */}
-        <div style={{ position: 'sticky', top: 24, maxHeight: 'calc(100vh - 48px)' }}>
+        <div style={{ flex: '1 1 340px', maxWidth: '100%', position: 'sticky', top: 88, maxHeight: 'calc(100vh - 112px)' }}>
           <ChatPanel
             planId={planId}
             initialMessages={detail.messages}
@@ -516,7 +579,33 @@ export default function TrainingPlanDetailPage() {
           />
         </div>
       </div>
-
     </>
+  );
+}
+
+function GuidanceBox({ title, color, icon, children }: { title: string; color: string; icon: string; children: string[] }) {
+  return (
+    <div style={{
+      padding: 14, borderRadius: 12,
+      background: `${color}0d`, border: `1px solid ${color}26`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 13, fontWeight: 700, color }}>
+        <span aria-hidden="true">{icon}</span>{title}
+      </div>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+        {children.map((line, i) => (
+          <Bullet key={i} color={color}>{line}</Bullet>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Bullet({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <li style={{ display: 'flex', gap: 9, fontSize: 13, lineHeight: 1.6, color: T.inkDim }}>
+      <span style={{ width: 5, height: 5, borderRadius: 999, background: color, marginTop: 8, flexShrink: 0 }} />
+      <span>{children}</span>
+    </li>
   );
 }

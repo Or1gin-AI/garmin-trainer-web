@@ -34,7 +34,7 @@ export default function Home() {
         <p style={{
           margin: '20px auto 0', maxWidth: 480, color: T.inkDim, fontSize: 16, lineHeight: 1.65,
         }}>
-          Connect CN and International Garmin, auto-sync activities, and let AI generate next week’s training from real data.
+          Connect Garmin China and Garmin International, sync activities automatically, and let AI build next week’s training from your real data.
         </p>
 
         <div style={{
@@ -42,7 +42,7 @@ export default function Home() {
           gap: 12, marginTop: 36, flexWrap: 'wrap',
         }}>
           <Link href="/sign-up" style={{ textDecoration: 'none' }}>
-            <Btn>Sign-up account →</Btn>
+            <Btn>Create account →</Btn>
           </Link>
           <Link href="/sign-in" style={{ textDecoration: 'none' }}>
             <Btn variant="ghost">Sign in</Btn>
@@ -58,19 +58,19 @@ export default function Home() {
           <div>
             <div style={{ color: T.lime, marginBottom: 4 }}>SYNC</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              Auto-sync both regions every 2 hours
+              Both regions sync automatically every 2 hours
             </div>
           </div>
           <div>
-            <div style={{ color: T.lime, marginBottom: 4 }}>AI.COACH</div>
+            <div style={{ color: T.lime, marginBottom: 4 }}>AI Coach</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              Conversational coach · Adjust training on demand
+              Chat with your coach · adjust training anytime
             </div>
           </div>
           <div>
             <div style={{ color: T.lime, marginBottom: 4 }}>DATA</div>
             <div style={{ color: T.ink, fontFamily: T.sans, fontSize: 13, letterSpacing: 0 }}>
-              Weekly plans based on your history
+              Weekly plans built from your history
             </div>
           </div>
         </div>

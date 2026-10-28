@@ -172,12 +172,12 @@ export default function AdminPage() {
   }
 
   async function grantMax(userId: string) {
-    const days = Number(prompt('How many days of Max should be granted?', '30'));
+    const days = Number(prompt('How many days of Max to grant?', '30'));
     if (!days) return;
     try {
       await api.post('/api/admin/grant', { userId, plan: 'max', planDays: days });
       await refresh();
-      alert('Granted');
+      alert('Max granted');
     } catch (e) {
       alert((e as Error).message);
     }
@@ -189,7 +189,7 @@ export default function AdminPage() {
         <PageHero
           eyebrow="ADMIN.CONSOLE"
           title="Admin"
-          sub="Generate codes · Manage users · View AI chat records · Configure AI models · View usage"
+          sub="Generate codes · Manage users · Review AI chats · Configure AI models · Track usage"
         />
 
         <div style={{
@@ -197,13 +197,13 @@ export default function AdminPage() {
           borderBottom: `1px solid ${T.border}`,
         }}>
           <TabButton active={tab === 'users'} onClick={() => setTab('users')} code="USERS">
-            Users and chat records
+            Users & chats
           </TabButton>
           <TabButton active={tab === 'codes'} onClick={() => setTab('codes')} code="CODES">
-            code
+            Codes
           </TabButton>
           <TabButton active={tab === 'ai'} onClick={() => setTab('ai')} code="AI.CFG">
-            AI configuration
+            AI models
           </TabButton>
           <TabButton active={tab === 'usage'} onClick={() => setTab('usage')} code="USAGE">
             Usage
@@ -219,7 +219,7 @@ export default function AdminPage() {
         {tab === 'codes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Card style={{ padding: 24 }}>
-              <CardHeader eyebrow="CODES.GENERATE" title="Generatecode" />
+              <CardHeader eyebrow="CODES.GENERATE" title="Generate codes" />
               <form
                 onSubmit={generate}
                 style={{
@@ -276,7 +276,7 @@ export default function AdminPage() {
                 </Field>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <Btn type="submit" disabled={busy}>
-                    {busy ? 'Generateing…' : 'Generatecode →'}
+                    {busy ? 'Generating…' : 'Generate codes →'}
                   </Btn>
                 </div>
               </form>
@@ -437,7 +437,7 @@ function fmtDateTime(value: string): string {
 }
 
 function pageRangeText(page: AdminPageMeta | null, count: number): string {
-  if (!page) return `${count} `;
+  if (!page) return `${count} ${count === 1 ? 'row' : 'rows'}`;
   if (page.total === 0) return '0 / 0';
   return `${page.offset + 1}-${page.offset + count} / ${page.total}`;
 }
@@ -488,11 +488,11 @@ function StatusPill({ status }: { status: AdminTrainingPlanRow['status'] }) {
   const color = status === 'ready' ? T.lime : status === 'failed' ? T.red : status === 'generating' ? T.cyan : T.inkFaint;
   const label =
     status === 'ready'
-      ? 'Generated'
+      ? 'Ready'
       : status === 'failed'
         ? 'Failed'
         : status === 'generating'
-          ? 'Generate'
+          ? 'Generating'
           : 'Archived';
   return (
     <span style={{
@@ -592,7 +592,7 @@ function PlanWorkoutList({
         color: T.inkDim,
         fontSize: 13,
       }}>
-        This plan has no workout records.
+        This plan has no workouts.
       </div>
     );
   }
@@ -617,7 +617,7 @@ function PlanWorkoutList({
               {w.date} · {sportLabel(w.sport)} · {w.intensity}
             </span>
             <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
-              {w.durationMinutes ?? '—'} minutes{w.distanceKm ? ` · ${w.distanceKm} km` : ''}
+              {w.durationMinutes ?? '—'} min{w.distanceKm ? ` · ${w.distanceKm} km` : ''}
             </span>
           </div>
           <div style={{
@@ -626,10 +626,10 @@ function PlanWorkoutList({
             gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             gap: 8,
           }}>
-            <MiniLine label="" value={w.targetMetric || '—'} />
-            <MiniLine label="heart rate" value={w.targetHeartRate || '—'} />
+            <MiniLine label="Target" value={w.targetMetric || '—'} />
+            <MiniLine label="Heart rate" value={w.targetHeartRate || '—'} />
             <MiniLine label="Pace" value={w.targetPace || '—'} />
-            <MiniLine label="power" value={w.targetPower || '—'} />
+            <MiniLine label="Power" value={w.targetPower || '—'} />
           </div>
           {w.workoutStructure && (
             <div style={{
@@ -802,7 +802,7 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="USERS"
-          title="hasusers"
+          title="All users"
           right={
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
@@ -818,11 +818,11 @@ function UsersAndChatsSection({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
-                <Th>email</Th>
-                <Th>username</Th>
-                <Th>membership</Th>
+                <Th>Email</Th>
+                <Th>Username</Th>
+                <Th>Plan</Th>
                 <Th>Role</Th>
-                <Th>Sign-up date</Th>
+                <Th>Signed up</Th>
                 <Th />
               </tr>
             </thead>
@@ -832,7 +832,7 @@ function UsersAndChatsSection({
                   <Td>
                     <div style={{ color: T.ink, fontWeight: 500 }}>{u.email}</div>
                     <div style={{ fontFamily: T.mono, fontSize: 10, color: u.emailVerified ? T.lime : T.amber, marginTop: 3 }}>
-                      {u.emailVerified ? 'Email verified' : 'Email not verified'}
+                      {u.emailVerified ? 'Verified' : 'Unverified'}
                     </div>
                   </Td>
                   <Td>{u.displayUsername || u.name || '—'}</Td>
@@ -861,7 +861,7 @@ function UsersAndChatsSection({
                   <Td>
                     <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
                       <RowBtn color={T.cyan} onClick={() => inspectUser(u.id)}>
-                        View records
+                        View activity
                       </RowBtn>
                       <RowBtn color={T.lime} onClick={() => onGrantMax(u.id)}>
                         + Max
@@ -878,11 +878,11 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="TRAINING.PLANS"
-          title={selectedUser ? `Trainingplan · ${selectedUser.email}` : 'All users’ training plans'}
+          title={selectedUser ? `Training plans · ${selectedUser.email}` : 'All training plans'}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-                per page {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(planPage, plans.length)}
+                {ADMIN_LIST_PAGE_SIZE} per page · {pageRangeText(planPage, plans.length)}
               </span>
               <RowBtn color={T.cyan} onClick={() => turnPlanPage(-1)} disabled={plansLoading || planOffset <= 0}>
                 Previous
@@ -904,12 +904,12 @@ function UsersAndChatsSection({
             alignItems: 'end',
           }}
         >
-          <Field label="users">
+          <Field label="User">
             <TrackSelect
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
-              <option value="">Allusers</option>
+              <option value="">All users</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.email}
@@ -923,17 +923,17 @@ function UsersAndChatsSection({
               onChange={(e) => setPlanStatus(e.target.value as PlanStatusFilter)}
             >
               <option value="all">All</option>
-              <option value="ready">Generated</option>
-              <option value="generating">Generate</option>
+              <option value="ready">Ready</option>
+              <option value="generating">Generating</option>
               <option value="failed">Failed</option>
               <option value="archived">Archived</option>
             </TrackSelect>
           </Field>
-          <Field label="keyword">
+          <Field label="Keyword">
             <TrackInput
               value={planQuery}
               onChange={(e) => setPlanQuery(e.target.value)}
-              placeholder="Search email, username, summaries, or monitoring suggestions"
+              placeholder="Search email, username, summary or monitoring notes"
             />
           </Field>
           <Btn type="submit" disabled={plansLoading}>
@@ -973,7 +973,7 @@ function UsersAndChatsSection({
                   <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{p.email}</span>
                   {p.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{p.displayName}</span>}
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
-                    Weekly plan {String(p.weekStartDate).slice(0, 10)}
+                    Week of {String(p.weekStartDate).slice(0, 10)}
                   </span>
                   <span style={{ color: T.inkFaint, fontSize: 12 }}>
                     {previewText(p.request?.goal || p.summary, 72)}
@@ -1026,7 +1026,7 @@ function UsersAndChatsSection({
                     {Boolean(p.monitoring || p.adjustmentRules || p.modelMeta) && (
                       <details style={{ marginTop: 10 }}>
                         <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
-                          monitoringsuggestions / adjustmentrule / Model
+                          Monitoring / adjustment rules / model info
                         </summary>
                         <pre style={{
                           margin: '10px 0 0',
@@ -1073,11 +1073,11 @@ function UsersAndChatsSection({
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="CHAT.LOGS"
-          title={selectedUser ? `Chat records · ${selectedUser.email}` : 'has AI Chat records'}
+          title={selectedUser ? `Chat history · ${selectedUser.email}` : 'All AI chats'}
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.inkFaint, letterSpacing: 1.2 }}>
-                per page {ADMIN_LIST_PAGE_SIZE} · {pageRangeText(chatPage, messages.length)}
+                {ADMIN_LIST_PAGE_SIZE} per page · {pageRangeText(chatPage, messages.length)}
               </span>
               <RowBtn color={T.cyan} onClick={() => turnChatPage(-1)} disabled={loading || chatOffset <= 0}>
                 Previous
@@ -1099,12 +1099,12 @@ function UsersAndChatsSection({
             alignItems: 'end',
           }}
         >
-          <Field label="users">
+          <Field label="User">
             <TrackSelect
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
-              <option value="">Allusers</option>
+              <option value="">All users</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.email}
@@ -1118,16 +1118,16 @@ function UsersAndChatsSection({
               onChange={(e) => setRole(e.target.value as ChatRoleFilter)}
             >
               <option value="all">All</option>
-              <option value="user">users</option>
+              <option value="user">User</option>
               <option value="assistant">AI</option>
               <option value="tool">Tool</option>
             </TrackSelect>
           </Field>
-          <Field label="keyword">
+          <Field label="Keyword">
             <TrackInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search email, username, or message content"
+              placeholder="Search email, username or message text"
             />
           </Field>
           <Btn type="submit" disabled={loading}>
@@ -1149,7 +1149,7 @@ function UsersAndChatsSection({
               textAlign: 'center',
               fontSize: 13,
             }}>
-              No matching chat records.
+              No matching messages.
             </div>
           ) : (
             messages.map((m) => (
@@ -1167,7 +1167,7 @@ function UsersAndChatsSection({
                   <span style={{ color: T.ink, fontWeight: 600, fontSize: 13 }}>{m.email}</span>
                   {m.displayName && <span style={{ color: T.inkFaint, fontSize: 12 }}>{m.displayName}</span>}
                   <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan }}>
-                    Weekly plan {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
+                    Week of {String(m.weekStartDate).slice(0, 10)} · {m.planStatus}
                   </span>
                   <span style={{ color: T.inkFaint, fontSize: 12 }}>
                     {previewText(m.content, 96)}
@@ -1178,7 +1178,7 @@ function UsersAndChatsSection({
                       setExpandedMessageId((current) => (current === m.id ? null : m.id))
                     }
                   >
-                    {expandedMessageId === m.id ? '' : ''}
+                    {expandedMessageId === m.id ? 'Collapse' : 'Expand'}
                   </RowBtn>
                   <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 10, color: T.inkFaint }}>
                     {fmtDateTime(m.createdAt)}
@@ -1205,7 +1205,7 @@ function UsersAndChatsSection({
                     {(m.toolCalls || m.toolResultRefs) && (
                       <details style={{ marginTop: 10 }}>
                         <summary style={{ cursor: 'pointer', fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 1.2 }}>
-                          Tool / Records
+                          Tool calls / edits
                         </summary>
                         <pre style={{
                           margin: '10px 0 0',
@@ -1303,7 +1303,7 @@ function AiConfigSection() {
   }
 
   function validate(isCreate: boolean): string | null {
-    if (!form.name.trim() || form.name.length > 50) return 'Name is required, up to 50 characters';
+    if (!form.name.trim() || form.name.length > 50) return 'Name is required (max 50 characters)';
     if (!form.baseUrl.trim()) return 'Base URL is required';
     try {
       const u = new URL(form.baseUrl);
@@ -1312,17 +1312,17 @@ function AiConfigSection() {
         return 'Base URL must use https:// (http:// is allowed only for localhost)';
       }
     } catch {
-      return 'Invalid Base URL format';
+      return 'Base URL is not a valid URL';
     }
-    if (isCreate && !form.apiKey) return 'API Key is required when creating';
-    if (form.apiKey.length > 200) return 'API Key exceeds 200 characters';
-    if (!form.model.trim() || form.model.length > 100) return 'Model ， 100 ';
+    if (isCreate && !form.apiKey) return 'API key is required for a new configuration';
+    if (form.apiKey.length > 200) return 'API key must be 200 characters or fewer';
+    if (!form.model.trim() || form.model.length > 100) return 'Model is required (max 100 characters)';
     if (
       !Number.isInteger(form.maxOutputTokens) ||
       form.maxOutputTokens < 1 ||
       form.maxOutputTokens > 32768
     ) {
-      return 'Max Output Tokens  1–32768';
+      return 'Max output tokens must be between 1 and 32768';
     }
     return null;
   }
@@ -1384,7 +1384,7 @@ function AiConfigSection() {
 
   async function remove(row: LlmConfigSummary) {
     if (row.isActive) return;
-    if (!confirm(`Delete LLM Configuration “${row.name}”？Actions。`)) return;
+    if (!confirm(`Delete LLM configuration “${row.name}”? This can’t be undone.`)) return;
     setBusy(true);
     setError(null);
     try {
@@ -1404,7 +1404,7 @@ function AiConfigSection() {
       <Card style={{ padding: 24 }}>
         <CardHeader
           eyebrow="LLM.CONFIGS"
-          title="AI ModelConfiguration"
+          title="AI model configuration"
           right={
             <Btn
               size="sm"
@@ -1430,7 +1430,7 @@ function AiConfigSection() {
               color: T.inkDim,
               fontSize: 13,
             }}>
-              not yetConfiguration LLM。「+ new 」。
+              No LLM configured yet. Click “+ Add” to get started.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -1513,7 +1513,7 @@ function AiConfigSection() {
         <Card hot style={{ padding: 24 }}>
           <CardHeader
             eyebrow={editingId === 'new' ? '// LLM.NEW' : '// LLM.EDIT'}
-            title={editingId === 'new' ? 'new Configuration' : `Edit：${form.name}`}
+            title={editingId === 'new' ? 'New configuration' : `Edit: ${form.name}`}
           />
           <form
             onSubmit={submit}
@@ -1538,7 +1538,7 @@ function AiConfigSection() {
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
                 maxLength={100}
-                placeholder="For example gpt-4o-mini"
+                placeholder="e.g. gpt-4o-mini"
                 required
               />
             </Field>
@@ -1551,7 +1551,7 @@ function AiConfigSection() {
                 required
               />
             </Field>
-            <Field label={editingId === 'new' ? 'API.KEY' : 'API.KEY（Leave blank）'}>
+            <Field label={editingId === 'new' ? 'API.KEY' : 'API.KEY (LEAVE BLANK TO KEEP)'}>
               <TrackInput
                 mono
                 type="password"
@@ -1590,13 +1590,13 @@ function AiConfigSection() {
                   style={{ accentColor: T.lime }}
                 />
                 <span style={{ fontSize: 13, color: T.inkDim }}>
-                  SavewilloneConfiguration
+                  Make this the only active configuration on save
                 </span>
               </label>
             </Field>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10 }}>
               <Btn type="submit" disabled={busy}>
-                {busy ? 'Saveing…' : 'Save →'}
+                {busy ? 'Saving…' : 'Save →'}
               </Btn>
               <Btn type="button" variant="ghost" onClick={cancelEdit} disabled={busy}>
                 Cancel
@@ -1720,8 +1720,8 @@ function AiUsageSection() {
           }}>
             <MiniStat label="USERS" value={entries.length} />
             <MiniStat label="GEN.RUNS" value={totalGen} />
-            <MiniStat label="IN.TOKENS" value={totalIn.toLocaleString()} />
-            <MiniStat label="OUT.TOKENS" value={totalOut.toLocaleString()} accent />
+            <MiniStat label="IN.TOKENS" value={totalIn.toLocaleString('en-US')} />
+            <MiniStat label="OUT.TOKENS" value={totalOut.toLocaleString('en-US')} accent />
           </div>
         )}
 
@@ -1766,8 +1766,8 @@ function AiUsageSection() {
                       <Td mono dim>{e.periodStart.slice(0, 7)}</Td>
                       <TdRight mono>{e.planGenerationCount}</TdRight>
                       <TdRight mono>{e.chatMessageCount}</TdRight>
-                      <TdRight mono>{e.inputTokens.toLocaleString()}</TdRight>
-                      <TdRight mono accent>{e.outputTokens.toLocaleString()}</TdRight>
+                      <TdRight mono>{e.inputTokens.toLocaleString('en-US')}</TdRight>
+                      <TdRight mono accent>{e.outputTokens.toLocaleString('en-US')}</TdRight>
                     </tr>
                   ))}
                 </tbody>

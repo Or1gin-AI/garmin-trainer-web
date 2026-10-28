@@ -47,7 +47,7 @@ export function TrainingEvidencePanel({
     <Card style={{ padding: 22 }}>
       <CardHeader
         eyebrow="Training rationale"
-        title="Why this plan is structured this way"
+        title="Why your week looks like this"
         right={
           <span style={{ fontFamily: T.mono, fontSize: 10, color: readinessColor, letterSpacing: 1.2 }}>
             ● READINESS.{String(readiness).toUpperCase()}
@@ -64,17 +64,17 @@ export function TrainingEvidencePanel({
             gap: 10,
           }}
         >
-          <Metric label="Current ability" value={levelZh(capacity.overall.level)} color={T.cyan} />
-          <Metric label="RecoveryStatus" value={readinessZh(capacity.overall.readiness)} color={readinessColor} />
-          <Metric label="High intensitylimit" value={`${capacity.guardrails.maxHardSessionsPerWeek} sessions/week`} color={T.amber} />
+          <Metric label="Current level" value={levelZh(capacity.overall.level)} color={T.cyan} />
+          <Metric label="Recovery" value={readinessZh(capacity.overall.readiness)} color={readinessColor} />
+          <Metric label="Hard sessions cap" value={`${capacity.guardrails.maxHardSessionsPerWeek}/week`} color={T.amber} />
           <Metric
-            label="intensityminutes"
-            value={capacity.guardrails.maxHighMinutesShare == null ? 'Controlled' : `≤${Math.round(capacity.guardrails.maxHighMinutesShare * 100)}%`}
+            label="High-intensity time"
+            value={capacity.guardrails.maxHighMinutesShare == null ? 'Capped' : `≤${Math.round(capacity.guardrails.maxHighMinutesShare * 100)}%`}
             color={T.lime}
           />
           <Metric
-            label="7/28 load ratio"
-            value={capacity.load.acuteChronicRatio === null ? 'insufficient' : String(capacity.load.acuteChronicRatio)}
+            label="7/28-day load ratio"
+            value={capacity.load.acuteChronicRatio === null ? 'Not enough data' : String(capacity.load.acuteChronicRatio)}
             color={T.cyan}
           />
         </div>
@@ -89,7 +89,7 @@ export function TrainingEvidencePanel({
         }}
       >
         <div style={boxStyle}>
-          <div style={boxTitleStyle}>What the system actually did</div>
+          <div style={boxTitleStyle}>What the AI adjusted</div>
           <ul style={listStyle}>
             {usefulNotes.map((note) => (
               <li key={note}>{note}</li>
@@ -98,12 +98,12 @@ export function TrainingEvidencePanel({
         </div>
 
         <div style={boxStyle}>
-          <div style={boxTitleStyle}>Sources of training rules</div>
+          <div style={boxTitleStyle}>Training principles used</div>
           <ul style={listStyle}>
-            <li>Use recent 7/28/56-day CN Garmin training load to assess current stress, rather than relying only on the user’s goal.</li>
-            <li>Use Foster monotony and strain to check whether training is repetitive or overly stressful.</li>
-            <li>Use Garmin sleep, HRV, training status, and recovery time as recovery-risk signals; reduce confidence when data is missing.</li>
-            <li>Follow Seiler intensity-distribution principles, limit threshold and VO2max sessions, and avoid turning all available time into high intensity.</li>
+            <li>Recent 7/28/56-day Garmin training load is used to gauge current stress, not just your stated goal.</li>
+            <li>Foster monotony and strain flag training that is too repetitive or too concentrated.</li>
+            <li>Garmin sleep, HRV, training status and recovery time act as recovery-risk signals; confidence is lowered when data is missing.</li>
+            <li>Seiler’s intensity-distribution principles cap threshold, VO2max and anaerobic sessions so extra available time doesn’t turn into extra intensity.</li>
           </ul>
         </div>
       </div>
@@ -143,13 +143,15 @@ function selectDecisionNotes(
   ].filter(Boolean);
   const selected = notes.filter((note, index, arr) => {
     if (arr.indexOf(note) !== index) return false;
-    return /|Recovery|Load|High intensity|limit||need|Available time|day|Double days|intensity/.test(note);
+    // Backend notes may be Chinese (legacy) or English.
+    return /容量|恢复|负荷|高强度|上限|未按原|明确要求|可用时间|同日|多练|强度/.test(note)
+      || /capacity|recover|load|intensity|limit|\bcap|as requested|explicit|available time|same day|double/i.test(note);
   });
   if (forceRequestedSchedule) {
-    selected.unshift('The user explicitly requested generation as entered; keep risk warnings without automatically deleting requested training.');
+    selected.unshift('You asked for the plan to follow your inputs exactly, so requested workouts were kept and risks are shown as warnings only.');
   }
   if (selected.length > 0) return selected.slice(0, 6);
-  return ['This week’s plan was generated from recent training volume, recovery status, sport ability, and the user’s goal.'];
+  return ['This week’s plan is based on your recent training volume, recovery status, current fitness in each sport and your goal.'];
 }
 
 function isTrainingCapacityView(value: unknown): value is TrainingCapacityView {
@@ -160,7 +162,7 @@ function isTrainingCapacityView(value: unknown): value is TrainingCapacityView {
 
 function levelZh(level: string): string {
   if (level === 'advanced') return 'Advanced';
-  if (level === 'trained') return 'Stable';
+  if (level === 'trained') return 'Trained';
   if (level === 'developing') return 'Developing';
   if (level === 'novice') return 'Novice';
   return level || 'Unknown';
