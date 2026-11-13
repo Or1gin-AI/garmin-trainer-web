@@ -62,3 +62,30 @@ export function formatMinutes(total: number): string {
 export function planShortId(id: string): string {
   return '#' + id.slice(0, 6).toUpperCase();
 }
+
+/**
+ * Coach text sometimes carries internal tokens: template ids ("run.tempo.v1")
+ * and zone variables ("HR.zone2"). Swap them for plain wording.
+ */
+export function humanizeCoachText(text: string): string {
+  const id = String.raw`(run|bike|ride|cycle|cycling|swim|rest|strength|mobility)\.([a-z0-9_]+(?:\.[a-z0-9_]+)*)\.v\d+`;
+  const plain = (_m: string, kind: string, name: string) => {
+    const words = name.replace(/[._]+/g, ' ').replace(/\blsd\b/i, 'long').trim();
+    const k = kind.toLowerCase();
+    if (k === 'rest') return /full/i.test(words) ? 'rest day' : words;
+    const noun = k === 'run' ? 'run' : k === 'swim' ? 'swim' : k === 'strength' || k === 'mobility' ? k : 'ride';
+    return `${words} ${noun}`;
+  };
+  const zones: Record<string, string> = {
+    zone2: 'Zone 2', aerobic: 'the aerobic zone', aerobiclow: 'the low aerobic zone', recovery: 'the recovery zone',
+    'recovery.high': 'the top of the recovery zone', tempo: 'the tempo zone', threshold: 'threshold',
+    vo2: 'the VO2max zone', vo2cap: 'the VO2max zone',
+  };
+  return text
+    // debug references such as "(payload.metrics.hardDays)"
+    .replace(/\s*\(\s*payload\.[\w.]+\s*\)/g, '')
+    // "(run.tempo.v1)" or ", run.tempo.v1)" right after the session is already named
+    .replace(new RegExp(String.raw`\s*[(（,，]\s*\x60?${id}\x60?\s*[)）]`, 'gi'), (m) => (/^\s*[,，]/.test(m) ? ')' : ''))
+    .replace(new RegExp(String.raw`\x60?${id}\x60?`, 'gi'), plain)
+    .replace(/\bHR\.([a-z0-9]+(?:\.high|\.low)?)\b/gi, (m, key: string) => zones[key.toLowerCase()] ?? zones[key.toLowerCase().replace(/\.(high|low)$/, '')] ?? m);
+}

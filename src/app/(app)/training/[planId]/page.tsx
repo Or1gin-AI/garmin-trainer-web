@@ -29,7 +29,7 @@ import {
   type CalendarDay,
   type CalendarCellWorkout,
 } from '@/components/training/WeekCalendar';
-import { formatMinutes, formatWeekRange, weekRelation } from '@/lib/format';
+import { formatMinutes, formatWeekRange, humanizeCoachText, weekRelation } from '@/lib/format';
 import { readPlanEstimatedTrainingLoad, sumWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
 import { useGarminPublish, GARMIN_REGIONS } from './_components/useGarminPublish';
 import { ConfirmDialog } from './_components/ConfirmDialog';
@@ -293,8 +293,8 @@ export default function TrainingPlanDetailPage() {
   const uploaded = garmin.status?.uploaded ?? false;
   const garminRegion = GARMIN_REGIONS.find((r) => r.key === garmin.region) ?? GARMIN_REGIONS[0];
 
-  const monitoring = toBullets(plan.monitoring);
-  const rules = toBullets(plan.adjustmentRules);
+  const monitoring = toBullets(plan.monitoring).map(humanizeCoachText);
+  const rules = toBullets(plan.adjustmentRules).map(humanizeCoachText);
 
   const subParts = [
     request.goal ? `Goal: ${request.goal}` : null,
@@ -499,7 +499,7 @@ export default function TrainingPlanDetailPage() {
                 <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Coach&apos;s overview</div>
               </div>
               {plan.summary && (
-                <p style={{ margin: '0 0 16px', fontSize: 15, color: T.ink, lineHeight: 1.7 }}>{plan.summary}</p>
+                <p style={{ margin: '0 0 16px', fontSize: 15, color: T.ink, lineHeight: 1.7 }}>{humanizeCoachText(plan.summary)}</p>
               )}
               {(monitoring.length > 0 || rules.length > 0) && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>

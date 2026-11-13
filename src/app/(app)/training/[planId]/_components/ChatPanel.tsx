@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { humanizeCoachText } from '@/lib/format';
 import {
   trainingChatStreamUrl,
   type TrainingChatMessage,
@@ -324,7 +325,7 @@ function PersistedTurn({ message }: { message: TrainingChatMessage }) {
             fontSize: 13, color: T.ink, lineHeight: 1.6,
           }}>
             <div className="track-md">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              <ReactMarkdown>{humanizeCoachText(message.content)}</ReactMarkdown>
             </div>
             <div style={{ fontFamily: T.mono, fontSize: 9, color: T.inkFaint, marginTop: 6 }}>
               {formatTime(message.createdAt)} · coach
@@ -353,7 +354,7 @@ function DraftTurn({ draft }: { draft: DraftAssistant }) {
       }}>
         {draft.content.length > 0 ? (
           <div className="track-md">
-            <ReactMarkdown>{draft.content}</ReactMarkdown>
+            <ReactMarkdown>{humanizeCoachText(draft.content)}</ReactMarkdown>
           </div>
         ) : (
           <div className="track-blink" style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, letterSpacing: 1 }}>

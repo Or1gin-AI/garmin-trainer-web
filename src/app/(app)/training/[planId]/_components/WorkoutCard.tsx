@@ -6,6 +6,7 @@ import {
   type StatusKind, type IntensityKind, type SportKind,
 } from '@/components/track';
 import { readWorkoutEstimatedTrainingLoad } from '@/lib/training-load';
+import { humanizeCoachText } from '@/lib/format';
 
 const STATUS_MAP: Record<TrainingWorkout['status'], StatusKind> = {
   planned: 'planned',
@@ -62,10 +63,10 @@ const PHASE_META: Record<Phase, { label: string; color: string }> = {
 };
 
 function phaseOf(text: string): Phase {
-  const t = text.toLowerCase();
-  if (/^(warm[\s-]?up|热身)/.test(t)) return 'warmup';
-  if (/^(cool[\s-]?down|放松|冷身)/.test(t)) return 'cooldown';
-  if (/^(main|主训练|主课)/.test(t)) return 'main';
+  const t = text.toLowerCase().slice(0, 48);
+  if (/warm[\s-]?up|热身/.test(t)) return 'warmup';
+  if (/cool[\s-]?down|放松|冷身/.test(t)) return 'cooldown';
+  if (/main set|^main|主训练|主课/.test(t)) return 'main';
   if (/^(recover|between|组间)/.test(t)) return 'recovery';
   return 'other';
 }
@@ -130,9 +131,9 @@ export function WorkoutCard({
   const { weekday, date } = formatDay(w.date);
   const estimatedLoad = readWorkoutEstimatedTrainingLoad(w.parameterSource);
   const targets = targetsOf(w);
-  const steps = w.workoutStructure ? structureSteps(w.workoutStructure) : [];
+  const steps = w.workoutStructure ? structureSteps(humanizeCoachText(w.workoutStructure)) : [];
   const split = isRest ? null : phaseSplit(w);
-  const keyPoints = (w.targets ?? []).filter((t) => !/^(total duration|总时长)\s*(n\/a|不适用)?$/i.test(t.trim()));
+  const keyPoints = (w.targets ?? []).map(humanizeCoachText).filter((t) => !/^(total duration|总时长)\s*(n\/a|不适用)?$/i.test(t.trim()));
 
   const accent = highlighted ? T.amber : w.status === 'regenerating' ? T.cyan : sportMeta.color;
 
@@ -279,7 +280,7 @@ export function WorkoutCard({
               borderRadius: 12, fontSize: 14, color: T.ink, lineHeight: 1.6,
             }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: T.amber, marginBottom: 4 }}>If you need to adjust</div>
-              {w.adaptation}
+              {humanizeCoachText(w.adaptation)}
             </div>
           )}
 

@@ -14,7 +14,7 @@ import {
   T, Btn, Card, SectionLabel, StatusBadge, PageHero, Banner, Pill, LABEL,
   type StatusKind,
 } from '@/components/track';
-import { formatWeekRange, weekRelation } from '@/lib/format';
+import { formatWeekRange, humanizeCoachText, weekRelation } from '@/lib/format';
 
 const PLAN_LIMIT = 10;
 
@@ -33,7 +33,7 @@ const RELATION_PILL = {
 
 function summaryText(s: string | null): string {
   if (!s) return 'No summary yet.';
-  return s.replace(/\s+/g, ' ').trim();
+  return humanizeCoachText(s).replace(/\s+/g, ' ').trim();
 }
 
 export default function TrainingListPage() {

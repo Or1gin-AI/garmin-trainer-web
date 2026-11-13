@@ -16,7 +16,7 @@ import {
 import {
   T, Btn, Card, PageHero, SectionLabel, Banner, Pill, LABEL, SPORT, type SportKind,
 } from '@/components/track';
-import { formatWeekRange } from '@/lib/format';
+import { formatWeekRange, humanizeCoachText } from '@/lib/format';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -287,7 +287,7 @@ export default function CalendarPage() {
                           {active && <Pill color={T.lime} size="sm">Active</Pill>}
                         </div>
                         <div style={{ color: T.inkDim, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.summary ?? 'Training plan'}
+                          {p.summary ? humanizeCoachText(p.summary) : 'Training plan'}
                         </div>
                       </div>
                       <Btn
@@ -727,7 +727,7 @@ function EventDetail({ event }: { event: TrainingCalendarEvent }) {
       </div>
       {event.workoutStructure && (
         <p style={{ margin: '0 0 12px', color: T.inkDim, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
-          {event.workoutStructure}
+          {humanizeCoachText(event.workoutStructure)}
         </p>
       )}
       {event.targets && event.targets.length > 0 && (
